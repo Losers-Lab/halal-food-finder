@@ -26,6 +26,15 @@ class JdbcAccountRepository(private val jdbc: JdbcTemplate) : AccountRepository 
         return rows.firstOrNull()
     }
 
+    override fun findById(id: UUID): Account? {
+        val rows = jdbc.query(
+            "SELECT id, email, password_hash, role FROM users WHERE id = ?",
+            { rs, _ -> rs.toAccount() },
+            id,
+        )
+        return rows.firstOrNull()
+    }
+
     override fun save(account: Account): Account {
         val id = jdbc.queryForObject(
             """

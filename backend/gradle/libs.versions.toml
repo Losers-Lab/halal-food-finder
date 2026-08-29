@@ -11,6 +11,8 @@ postgresql = "42.7.4"
 bouncycastle = "1.77"
 # Bump past the Boot-3.3 BOM pin (10.10.0) which warns on PostgreSQL 17.
 flyway = "10.15.0"
+# JWT (RS256) signing/parsing for the short-lived access token.
+nimbus-jose-jwt = "9.48"
 
 [libraries]
 # --- Spring Boot (versions managed by the spring-boot-dependencies BOM) ---
@@ -26,6 +28,11 @@ springdoc = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", vers
 spring-security-crypto = { module = "org.springframework.security:spring-security-crypto" }
 # Argon2PasswordEncoder's Argon2 implementation delegates to BouncyCastle.
 bouncycastle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncycastle" }
+# Nimbus JOSE + JWT: RS256 signing for the short-lived access token (sc-40).
+nimbus-jose-jwt = { module = "com.nimbusds:nimbus-jose-jwt", version.ref = "nimbus-jose-jwt" }
+# Apache HC5 (version from the Boot BOM): request factory that returns 401 as a
+# normal response (the JDK HttpURLConnection client cannot read 401 in streaming).
+httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }
 
 # --- Persistence / data ---
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }

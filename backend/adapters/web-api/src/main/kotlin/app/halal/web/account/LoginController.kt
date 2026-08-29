@@ -1,0 +1,64 @@
+package app.halal.web.account
+
+import app.halal.application.account.AuthenticateAccount
+import app.halal.application.account.InvalidCredentialsException
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
+import io.swagger.v3.oas.annotations.responses.ApiResponses
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.NotBlank
+import org.springframework.http.HttpStatus
+import org.springframework.http.ResponseEntity
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RestController
+
+/**
+ * Log In (sc-40) endpoint. Verifies the credentials (generic rejection — the
+ * same 401 for an unknown email and a wrong password, so the response is not
+ * user-enumeration friendly) and returns a short access token plus a rotating
+ * refresh token.
+ */
+@RestController
+@RequestMapping("/v1/auth/login")
+class LoginController(private val authenticateAccount: AuthenticateAccount) {
+
+    @PostMapping
+    @Operation(summary = "Log in", description = "Verifies the email/password against the stored Argon2id hash and returns a short-lived access token (RS256 JWT with the account's RBAC role) and a rotating refresh token.")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Authenticated; token pair issued", content = [Content(schema = Schema(implementation = AuthResponse::class))]),
+            ApiResponse(responseCode = "401", description = "Invalid email or password (generic, no user enumeration)"),
+            ApiResponse(responseCode = "400", description = "Invalid input", content = [Content(schema = Schema(implementation = ErrorResponse::class))]),
+        ],
+    )
+    fun login(@Valid @RequestBody request: LoginRequest): ResponseEntity<AuthResponse> {
+        val session = authenticateAccount.execute(request.email, request.password)
+        return ResponseEntity.ok(AuthResponse.from(session))
+    }
+
+    @ExceptionHandler(InvalidCredentialsException::class)
+    @ApiResponse(responseCode = "401", description = "Invalid email or password")
+    fun onInvalidCredentials(): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(ErrorResponse("invalid_credentials", "Invalid email or password."))
+
+    @ExceptionHandler(IllegalArgumentException::class)
+    @ApiResponse(responseCode = "400", description = "Invalid input")
+    fun onInvalidInput(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse("invalid_input", ex.message))
+
+    data class LoginRequest(
+        @field:NotBlank(message = "email is required")
+        @field:Email(message = "email must be a valid address")
+        val email: String,
+
+        @field:NotBlank(message = "password is required")
+        val password: String,
+    )
+}
