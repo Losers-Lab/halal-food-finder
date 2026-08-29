@@ -10,7 +10,9 @@ two distinct parts:
    deliberately left open and marked clearly; **do not treat them as decided.**
 
 > Status: **Greenfield / DRAFT.** This document accompanies the first commit of
-> an empty repository. Nothing here implies implementation exists.
+> an empty repository. Nothing here implies implementation exists. Hosting,
+> geo, reviews, verification provider, auth tuning, and SEO were ratified
+> 2026-08-29 (see §1.0); partial-halal and alcohol-served added to MVP scope.
 
 ---
 
@@ -40,7 +42,14 @@ remains **unresolved** (see Part 2).
 | **Image storage** | **MinIO self-hosted** (S3-compatible, **$0**, runs in Docker alongside the app) for MVP — private bucket, presigned PUT/GET, namespaced keys, versioning + content SHA-256 audit. **Cloudflare R2 is the target for the future** | Founder decision: MinIO now (fully $0, self-operated), **R2 later** (free tier + managed + zero egress). Build against the **S3 SDK on a configurable endpoint** so R2 is a config change, not code — keep all storage access behind one internal interface and avoid AWS-only features. |
 | **Verification (hosted AI)** | **Hosted/API multimodal AI (vision)** judges halal-certificate image → conservative verdict + **lightweight human review/correction loop**; **no in-house ML model/training pipeline** | Founded pivot + clarification: "committee" = AI verdict + human spot-check/correct (NOT a people board, NOT training). Pluggable `VerificationProvider` port, default = HostedVisionAdapter. Details: state machine SUBMITTED→AI_REVIEW→AI_SUGGESTED→HUMAN_REVIEW→APPROVED/DENIED (+REVERSED); conservative VerificationSuggestion contract; privacy/security flags (provider terms, PII redaction, retention). See unresolved U-11. |
 | **Testing/TDD** | **Kotest + MockK + Testcontainers** (PostGIS) + Spring Test slices; hexagonal modules `:domain → :application → adapters → :bootstrap` | Supports mandated backend TDD. |
-| **Build/ops baseline** | **Gradle (Kotlin DSL)**, **JDK 21 LTS** (Temurin), Kotlin 2.x K2, **Jib** OCI images, managed Postgres+PostGIS | Deploy target (U-08) still open. |
+| **Build/ops baseline** | **Gradle (Kotlin DSL)**, **JDK 21 LTS** (Temurin), Kotlin 2.x K2, **Jib** OCI images, Postgres+PostGIS | Deploy target now resolved (see U-08 below). |
+| **Hosting / deploy (U-08)** | **Hetzner VPS (CX class, ~US$6–7/mo, e.g. CX23 2 vCPU/4GB/40GB) self-hosting** Postgres 16/17 + PostGIS, MinIO, the Spring Boot Jib image, and the async verification worker on one always-on box | Ratified by founder 2026-08-29. Cheapest reliable floor — self-host has full extension control so PostGIS can't be dropped by a vendor tier. **Neon (managed Postgres, PostGIS native, free/scale-to-zero) is the $0 zero-ops alternative.** ⚠ Use Hetzner's cost-optimized CX/CAX line, NOT the CPX line (prices raised 2026). Migration is config-cheap: Jib OCI images + env-var connection strings; DB move = pg_dump/restore + one JDBC URL (<1 day). Avoid provider-specific DB lock-in. EKS is NOT an MVP option (~$60–300/mo). |
+| **Maps / geo (U-09)** | **Google Places API for Autocomplete + Geocoding only**, held **server-side** (no Maps SDK / heavy rendering — PostGIS does the radius match) | Since 2025-03-01 Google replaced the $200/mo pool with per-SKU free caps: **Autocomplete free 10k/mo, Geocoding free 10k/mo** → ~$0 at MVP (card on file, pay only past caps). OSM (Photon+Nominatim) is the $0-no-card fallback (weaker UX, no SLA). Server-side key → no client exposure. |
+| **Reviews / ratings (U-10)** | **Official APIs + server-side keys + 24h backend cache** (1 restaurant view = 1 API call, repeats hit cache at $0): **Google Place Details (Enterprise fields)** = rating + user_ratings_total + reviews ($20/1k, 1k free/mo → $0); **Yelp Fusion free tier** (~500/day) = rating + review_count | MVP shows rating + count + "Read on [Google/Yelp]" link; **Yelp full review-snippet text deferred to paid Enhanced tier (~$7.99–9.99/1k)** until revenue. **No scraping** (ToS/DMCA risk). Fallback for listings w/o linked Google/Yelp: owner/user-entered rating + external links. ~$0/mo. |
+| **Verification provider (U-11)** | **Google Gemini 2.5 Flash (PAID API tier)** as the default `HostedVisionAdapter`/`VerificationProvider`; ~$0.0002–0.0005/verification, 1–4s latency, strong document understanding | Ratified 2026-08-29. **Never the free AI Studio tier** (uses data to improve Google products, no retention controls). Non-Vertex Gemini API retains prompts 55 days for abuse monitoring. **Alternative: Claude Haiku 4.5** — cleanest default data posture (no retention/training by default) if guarantees outweigh cost. **Human-in-the-loop is MANDATORY** (both Google & OpenAI require human supervision for high-stakes automated decisions): AI-suggests → VC-approves, never ship AI alone. **Upload hygiene regardless of provider:** downscale ~1024px, strip EXIF, upload cert-only image (not proof-of-ownership composites). Do-not-use: xAI/Grok. |
+| **Verification consent (new)** | **Owner must explicitly consent to AI-based verification before uploading** a certificate for verification | Founder requirement 2026-08-29. A consent step/checkbox on the verification upload flow; recorded with the submission. |
+| **SEO / public pages (U-13)** | **Public listing/view pages crawlable (SEO) from day one**; owner/dashboard behind auth | Fits listing-first product + Next.js SSR at no extra cost; protects future SEO asset. |
+| **Auth tuning (U-12)** | **VC/IC as roles on existing accounts** (not separate accounts); standard Argon2id params; extension API-keys rotated on a schedule; refresh-token lifetime ~30 days | Defaults ratified by founder 2026-08-29. |
 
 > **Backend stack is RATIFIED** (2026-08-28): Kotlin + Spring Boot 3 + PostgreSQL/PostGIS
 > (jOOQ + Spring Data JDBC + Flyway) + REST/OpenAPI + Spring Security JWT/RBAC + PostGIS
@@ -55,6 +64,10 @@ From the PRD's objective and high-level user stories:
   opt-in) and filter results by **cutting method** (hand-cut / machine-cut),
   **price**, **cuisine** (AND/OR chaining, default OR), **rating**, and
   **distance**.
+- Restaurant listings carry halal-relevant attributes: an **alcohol-served**
+  flag (whether the establishment serves alcohol) and, **in MVP scope**,
+  support for **partial-halal** restaurants (whole-restaurant vs partial
+  status). These are related trust/decision attributes and likely filters.
 - Restaurant listings support a **verification tag**: a listing starts
   **unverified**; a restaurant owner can "claim" it and, once verified, gains a
   **Verified** status and control over the listing.
@@ -136,18 +149,14 @@ They need to be resolved (with input from the relevant specialists and the
 founder) before implementation of substantial features. Until resolved, treat
 them as **unknowns**, not as a chosen architecture.
 
-> The backend stack (U-01…U-07 as previously listed) is now **resolved**;
-> see the Agreed section 1.0. Remaining open items below.
+> The backend stack (U-01…U-07) and hosting/geo/reviews/verification/auth/SEO
+> (U-08…U-13) are now **resolved** — see the Agreed section 1.0. Remaining open
+> items below.
 
 | ID | Decision | Notes / open questions |
 |----|----------|------------------------|
-| U-08 | **Hosting / deployment / infrastructure** | Not decided. Candidates: Cloud Run / Fly.io / EKS. Cascades into managed-Postgres provider and (per Hamza research) queue choice if serverless. |
-| U-09 | **Google Maps integration details** | API provider, billing/cost, geocoding/autocomplete approach, key management (server-side). |
-| U-10 | **Google/Yelp data integration** | Reviews/ratings sourcing not specified (API vs. scraping vs. manual). |
-| U-11 | **Hosted-AI verification provider & policy** | Pending founder decisions: which hosted vision provider (and whether its content policy allows certificate/sensitive-document upload — MUST verify terms); per-verification **cost ceiling** & monthly budget; zero-retention/regional-hosting requirement; whether to enable PII **blur/redaction** of owner/license info before upload; **auto-approve vs human-first** for MVP (recommend human-first until correction stats show high precision); certification-image **WORM/Object Lock** rigor vs versioning+hash. Security sub-processor review (Omar) required before enabling. |
-| U-12 | **Auth policy details** | VC/IC as distinct accounts vs roles; Argon2id tuning budget; extension API-key issuance/rotation; refresh-token lifetime. (Mechanism itself resolved; these are tuning/policy details.) |
-| U-13 | **SEO / public pages** | Whether public restaurant pages must be SEO-crawlable (Next.js chosen supports it; confirm scope). |
-| U-14 | **Partial-halal / certification semantics** | See product questions below (expiry/revocation display is unresolved). |
+| U-14 | **Partial-halal semantics** | **Confirmed IN MVP scope by founder (2026-08-29)** — the platform should handle partial-halal restaurants thoughtfully (not deferred). Exact modeling still to design: how the verification tag relates to whole-restaurant vs partial status. See product questions below. |
+| U-15 | **Alcohol-served attribute** | **New founder requirement (2026-08-29):** whether alcohol is served in the establishment is a listing attribute and likely a filter — an establishment serving alcohol is halal-relevant. Field + filter semantics to be designed. |
 
 ### Open product/requirements questions (from PRD "Open Questions" & "Edge Cases")
 
@@ -156,10 +165,13 @@ architecture. They remain unresolved in Shortcut:
 
 - Should **kosher** restaurants be listed?
 - Should the platform broaden beyond restaurants (e.g. meat shops)?
-- How to handle **partial-halal** restaurants / partially halal menus (the
-  verification tag currently implies whole-restaurant status)?
+- How to model **partial-halal** restaurants / partially halal menus — now **in
+  MVP scope** (founder 2026-08-29). The verification tag currently implies
+  whole-restaurant status; partial-halal needs its own representation (field /
+  tag / filter semantics). Related: the new **alcohol-served** attribute (U-15).
 - What happens when a halal **certification expires or is revoked** after
-  verification?
+  verification? (Show expiry date; revocation handling remains an open flag —
+  founder 2026-08-29.)
 - (Resolved in PRD as **deferred**): menu-item entries and analytics
   date-range customizability.
 
