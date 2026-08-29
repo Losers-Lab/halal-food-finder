@@ -5,6 +5,15 @@ spring:
     # Blocking thread-per-request model, but on JDK 21 Virtual Threads (NOT WebFlux).
     virtual:
       enabled: true
+  # Local dev datasource (docker-compose.yml: postgis service). Flyway auto-migrates
+  # the users table on boot. Override via env (SPRING_DATASOURCE_URL) in real envs.
+  datasource:
+    url: jdbc:postgresql://localhost:5432/halal
+    username: halal
+    password: halal
+    driver-class-name: org.postgresql.Driver
+  flyway:
+    enabled: true
 
 server:
   port: 8080

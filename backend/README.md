@@ -1,7 +1,11 @@
 # Halal Food Finder — Backend
 
-Kotlin / Spring Boot backend for Halal Food Finder. **Skeleton + TDD harness only —
-no product features yet.**
+Kotlin / Spring Boot backend for Halal Food Finder.
+
+**Implemented so far:** M1 skeleton + TDD harness, and **Create Account**
+(sc-39) — email-uniqueness check, password-strength validation,
+Argon2id hashing, and the `users` Flyway migration (6 MVP roles, default
+`USER`). See `openapi/v1.json` for the current contract.
 
 ## Stack (ratified — see repository ARCHITECTURE.md)
 

@@ -6,4 +6,8 @@ dependencies {
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.springdoc)
+    // Bean validation (@Valid/@NotBlank/@Email) for request DTOs.
+    implementation(libs.spring.boot.starter.validation)
+    // Kotlin data-class JSON serialization.
+    implementation(libs.jackson.module.kotlin)
 }

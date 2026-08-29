@@ -1,21 +1,15 @@
 package app.halal.bootstrap
 
-import io.kotest.core.spec.style.FunSpec
-import io.kotest.extensions.spring.SpringTestExtension
 import io.kotest.matchers.shouldBe
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.web.client.TestRestTemplate
 
 /**
- * Skeleton boot smoke test: proves the assembled Spring Boot application boots
- * (blocking + Virtual Threads) and serves the `/v1/health` endpoint used to
- * check liveness and to seed the OpenAPI spec.
+ * Boot smoke test: proves the assembled Spring Boot application boots
+ * (blocking + Virtual Threads + a live PostGIS datasource + Flyway migration)
+ * and serves the `/v1/health` endpoint.
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-class HealthEndpointTest : FunSpec() {
-
-    override fun extensions() = listOf(SpringTestExtension())
+class HealthEndpointTest : PostgresBootTest() {
 
     @Autowired
     lateinit var restTemplate: TestRestTemplate

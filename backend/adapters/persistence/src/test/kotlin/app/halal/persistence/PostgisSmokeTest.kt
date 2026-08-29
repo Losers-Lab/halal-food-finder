@@ -51,9 +51,8 @@ class PostgisSmokeTest : FunSpec() {
 
             val result = flyway.migrate()
 
-            // No migrations exist yet (skeleton): a successful run with 0 applied
-            // migrations proves the Flyway harness is wired correctly.
-            result.migrationsExecuted shouldBe 0
+            // The users table migration (V1) runs cleanly on a real PostGIS DB.
+            result.migrationsExecuted shouldBe 1
         }
     }
 }
