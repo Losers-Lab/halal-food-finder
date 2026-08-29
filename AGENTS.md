@@ -131,8 +131,17 @@ find yourself reaching for `apt`/`pip`/`npm install -g` on the host, stop.
 - **Verification before claiming done:** a change is only "done" when its
   acceptance criteria are verified (tests pass, behavior confirmed), not when
   code merely compiles.
-- **Commit hygiene:** keep commits focused and logically separated (this
-  repository started with a docs-only commit). Write clear commit messages.
+- **Commit hygiene (MANDATORY — founder directive):**
+  - **Incremental commits if and ONLY if the build is passing.** Never commit
+    on a red build; fix or isolate first.
+  - **Pre-commit action:** always run project formatting before committing, if
+    the project has a formatter configured (run it in the containerized toolchain).
+  - **Prefix:** every incremental commit uses `[<STORY>]` as its prefix, where
+    `<STORY>` is the Shortcut story the work belongs to (e.g. `[SC-131]`).
+  - **Message standards:** max 50 characters (excluding the prefix), capitalize
+    the first letter, no trailing period, imperative mood (e.g. `Add feature`,
+    `Fix bug`). Full: `[SC-131] Add JWT verification filter`.
+  - Keep commits focused and logically separated; write clear messages.
 - **Honesty in status reporting (amanah):** report real results; surface
   blockers and unknowns rather than papering over them.
 
