@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: halal-food-finder
+  threads:
+    # Blocking thread-per-request model, but on JDK 21 Virtual Threads (NOT WebFlux).
+    virtual:
+      enabled: true
+
+server:
+  port: 8080
+
+# Code-first OpenAPI (springdoc). Spec is emitted at /v1/api-docs and committed
+# to the repository so the frontend type client and browser extensions consume it.
+springdoc:
+  api-docs:
+    path: /v1/api-docs
+    enabled: true
+    # Emit the OpenAPI 3.1 dialect (the committed /v1 spec is 3.1).
+    version: openapi_3_1
+  swagger-ui:
+    path: /v1/swagger-ui.html
+  show-actuator: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
