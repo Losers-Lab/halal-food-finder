@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Halal Food Finder — Frontend
 
-## Getting Started
+Next.js 16 (App Router, TypeScript strict, Tailwind v4) frontend. Design tokens
+live in the Tailwind `@theme` block in `src/app/globals.css` (spec:
+`docs/design/tokens.md`).
 
-First, run the development server:
+## Getting started
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The app needs the backend running (Kotlin/Spring Boot on `http://127.0.0.1:8080`,
+see `backend/README.md`). PostGIS + MinIO are required — `docker compose up -d`
+in `backend/`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API client & typed contract
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The API client is type-safe, generated from the backend's committed OpenAPI
+spec:
 
-## Learn More
+- `src/lib/api/openapi.json` — snapshot of `backend/openapi/v1.json`.
+- `src/lib/api/schema.d.ts` — generated TypeScript types (openapi-typescript).
+- `src/lib/api/client.ts` — thin typed fetch client (`api.signup` / `api.login`
+  / `api.refresh`); throws `ApiError` with the backend's `code` + optional
+  `detail`, or `network_error` for transport failures.
 
-To learn more about Next.js, take a look at the following resources:
+Regenerate types after the backend contract changes:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run codegen:api   # must run from frontend/
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Keep `openapi.json` in sync with `backend/openapi/v1.json` when the API changes.
 
-## Deploy on Vercel
+### Same-origin API proxy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The browser calls the API via Next.js rewrites (`/v1/*` → backend) so all
+requests are same-origin and the backend needs no CORS config. Override the
+target with the `API_PROXY_TARGET` env var, or point the client directly at an
+origin with `NEXT_PUBLIC_API_BASE`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Auth (Sign Up sc-39 / Log In sc-40)
+
+- `src/app/signup/page.tsx` — create-account form (Zod + react-hook-form):
+  email-uniqueness, weak-password, and inline validation errors; success
+  redirects to Log In (`?created=1`).
+- `src/app/login/page.tsx` — sign-in form with a single combined
+  "Incorrect email or password." alert (anti-enumeration); clears + refocuses
+  the password field on bad credentials; success persists the session and goes
+  home.
+- `src/lib/auth/AuthProvider.tsx` — session store (localStorage-backed,
+  `useSyncExternalStore`); `useAuth()` exposes `session` / `signIn` / `signOut`.
+- `src/components/auth/*` — shared form primitives (Button, Field,
+  PasswordField, Alert, AuthCard, AuthHeader) per the auth-screens design spec.
+
+## Checks
+
+```bash
+npm run lint   # eslint
+npm test       # vitest (unit)
+npm run build  # production build + typecheck
+```
+
+## Auth notes / open questions
+
+Per Fatima's `docs/design/auth-screens.md`, the Sign Up spec lists a **Full
+name** field, but the sc-39 backend contract (`SignupRequest`) accepts only
+email + password. The form intentionally matches the API so signup works
+end-to-end. Collecting a name requires a backend contract change first — see
+kanban task t_514f91af for the escalation to Adnan.
