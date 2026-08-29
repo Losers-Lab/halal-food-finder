@@ -4,19 +4,25 @@ import {
   UnverifiedTag,
   VerifiedBadge,
 } from "@/components/trust";
+import { AuthHeader } from "@/components/auth/AuthHeader";
 
 /**
  * Static design-system preview (skeleton task). Renders the trust components
  * per docs/design/trust-components.md so tokens + components are visually
- * inspectable. No data wiring.
+ * inspectable. Also hosts the AuthHeader (post-login signed-in state).
  */
 export default function Home() {
   return (
     <main className="mx-auto max-w-3xl px-5 py-12">
-      <h1 className="text-display text-neutral-900">Halal Food Finder</h1>
-      <p className="mt-2 text-body text-neutral-500">
-        Design-system preview — trust components and tokens (docs/design).
-      </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-display text-neutral-900">Halal Food Finder</h1>
+          <p className="mt-2 text-body text-neutral-500">
+            Design-system preview — trust components and tokens (docs/design).
+          </p>
+        </div>
+        <AuthHeader />
+      </div>
 
       <section className="mt-10">
         <h2 className="text-title text-neutral-900">Trust components</h2>
