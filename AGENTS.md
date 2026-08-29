@@ -80,6 +80,46 @@ RestaurantListing → Verified/Unverified, committee review) is agreed. The
 of ARCHITECTURE.md. Do not assume a stack; propose/confirm it before
 introducing frameworks, languages, or databases.
 
+## Containerized execution (MANDATORY — founder directive)
+
+**The host machine has NO language toolchains — do not install or assume any.**
+No JDK, no Gradle, no Node, no npm on the host. **Docker is the only build
+runtime.** All builds, tests, and tool runs happen inside containers. Never run
+`apt install`/`sdkman`/`brew install` for a language runtime; if a needed
+toolchain is missing, that's a signal to containerize, not to install.
+
+### Build & test (the only supported paths)
+
+- **Backend:** `./scripts/backend-test.sh` — runs Gradle build + tests in
+  `eclipse-temurin:21-jdk`. `./scripts/backend-test.sh test-only` for tests only.
+  No JDK/Gradle needed on the machine.
+- **Frontend:** `./scripts/frontend-test.sh` — `npm ci` + `next build` in a
+  `node:22` container. `./scripts/frontend-test.sh dev-install` skips the clean install.
+- Dependencies are cached in **named volumes** (`halal-gradle-cache`,
+  `halal-npm-cache`) — never inside the repo tree, never on the host.
+
+### Testcontainers-in-Docker notes (backend)
+
+The build container mounts `/var/run/docker.sock` so Testcontainers can manage
+**sibling** containers. This requires (baked into the script):
+
+- `TESTCONTAINERS_HOST_OVERRIDE=host.docker.internal` +
+  `--add-host host.docker.internal:host-gateway` — sibling containers bind on
+  the host; the build container reaches them via the gateway alias (else:
+  "Connection to 172.17.0.1 refused").
+- `TESTCONTAINERS_RYUK_DISABLED=true` — Ryuk's reaper has the same
+  cross-container networking problem.
+
+**Security note:** the docker.sock mount is host-root-equivalent. Accepted
+deliberately for our own build/test in a trusted repo; do NOT extend this
+pattern to running untrusted code.
+
+### Adding tooling
+
+New dev tooling (linters, generators, migration tools) must also run in
+containers — either as a one-off `docker run` or as a compose service. If you
+find yourself reaching for `apt`/`pip`/`npm install -g` on the host, stop.
+
 ## Engineering ground rules
 
 - **Work in small, reviewable increments.** Prefer clear tasks with explicit
