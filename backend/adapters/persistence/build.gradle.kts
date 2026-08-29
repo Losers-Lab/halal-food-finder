@@ -6,6 +6,7 @@ dependencies {
 
     implementation(libs.flyway.core)
     implementation(libs.flyway.database.postgresql)
+    implementation(libs.spring.boot.starter.jdbc)
 
     // Test-only harness: Testcontainers PostGIS smoke test proves the TDD harness.
     testImplementation(libs.postgresql)
