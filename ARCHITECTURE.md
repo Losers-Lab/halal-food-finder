@@ -16,6 +16,21 @@ two distinct parts:
 
 ## Part 1 — Agreed architecture
 
+### 1.0 Resolved technical decisions (ratified by founder)
+
+The following were explicitly agreed with the founder. Anything not listed here
+remains **unresolved** (see Part 2).
+
+| Decision | Agreed | Note |
+|----------|--------|------|
+| **Frontend architecture** | **Next.js** responsive web (SSR/SEO), later wrapped in **Capacitor** to also ship as a mobile app | Single codebase for website + app; resolved 2026-08-28. |
+| **Browser extensions (Google + Yelp)** | **In MVP scope** | MV3 thin content-script overlays, shared TS core, address matching; resolved 2026-08-28. |
+| **Distance-filter UX** | Delegated to **Design (Fatima)** | Form factor to be recommended by design; not yet finalized. |
+
+> The **backend stack is NOT yet resolved** — the founder is specifying it
+> directly (see U-01…U-07). Do not assume Python/FastAPI or any other backend
+> choice is agreed.
+
 ### 1.1 Core product model
 
 From the PRD's objective and high-level user stories:
@@ -104,15 +119,16 @@ them as **unknowns**, not as a chosen architecture.
 
 | ID | Decision | Notes / open questions |
 |----|----------|------------------------|
-| U-01 | **Backend language & framework** | Not specified anywhere in Shortcut. Needs a recommendation (e.g. proposal from backend engineering). |
-| U-02 | **Frontend framework / tech** | Not specified. Design (Figma) exists, but no UI tech chosen. |
-| U-03 | **Database & data layer** | Not specified. Must support the domain model and geo/distance filtering. |
-| U-04 | **Authentication & authorization model** | "Create Account / Log In" exists as a story, but the mechanism, session/token model, and per-persona access control are not specified. |
-| U-05 | **Image-recognition model & ML pipeline** | The PRD describes the goal (certificate verification) but no model, data source, training, or accuracy pipeline is defined (success target: ≥90% accuracy within 6 months of launch). |
-| U-06 | **Hosting / deployment / infrastructure** | Not specified. |
-| U-07 | **Google Maps integration details** | API provider, billing, geocoding/autocomplete approach not specified. |
-| U-08 | **Google/Yelp data integration** | Reviews/ratings sourcing not specified (API vs. scraping vs. manual). |
-| U-09 | **Browser extension platform/build** | Chrome/Firefox/etc., and extension framework not specified. |
+| U-01 | **Backend language & framework** | **OPEN (awaits founder input).** The founder is a backend expert and will specify the backend direction. Hamza's proposal (under consideration): Python 3.12 + FastAPI + pytest; alternative Node/TypeScript. Not ratified. |
+| U-02 | **Database & data layer** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): PostgreSQL + PostGIS via SQLAlchemy 2.0 + Alembic. Not ratified. |
+| U-03 | **REST/API design approach** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): resource-oriented REST/JSON /v1 + OpenAPI. Not ratified. |
+| U-04 | **Authentication & authorization model** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): email/password (bcrypt) + stateless JWT (access+refresh) + RBAC. Not ratified. |
+| U-05 | **Geo/spatial search & distance filtering** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): PostGIS GiST, server-side distance + filter query. Not ratified. |
+| U-06 | **Image upload & storage** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): S3-compatible storage with presigned URLs. Not ratified. |
+| U-07 | **Image-recognition model & ML pipeline** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): pluggable `VerificationProvider` seam; ship human-review first. PRD success target unchanged (≥90% accuracy within 6 months). |
+| U-08 | **Hosting / deployment / infrastructure** | Not specified. |
+| U-09 | **Google Maps integration details** | API provider, billing, geocoding/autocomplete approach not specified. |
+| U-10 | **Google/Yelp data integration** | Reviews/ratings sourcing not specified (API vs. scraping vs. manual). |
 
 ### Open product/requirements questions (from PRD "Open Questions" & "Edge Cases")
 
