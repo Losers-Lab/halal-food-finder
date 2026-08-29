@@ -7,7 +7,11 @@ type FieldProps = {
   label: string;
   /** Helpful idle text (replaced by `error` when present). */
   helper?: string;
-  error?: string;
+  /**
+   * Field error below the input. Accepts a ReactNode so a message can carry an
+   * inline element (e.g. the "logging in" <Link> on signup email-not-unique).
+   */
+  error?: ReactNode;
   /** Renders the label row's trailing adornment (e.g. "Forgot password?" link). */
   labelEnd?: ReactNode;
   inputProps: Omit<

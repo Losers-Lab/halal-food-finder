@@ -16,6 +16,10 @@ import { signupSchema, type SignupFormValues } from "@/lib/auth/schemas";
 export default function SignUpPage() {
   const router = useRouter();
   const [serverError, setServerError] = useState<string | null>(null);
+  // Server-reported duplicate email. Tracked separately so "logging in" can be
+  // rendered as an inline <Link> inside the field error (spec: auth-screens.md
+  // §1 error treatment #1 — always offer the next step). Cleared on edit.
+  const [emailConflict, setEmailConflict] = useState(false);
 
   const {
     register,
@@ -29,6 +33,7 @@ export default function SignUpPage() {
 
   async function onSubmit(values: SignupFormValues) {
     setServerError(null);
+    setEmailConflict(false);
     try {
       await api.signup(values);
       // Post-signup destination: backend returns the account (no session) —
@@ -38,11 +43,7 @@ export default function SignUpPage() {
       if (err instanceof ApiError) {
         switch (err.code) {
           case "email_already_exists":
-            setError("email", {
-              type: "server",
-              message:
-                "An account with this email already exists. Try logging in instead.",
-            });
+            setEmailConflict(true);
             return;
           case "weak_password": {
             // Backend rule message (e.g. "Password must be at least 8 characters.").
@@ -94,9 +95,28 @@ export default function SignUpPage() {
       >
         <Field
           label="Email"
-          error={errors.email?.message}
+          error={
+            emailConflict ? (
+              <>
+                An account with this email already exists. Try{" "}
+                <Link
+                  href="/login"
+                  className="font-medium text-brand-600 underline underline-offset-2 hover:text-brand-700"
+                >
+                  logging in
+                </Link>{" "}
+                instead.
+              </>
+            ) : (
+              errors.email?.message
+            )
+          }
           inputProps={{
             ...register("email"),
+            onChange: (e) => {
+              if (emailConflict) setEmailConflict(false);
+              void register("email").onChange(e);
+            },
             type: "email",
             autoComplete: "email",
             placeholder: "you@example.com",
