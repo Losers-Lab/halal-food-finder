@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
+/*
+ * Design tokens — docs/design/tokens.md (M1 Foundation, owner: Fatima).
+ * Consumed via Tailwind v4 @theme so utilities like bg-brand-500,
+ * text-body, rounded-lg, shadow-card resolve directly. Never hardcode hex
+ * values in components — always use these tokens.
+ */
+@theme {
+  /* Color — brand (primary) */
+  --color-brand-50: #eff8f8;
+  --color-brand-100: #d7ecec;
+  --color-brand-200: #aed9da;
+  --color-brand-300: #7fc0c3;
+  --color-brand-400: #4a9fa4;
+  --color-brand-500: #2b7f86;
+  --color-brand-600: #22676d;
+  --color-brand-700: #1c5257;
+  --color-brand-800: #174246;
+  --color-brand-900: #122f32;
+
+  /* Color — positive / verified */
+  --color-positive-50: #edf7ef;
+  --color-positive-100: #d6eeda;
+  --color-positive-200: #a9dcb4;
+  --color-positive-500: #2e8b47;
+  --color-positive-600: #247038;
+  --color-positive-700: #1d5a2e;
+
+  /* Color — neutral (slate) */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f7f8f9;
+  --color-neutral-100: #eef0f2;
+  --color-neutral-200: #dfe3e8;
+  --color-neutral-300: #c6cdd5;
+  --color-neutral-400: #94a0ac;
+  --color-neutral-500: #64707d;
+  --color-neutral-700: #3d4650;
+  --color-neutral-900: #1d2329;
+
+  /* Color — danger (errors only, never "Unverified") */
+  --color-danger-50: #fdf1f0;
+  --color-danger-100: #f9dbd8;
+  --color-danger-500: #c0392b;
+  --color-danger-600: #a32f23;
+  --color-danger-700: #8a2620;
+
+  /* Color — warning (informational only) */
+  --color-warning-50: #fdf6ec;
+  --color-warning-100: #f5e6cd;
+  --color-warning-500: #b0731c;
+
+  /* Color — focus */
+  --color-focus: #2b7f86;
+
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --text-display: 1.875rem;
+  --text-display--line-height: 2.25rem;
+  --text-display--font-weight: 700;
+  --text-title: 1.375rem;
+  --text-title--line-height: 1.75rem;
+  --text-title--font-weight: 600;
+  --text-heading: 1.0625rem;
+  --text-heading--line-height: 1.5rem;
+  --text-heading--font-weight: 600;
+  --text-body: 0.9375rem;
+  --text-body--line-height: 1.5rem;
+  --text-small: 0.8125rem;
+  --text-small--line-height: 1.125rem;
+  --text-mono: 0.875rem;
+  --text-mono--line-height: 1.25rem;
+
+  /* Spacing — 4px base (Tailwind default --spacing: 0.25rem, explicit for clarity) */
+  --spacing: 0.25rem;
+
+  /* Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-full: 9999px;
+
+  /* Elevation — subtle; trust comes from clarity, not depth */
+  --shadow-card: 0 1px 2px rgb(29 35 41 / 0.06), 0 1px 3px rgb(29 35 41 / 0.08);
+  --shadow-pop: 0 4px 12px rgb(29 35 41 / 0.12);
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-focus-ring: 2px solid var(--color-focus);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-neutral-0);
+  color: var(--color-neutral-700);
+  font-family: var(--font-sans);
 }
