@@ -31,10 +31,21 @@ remains **unresolved** (see Part 2).
 | **Filter bar system** | Hero chip row (cutting method — flagship — + top cuisines + distance) + a "+ Filters" sheet (mobile) / popover (desktop) for the tail (price, rating, full cuisine, distance-advanced); cuisine defaults OR with "Advanced" → Any(OR)/All(AND) toggle | Fatima recommendation, accepted; PRD OR default honored. |
 | **Verification trust language** | Layer 1: Verified green checkmark badge + posted certification asset (tooltip "Halal certification reviewed & approved by our committee"); Layer 2: neutral "Unverified" tag (never error-red); Layer 3: hand-cut/machine-cut via icon+text tag, colorblind-safe, never color-only | **Verified = green checkmark** (founder); "Unverified" copy + certification expiry display remain open product flags. |
 | **Design system / tokens** | Build a **fresh, clean design system from first principles** (mobile-first, trustworthy, accessible), anchored on the agreed verification-trust language; **Figma is not authoritative** | Founder: the existing Figma is an old generic draft and not sacrosanct. Figma-token extraction is **optional**; tokens defined fresh (colors w/ AA contrast, 4px spacing, radius, rem type scale, focus/ring a11y tokens, semantic tokens like `badge-verified`) and wired via Tailwind v4 `@theme`. Brand palette to be confirmed. |
+| **Backend language** | **Kotlin** | Founder decision; strong Java background, favourite language Kotlin. |
+| **Backend framework** | **Spring Boot 3.3+** (Kotlin, blocking thread-per-request with **Virtual Threads**; NOT WebFlux) | Hamza research; ratified by founder. Ktor 3 kept as swappable alternative via hexagonal modules. |
+| **Database & data access** | **PostgreSQL 16/17 + PostGIS**; **jOOQ** (search) + **Spring Data JDBC** (CRUD); **Flyway** migrations | Ratified. DENIED: JPA/Hibernate, Mongo. |
+| **API contract** | **Code-first REST via springdoc-openapi**; committed, CI-linted, versioned **OpenAPI 3.1** `/v1` | Frontend types client + extensions consume it. |
+| **Authn/Authz** | **Spring Security OAuth2 resource server**; email/password (**Argon2id**); short **JWT (RS256)** access + **rotating hashed refresh**; **RBAC** for 6 roles + anonymous + extension API-keys | Ratified. |
+| **Geo/search** | **PostGIS `geography(Point,4326)` + GiST**; one query: `ST_DWithin` (filter) + `ST_DistanceSphere` (order); denormalized `listing_search` table; offset paging | Straight-line/miles semantics (founder). |
+| **Image storage** | **S3-compatible** (R2/MinIO dev, presigned PUT/GET, private bucket), namespaced keys, versioning + content SHA-256 audit | Cert-image immutability rigor (WORM?) still an open founder flag. |
+| **Verification (hosted AI)** | **Hosted/API multimodal AI (vision)** judges halal-certificate image → conservative verdict + **lightweight human review/correction loop**; **no in-house ML model/training pipeline** | Founded pivot + clarification: "committee" = AI verdict + human spot-check/correct (NOT a people board, NOT training). Pluggable `VerificationProvider` port, default = HostedVisionAdapter. Details: state machine SUBMITTED→AI_REVIEW→AI_SUGGESTED→HUMAN_REVIEW→APPROVED/DENIED (+REVERSED); conservative VerificationSuggestion contract; privacy/security flags (provider terms, PII redaction, retention). See unresolved U-11. |
+| **Testing/TDD** | **Kotest + MockK + Testcontainers** (PostGIS) + Spring Test slices; hexagonal modules `:domain → :application → adapters → :bootstrap` | Supports mandated backend TDD. |
+| **Build/ops baseline** | **Gradle (Kotlin DSL)**, **JDK 21 LTS** (Temurin), Kotlin 2.x K2, **Jib** OCI images, managed Postgres+PostGIS | Deploy target (U-08) still open. |
 
-> The **backend stack is NOT yet resolved** — the founder is specifying it
-> directly (see U-01…U-07). Do not assume Python/FastAPI or any other backend
-> choice is agreed.
+> **Backend stack is RATIFIED** (2026-08-28): Kotlin + Spring Boot 3 + PostgreSQL/PostGIS
+> (jOOQ + Spring Data JDBC + Flyway) + REST/OpenAPI + Spring Security JWT/RBAC + PostGIS
+> geo + S3 images + hosted-AI verification. Deploy target and a few minor flags remain open
+> (see Part 2).
 
 ### 1.1 Core product model
 
@@ -105,13 +116,16 @@ Implications for the architecture:
 
 ### 1.5 External services referenced in the PRD
 
-These services appear in the PRD/use cases as integrations, but **none have been
-agreed as final implementation choices** (see Unresolved):
+These services appear in the PRD/use cases as integrations. Agreed choices are
+noted; genuinely open items are flagged in Part 2.
 
-- Google Maps API — location search/autocomplete and current location.
-- Google Business / Yelp — ratings and reviews for the View Restaurant use case.
-- Image-recognition model — automated halal-certificate verification (with human
-  committee oversight).
+- Google Maps API — location search/autocomplete and current location (agreed as
+  the geo entry; provider/billing details open, see U-09).
+- Google Business / Yelp — ratings and reviews for the View Restaurant use case
+  (integration approach open, see U-10).
+- Verification image analysis — replaced by the **hosted-AI vision API** decision
+  (see 1.0 "Verification (hosted AI)" and U-11). The PRD's "image-recognition
+  model" is no longer an in-house model we train.
 
 ---
 
@@ -122,18 +136,18 @@ They need to be resolved (with input from the relevant specialists and the
 founder) before implementation of substantial features. Until resolved, treat
 them as **unknowns**, not as a chosen architecture.
 
+> The backend stack (U-01…U-07 as previously listed) is now **resolved**;
+> see the Agreed section 1.0. Remaining open items below.
+
 | ID | Decision | Notes / open questions |
 |----|----------|------------------------|
-| U-01 | **Backend language & framework** | **OPEN (awaits founder input).** The founder is a backend expert and will specify the backend direction. Hamza's proposal (under consideration): Python 3.12 + FastAPI + pytest; alternative Node/TypeScript. Not ratified. |
-| U-02 | **Database & data layer** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): PostgreSQL + PostGIS via SQLAlchemy 2.0 + Alembic. Not ratified. |
-| U-03 | **REST/API design approach** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): resource-oriented REST/JSON /v1 + OpenAPI. Not ratified. |
-| U-04 | **Authentication & authorization model** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): email/password (bcrypt) + stateless JWT (access+refresh) + RBAC. Not ratified. |
-| U-05 | **Geo/spatial search & distance filtering** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): PostGIS GiST, server-side distance + filter query. Not ratified. |
-| U-06 | **Image upload & storage** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): S3-compatible storage with presigned URLs. Not ratified. |
-| U-07 | **Image-recognition model & ML pipeline** | **OPEN (awaits founder input).** Hamza's proposal (under consideration): pluggable `VerificationProvider` seam; ship human-review first. PRD success target unchanged (≥90% accuracy within 6 months). |
-| U-08 | **Hosting / deployment / infrastructure** | Not specified. |
-| U-09 | **Google Maps integration details** | API provider, billing, geocoding/autocomplete approach not specified. |
+| U-08 | **Hosting / deployment / infrastructure** | Not decided. Candidates: Cloud Run / Fly.io / EKS. Cascades into managed-Postgres provider and (per Hamza research) queue choice if serverless. |
+| U-09 | **Google Maps integration details** | API provider, billing/cost, geocoding/autocomplete approach, key management (server-side). |
 | U-10 | **Google/Yelp data integration** | Reviews/ratings sourcing not specified (API vs. scraping vs. manual). |
+| U-11 | **Hosted-AI verification provider & policy** | Pending founder decisions: which hosted vision provider (and whether its content policy allows certificate/sensitive-document upload — MUST verify terms); per-verification **cost ceiling** & monthly budget; zero-retention/regional-hosting requirement; whether to enable PII **blur/redaction** of owner/license info before upload; **auto-approve vs human-first** for MVP (recommend human-first until correction stats show high precision); certification-image **WORM/Object Lock** rigor vs versioning+hash. Security sub-processor review (Omar) required before enabling. |
+| U-12 | **Auth policy details** | VC/IC as distinct accounts vs roles; Argon2id tuning budget; extension API-key issuance/rotation; refresh-token lifetime. (Mechanism itself resolved; these are tuning/policy details.) |
+| U-13 | **SEO / public pages** | Whether public restaurant pages must be SEO-crawlable (Next.js chosen supports it; confirm scope). |
+| U-14 | **Partial-halal / certification semantics** | See product questions below (expiry/revocation display is unresolved). |
 
 ### Open product/requirements questions (from PRD "Open Questions" & "Edge Cases")
 
