@@ -25,7 +25,12 @@ remains **unresolved** (see Part 2).
 |----------|--------|------|
 | **Frontend architecture** | **Next.js** responsive web (SSR/SEO), later wrapped in **Capacitor** to also ship as a mobile app | Single codebase for website + app; resolved 2026-08-28. |
 | **Browser extensions (Google + Yelp)** | **In MVP scope** | MV3 thin content-script overlays, shared TS core, address matching; resolved 2026-08-28. |
-| **Distance-filter UX** | Delegated to **Design (Fatima)** | Form factor to be recommended by design; not yet finalized. |
+| **Distance-filter UX** | **Preset radius chips** (ARIA radio-group: 1/5/10/25 mi + "Any distance"), pinned "Near \<place\>" center pill | Fatima (design) recommendation, accepted; resolved 2026-08-28. |
+| **Distance semantics** | **Straight-line (haversine)** distance; radius in miles | Founder decision; backend API contract: center + radius query, distance per result. |
+| **Geo/search entry UX** | One persistent search bar (Google Maps autocomplete + Current-Location icon/≥44px target on mobile) pinning a search center | Fatima recommendation, accepted. |
+| **Filter bar system** | Hero chip row (cutting method — flagship — + top cuisines + distance) + a "+ Filters" sheet (mobile) / popover (desktop) for the tail (price, rating, full cuisine, distance-advanced); cuisine defaults OR with "Advanced" → Any(OR)/All(AND) toggle | Fatima recommendation, accepted; PRD OR default honored. |
+| **Verification trust language** | Layer 1: Verified green checkmark badge + posted certification asset (tooltip "Halal certification reviewed & approved by our committee"); Layer 2: neutral "Unverified" tag (never error-red); Layer 3: hand-cut/machine-cut via icon+text tag, colorblind-safe, never color-only | **Verified = green checkmark** (founder); "Unverified" copy + certification expiry display remain open product flags. |
+| **Design tokens** | Minimal set from **Figma Variables → single token source → Tailwind v4 `@theme`** (colors w/ AA contrast, 4px spacing, radius, rem type scale, focus/ring a11y tokens, semantic tokens like `badge-verified`) | Requires founder to confirm brand palette; Figma Variables availability to be verified. |
 
 > The **backend stack is NOT yet resolved** — the founder is specifying it
 > directly (see U-01…U-07). Do not assume Python/FastAPI or any other backend
