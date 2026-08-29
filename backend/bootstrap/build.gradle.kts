@@ -18,6 +18,8 @@ dependencies {
     // Argon2id password hashing (ratified auth stack).
     implementation(libs.spring.security.crypto)
     implementation(libs.bouncycastle)
+    // RS256 JWT access-token issuance (ratified auth stack, short access JWT).
+    implementation(libs.nimbus.jose.jwt)
     // PostgreSQL JDBC driver at runtime (datasource for the users table).
     runtimeOnly(libs.postgresql)
 
@@ -29,4 +31,6 @@ dependencies {
     testImplementation(libs.testcontainers)
     testImplementation(libs.testcontainers.postgresql)
     testImplementation(libs.postgresql)
+    // Apache HC5 client so tests can read 401 responses (JDK client cannot).
+    testImplementation(libs.httpclient5)
 }
