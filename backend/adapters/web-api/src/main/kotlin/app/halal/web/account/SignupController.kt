@@ -73,6 +73,4 @@ class SignupController(private val createAccount: CreateAccount) {
     )
 
     data class SignupResponse(val id: UUID, val email: String, val role: String)
-
-    data class ErrorResponse(val code: String, val message: String? = null)
 }

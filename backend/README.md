@@ -2,10 +2,13 @@
 
 Kotlin / Spring Boot backend for Halal Food Finder.
 
-**Implemented so far:** M1 skeleton + TDD harness, and **Create Account**
+**Implemented so far:** M1 skeleton + TDD harness, **Create Account**
 (sc-39) — email-uniqueness check, password-strength validation,
 Argon2id hashing, and the `users` Flyway migration (6 MVP roles, default
-`USER`). See `openapi/v1.json` for the current contract.
+`USER`) — and **Log In** (sc-40): credential verification, short RS256 JWT
+access token with RBAC role claims, and rotating hashed refresh tokens
+(`refresh_tokens` Flyway migration, ~30-day lifetime). See `openapi/v1.json`
+for the current contract.
 
 ## Stack (ratified — see repository ARCHITECTURE.md)
 
