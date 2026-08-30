@@ -37,7 +37,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
       <div className="space-y-2">
         <label
           htmlFor={id}
-          className="block text-body font-medium text-neutral-700"
+          className="block text-body font-medium text-ink-700"
         >
           {label}
         </label>
@@ -47,8 +47,8 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
           id={id}
           aria-invalid={hasError || undefined}
           aria-describedby={describedBy}
-          className={`h-11 w-full appearance-none rounded-md border bg-white px-3 text-body text-neutral-900 focus:outline-2 focus:outline-offset-0 focus:outline-brand-500 ${
-            hasError ? "border-danger-500" : "border-neutral-300"
+          className={`h-11 w-full appearance-none rounded-md border bg-ink-0 px-3 text-body text-ink-900 focus:outline-2 focus:outline-offset-0 focus:outline-brand-500 ${
+            hasError ? "border-danger-500" : "border-kraft-300"
           }`}
           {...inputProps}
         >
@@ -64,7 +64,7 @@ export const SelectField = forwardRef<HTMLSelectElement, SelectFieldProps>(
             {error}
           </p>
         ) : helper ? (
-          <p id={`${id}-helper`} className="text-small text-neutral-500">
+          <p id={`${id}-helper`} className="text-small text-ink-500">
             {helper}
           </p>
         ) : null}

@@ -76,7 +76,7 @@ function LoginForm() {
       {created ? (
         <div
           role="status"
-          className="mb-4 rounded-md border border-positive-200 bg-positive-50 px-3 py-2.5 text-small text-positive-700"
+          className="mb-4 rounded-md border border-ink-300 bg-ink-100 px-3 py-2.5 text-small text-ink-700"
         >
           Account created. Log in to continue.
         </div>
