@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tahir's List — Logo Lockup Concepts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -21,23 +21,20 @@
   .wordmark { font-weight: 900; letter-spacing: -.03em; line-height: 1; }
   .wm-xl { font-size: 54px; } .wm-lg { font-size: 44px; } .wm-md { font-size: 38px; }
 
-  /* C1 — Tahir hangs off the top of the wordmark: his white "sign"
-     merges seamlessly into the white panel behind the type, so his
-     hooked hands appear to grip the logo's top edge itself */
-  .peek { position: relative; display: inline-block; padding-top: 118px; }
-  .peek img { position: absolute; width: 260px; top: -6px; left: 50%; transform: translateX(-50%); z-index: 1; }
-  .peek .wordmark { position: relative; z-index: 2; padding: 22px 26px 10px; background: #fff; }
-  .cell.light { background: #fff; }
+  /* C1 — Tahir hangs off the top of the wordmark.
+     Art: tahir-hanging.jpg (2048²); his white sign occupies everything
+     below y=50.4%, pale blue sky above. We show only the top half
+     (sky + hooked hands); the white panel below continues the sign,
+     so he appears to grip the logo's top edge. */
+  .peek { position: relative; width: 420px; max-width: 100%; padding-top: 178px; }
+  .peek .hang { position: absolute; top: 0; left: 0; width: 100%; aspect-ratio: 1/1; object-fit: cover; clip-path: inset(0 0 49.2% 0); z-index: 1; }
+  .peek .panel { position: relative; z-index: 2; background: #fff; padding: 26px 22px 14px; margin-top: -2px; white-space: nowrap; text-align: center; }
   .peek .apos { color: #C6381F; }
 
   /* C2 — head in a rounded square (app-icon style) beside wordmark */
   .lockup { display: flex; align-items: center; gap: 18px; }
   .appicon { width: 76px; height: 76px; border-radius: 22px; overflow: hidden; box-shadow: 4px 4px 0 #211B12; }
   .appicon img { width: 100%; height: 100%; object-fit: cover; }
-
-  /* C3 — inline head as the apostrophe */
-  .inlinehead { position: relative; display: inline-block; }
-  .inlinehead img { position: absolute; width: 74px; top: -62px; left: 24px; transform: rotate(5deg); }
 
   .sub { font-family: "Space Grotesk", sans-serif; font-weight: 500; font-size: 13px; color: rgba(33,27,18,.55); }
   .dark .sub { color: rgba(251,247,238,.6); }
@@ -48,12 +45,12 @@
 <body>
   <div class="board">
     <div class="cell light">
-      <span class="tag">C1 · Peekaboo apostrophe — hero/marketing</span>
+      <span class="tag">C1 · Hang-off wordmark — hero/marketing</span>
       <div class="peek">
-        <img src="tahir-head.jpg" alt="Tahir peeking">
-        <div class="wordmark wm-xl">Tahir<span class="apos">'</span>s List</div>
+        <img class="hang" src="tahir-hanging.jpg" alt="Tahir hanging onto the logo">
+        <div class="panel wordmark wm-xl">Tahir<span class="apos">'</span>s List</div>
       </div>
-      <div class="sub">Tahir leans over the apostrophe — playful, memorable, hero-section scale.</div>
+      <div class="sub">Tahir grips the top edge of the logo — playful, memorable, hero-section scale.</div>
     </div>
 
     <div class="cell">
@@ -61,7 +58,7 @@
       <div class="lockup">
         <div class="appicon"><img src="tahir-head.jpg" alt="Tahir icon"></div>
         <div>
-          <div class="wordmark wm-lg">Tahir's List</div>
+        <div class="wordmark wm-lg">Tahir<span class="apos">'</span>s List</div>
           <div class="sub">find halal food</div>
         </div>
       </div>

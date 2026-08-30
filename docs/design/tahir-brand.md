@@ -1,6 +1,6 @@
 # Tahir's List — Brand Direction (mascot & logo)
 
-Status: EXPLORATION — awaiting founder pick (sc-159) · Owner: Fatima (design) · Branch: `design/sc-159-tahir-brand`
+Status: EXPLORATION → **DIRECTION A PICKED + LOGO DECIDED (founder 2026-08-30)** · Owner: Fatima (design) · Branch: `design/sc-159-tahir-brand`
 Companion artifacts: `sketches/010-tahir-brand/` (exploration board: `index.html` + `preview.png`), `brand/tahir/` (canonical art + character bible).
 Supersedes: placeholder "HalalMarket" wordmark usage in `docs/design/tokens.md` mockups — the brand name is **Tahir's List** (tahirslist.com), founder-ratified 2026-08-30.
 
@@ -53,10 +53,10 @@ Wordmark: **Archivo Black (900), tight tracking (-0.03em), ink on paper; the apo
 
 | Lockup | Composition | Use |
 |---|---|---|
-| Peekaboo | Tahir head leaning over the red apostrophe | Hero/marketing only; min width ~280px |
-| Icon row | Rounded-square head icon (hard 4px offset ink shadow) + wordmark + tagline "find pure halal food" | Headers, footers, email |
+| **Icon row (C2 — PRIMARY, all contexts)** | Rounded-square head icon (hard 4px offset ink shadow) + wordmark + tagline "find halal food"; apostrophe brand red | Site header, footer, email, marketing — everywhere |
 | Wordmark-only | Type + red apostrophe | Legal, small spaces, print |
-| Inversion | Cream wordmark on ink, apostrophe in soft red #E8937D (AA) | Dark bands, dark mode |
+| Inversion | Cream wordmark on ink, apostrophe in soft red #E8937D (AA) | Dark bands, future dark mode |
+| ~~Peekaboo / hang-off~~ | ~~Tahir interacting with the wordmark~~ | **REJECTED by founder 2026-08-30** — shelve |
 
 Favicon/app icon: head-only crop, tested to 16px (kufi + glasses remain legible).
 
@@ -67,9 +67,15 @@ Favicon/app icon: head-only crop, tested to 16px (kufi + glasses remain legible)
 - **Colorblind-safe rules unchanged:** red = brand/action, green = verified (glyph + word always), ink = neutral. The mascot never wears or holds anything that muddies this (hence no green badge on the sweater — founder-ratified).
 - Voice examples already in `brand/tahir/CHARACTER.md` ("Tahir is checking the certificate… 🔍") apply to all mascot-fronted UI copy.
 
-## 5. Open items (for Adnan / founder)
+## 5. Resolved (founder decisions 2026-08-30) & remaining open items
 
-1. Direction pick (A / B / C / the hybrid recommended above).
-2. Final wordmark check: confirm Archivo Black treatment or commission custom lettering later (current treatment is type-only, no licensing issue).
-3. Food photography direction (separate open item) — mascot vs photography balance on the homepage hero depends on the direction pick.
-4. Once picked: canonical pose set (searching / checking / celebrating) as the next increment.
+**Resolved by founder:**
+1. Direction: **A** (the Foodie Friend, current canonical pose) — no neckerchief adoption recorded; C2 lockup everywhere.
+2. Logo system: **C2 (Icon row) is the primary lockup for ALL contexts**; "Peekaboo" hang-off variant **rejected**. Tagline finalized as **"find halal food"** (not "find pure halal food"). Apostrophe is red in all lockups including the icon row.
+3. **Dark theme:** founder likes the ink/cream inversion — planned as a future optimization pass; light is the launch default. Tracked in `brand/tahir/BRAND-DECISIONS.md`.
+4. Future mascot work (backlog, not now): Tahir loading animation (eating random food), expression/pose sheet, "Tahir's Favorites" sponsor slot.
+
+**Still open:**
+1. Food photography direction — mascot vs photography balance on the homepage hero.
+2. Custom lettering for the wordmark (current treatment is type-only, no licensing issue).
+3. Canonical pose set (searching / checking / celebrating) as the next mascot increment.

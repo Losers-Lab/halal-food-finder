@@ -6,7 +6,7 @@ Scope: applies the ratified stamps system to the EXISTING auth spec (sections be
 
 1. **Page background:** `neutral-50` → `cream-50` (warm paper). No texture image in v1 (flat cream; kraft texture is a follow-up if founder wants).
 2. **Card:** white → `ink-0`, `radius-lg` (10px), border 1.5px `kraft-200` (new), shadow-card → hard offset `shadow-card: 3px 3px 0 rgb(43 33 24 / 0.9)`. Max-width 400px and mobile full-bleed behavior unchanged.
-3. **Brand mark:** keep the small wordmark slot; render placeholder "HalalMarket" in Archivo 800 `brand-500` (matches site header). No real logo (founder TBD).
+3. **Brand mark:** render "Tahir's List" in Archivo 800 `brand-500` with the apostrophe in brand red (matches site header; founder-ratified brand 2026-08-30).
 4. **Typography:** headings → Archivo (`text-title` = 24/30, weight 700); body/labels → Space Grotesk; labels become `text-label` (Archivo 600, 14px, `ink-700`). Copy unchanged.
 5. **Inputs:** height 44px, `radius-md` (6px), bg `ink-0`, border 1.5px `kraft-300`; focus border + 2px ring `brand-500` (offset 0). Helper text `ink-500`.
 6. **Primary submit button:** brand-500 bg, `cream-50` text, Archivo 600 (`text-label`), hard `shadow-chip`. Press: translate(2px,2px) + shadow collapses ("stamp down"); reduced-motion: background darkens to brand-600 instead. Submitting state (disabled + "Creating account…"/"Logging in…") unchanged.

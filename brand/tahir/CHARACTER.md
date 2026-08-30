@@ -40,6 +40,7 @@ Tahir (طاهر — "pure") is the mascot and personification of Tahir's List (t
 ## Open branding items (for Adnan/Shortcut)
 
 - Founder pivot 2026-08-30: product is **"Tahir's List" (tahirslist.com)** — not Halal Food Finder / Halal Market.
-- Wordmark/logo lockup: TBD (candidate: Tahir peeking over the apostrophe in "Tahir's").
-- Favicon/app icon: compact Tahir head (kufi + glasses).
-- "Tahir's Favorites" — future sponsor/featured slot, mascot-fronted.
+- Tagline: **"find halal food"**.
+- Primary lockup: **C2** (head icon + wordmark + red apostrophe) everywhere; C1 hang-off rejected.
+- Dark theme: liked (C4 treatment); light is launch default, dark theme = later pass. See `BRAND-DECISIONS.md`.
+- Future: Tahir loading animation (eating random food), expression/pose sheet, "Tahir's Favorites" sponsor slot.
