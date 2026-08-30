@@ -4,10 +4,12 @@ import java.time.Clock
 
 /**
  * Refresh Session (sc-40) use case — rotating hashed refresh tokens. Validates a
- * presented refresh token (existence + not expired), revokes it (single-use),
- * then issues a fresh access + refresh pair stored for the owning account.
- * Unknown, already-rotated, or expired tokens are rejected with the same
- * generic [InvalidCredentialsException].
+ * presented refresh token (existence + not expired), then atomically consumes
+ * and rotates it through the store's single transaction-gated operation (sc-133
+ * fix): the old token is deleted and the new one inserted in one store call
+ * whose affected-row gate guarantees exact-one-winner under concurrency. Unknown,
+ * already-rotated, or expired tokens are rejected with the same generic
+ * [InvalidCredentialsException].
  */
 class RefreshSession(
     private val tokenIssuer: TokenIssuer,
@@ -31,15 +33,20 @@ class RefreshSession(
         val account = accountRepository.findById(stored.accountId)
             ?: throw InvalidCredentialsException()
 
-        // Rotate: the old refresh token is single-use, so revoke it first.
-        refreshTokenStore.revoke(refreshToken)
-
+        // Issue the new pair, then atomically consume the old token and persist
+        // the new one in a single store operation. The store's gated delete
+        // returns false if a concurrent refresh already consumed this token, in
+        // which case nothing is inserted and this caller loses the race.
         val tokens = tokenIssuer.issue(account)
-        refreshTokenStore.store(
-            token = tokens.refreshToken,
+        val rotated = refreshTokenStore.consumeAndRotate(
+            presentedToken = refreshToken,
+            newToken = tokens.refreshToken,
             accountId = account.id,
             expiresAt = clock.instant().plus(SessionLifetimes.REFRESH_LIFETIME),
         )
+        if (!rotated) {
+            throw InvalidCredentialsException()
+        }
         return AuthSession(account, tokens)
     }
 }

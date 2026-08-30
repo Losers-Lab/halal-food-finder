@@ -20,6 +20,10 @@ import org.springframework.http.client.HttpComponentsClientHttpRequestFactory
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.web.client.ResponseErrorHandler
 import org.springframework.web.client.RestTemplate
+import java.util.concurrent.Callable
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import javax.sql.DataSource
 
 /**
@@ -153,6 +157,41 @@ class LoginEndpointTest : PostgresBootTest() {
             val resp = exchange(url("/v1/auth/refresh"), "not-a-real-refresh-token")
             resp.statusCode shouldBe HttpStatus.UNAUTHORIZED
             resp.body!!["code"] shouldBe "invalid_credentials"
+        }
+
+        test("concurrent refresh with the same cookie yields exactly one 200, one 401, and exactly one live row") {
+            val (tokens, cookie) = signupAndLogin("nora@example.com")
+            val accountId = tokens["accountId"].toString()
+            val shared = cookie.refreshValue
+
+            // Two threads fire the SAME refresh cookie at the same time, so both
+            // read the live row before either deletes it — there is no guaranteed
+            // ordering between them. Exactly one may win the rotation.
+            val start = CyclicBarrier(2)
+            val pool = Executors.newFixedThreadPool(2)
+            val responses = try {
+                val futures = (1..2).map {
+                    pool.submit(Callable {
+                        start.await()
+                        exchange(url("/v1/auth/refresh"), shared)
+                    })
+                }
+                futures.map { it.get(30, TimeUnit.SECONDS) }
+            } finally {
+                pool.shutdownNow()
+            }
+
+            val statuses = responses.map { it.statusCode }
+            statuses.count { it == HttpStatus.OK } shouldBe 1
+            statuses.count { it == HttpStatus.UNAUTHORIZED } shouldBe 1
+
+            // Rotation must be single-use under concurrency: exactly one token
+            // row survives for this account (the winner's), never two.
+            val liveRows = JdbcTemplate(dataSource).queryForList(
+                "SELECT token_hash FROM refresh_tokens WHERE account_id = ?",
+                java.util.UUID.fromString(accountId),
+            )
+            liveRows.size shouldBe 1
         }
 
         test("refresh with an expired refresh cookie is rejected with 401 and revoked (negative path)") {
