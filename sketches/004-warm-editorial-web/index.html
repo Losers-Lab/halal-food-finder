@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Halal Atlas — Editorial Appetite (Web)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --paper: #FCF8F2; --ink: #2E2620; --muted: #8A7D6F;
+    --olive: #4A5D3A; --olive-deep: #33492A; --olive-soft: #EDF2E4;
+    --clay: #C4661F; --clay-soft: #F6E7D7; --line: #EDE3D5;
+  }
+  body { font-family: "Inter", -apple-system, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+  .display { font-family: "Fraunces", Georgia, serif; }
+  .wrap { max-width: 1140px; margin: 0 auto; padding: 0 36px; }
+  a { color: inherit; }
+
+  header { display: flex; align-items: center; justify-content: space-between; padding: 22px 0; border-bottom: 1px solid var(--line); }
+  .logo { font-family: "Fraunces", serif; font-weight: 600; font-size: 21px; display: flex; gap: 8px; align-items: center; }
+  .logo .star { color: var(--clay); }
+  nav { display: flex; gap: 30px; font-size: 14px; font-weight: 500; }
+  nav a { color: var(--muted); text-decoration: none; }
+  nav a:hover { color: var(--ink); }
+  .signin { font-size: 13.5px; font-weight: 600; text-decoration: none; border: 1px solid var(--ink); padding: 9px 20px; border-radius: 999px; }
+  .signin:hover { background: var(--ink); color: var(--paper); }
+
+  /* Hero — split editorial */
+  .hero { display: grid; grid-template-columns: 1.15fr .85fr; gap: 56px; align-items: center; padding: 60px 0 30px; }
+  .kicker { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; font-weight: 600; color: var(--clay); }
+  .hero h1 { font-size: 50px; font-weight: 500; line-height: 1.1; letter-spacing: -.015em; margin-top: 12px; }
+  .hero h1 em { font-style: italic; color: var(--olive); }
+  .hero p { margin-top: 14px; color: var(--muted); font-size: 16px; max-width: 46ch; }
+  .search { margin-top: 26px; display: flex; gap: 10px; max-width: 520px; }
+  .search input { flex: 1; padding: 15px 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; font: inherit; font-size: 15px; outline: none; }
+  .search input:focus { border-color: var(--olive); }
+  .search button { border: none; background: var(--olive); color: var(--paper); border-radius: 12px; padding: 0 26px; font: inherit; font-weight: 600; cursor: pointer; }
+  .search button:hover { background: var(--olive-deep); }
+  .heroart { height: 320px; border-radius: 22px; background: linear-gradient(135deg, #E0A458, #C05B2B 55%, #9C4423); position: relative; overflow: hidden; }
+  .heroart::after { content: "🥘"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 110px; opacity: .55; }
+  .heroart .cap { position: absolute; left: 18px; bottom: 16px; background: rgba(252,248,242,.92); border-radius: 999px; padding: 7px 15px; font-size: 12.5px; font-weight: 600; display: flex; gap: 7px; align-items: center; }
+  .heroart .cap .v { width: 18px; height: 18px; border-radius: 50%; background: var(--olive); color: var(--paper); display: grid; place-items: center; font-size: 11px; }
+
+  .filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; padding: 22px 0; border-top: 1px solid var(--line); }
+  .f { font-size: 13.5px; font-weight: 600; padding: 9px 17px; border-radius: 999px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .f:hover { border-color: var(--olive); color: var(--olive-deep); }
+  .f.on { background: var(--olive-deep); border-color: var(--olive-deep); color: var(--paper); }
+  .f.more { margin-left: auto; }
+
+  .sectionhead { display: flex; justify-content: space-between; align-items: baseline; margin: 26px 0 4px; }
+  .sectiontitle { font-family: "Fraunces", serif; font-size: 24px; font-weight: 600; }
+  .sectiontitle small { font-family: "Inter", sans-serif; font-size: 13px; color: var(--muted); font-weight: 400; margin-left: 10px; }
+
+  /* Editorial grid */
+  .stories { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0 40px; }
+  .story { padding: 22px 0; border-bottom: 1px solid var(--line); cursor: pointer; }
+  .story .photo { height: 170px; border-radius: 16px; position: relative; margin-bottom: 14px; }
+  .ph1 { background: linear-gradient(135deg, #E0A458, #C05B2B); }
+  .ph2 { background: linear-gradient(135deg, #93B57E, #4E7A44); }
+  .ph3 { background: linear-gradient(135deg, #D9848C, #A04258); }
+  .ph4 { background: linear-gradient(135deg, #C9A227, #8C6D1F); }
+  .ph5 { background: linear-gradient(135deg, #7FA8C9, #3D6B94); }
+  .ph6 { background: linear-gradient(135deg, #B07CB8, #6B3D75); }
+  .story .photo::after { content: "🍽"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 48px; opacity: .45; }
+  .verified { position: absolute; top: -10px; left: -10px; width: 32px; height: 32px; border-radius: 50%; background: var(--olive); color: var(--paper); display: grid; place-items: center; font-size: 14px; border: 3px solid var(--paper); }
+  .story:hover .name { color: var(--olive); }
+  .name { font-family: "Fraunces", serif; font-size: 19px; font-weight: 600; transition: color .15s; }
+  .desc { font-size: 13.5px; color: var(--muted); margin-top: 3px; }
+  .facts { display: flex; gap: 12px; margin-top: 10px; font-size: 12.5px; font-weight: 500; align-items: center; }
+  .facts .sep { width: 3px; height: 3px; border-radius: 50%; background: var(--line); }
+  .cut-tag { font-size: 11px; font-weight: 600; color: var(--clay); background: var(--clay-soft); padding: 3px 10px; border-radius: 6px; }
+  .cut-tag.machine { color: var(--muted); background: var(--line); }
+  .dist { margin-left: auto; color: var(--muted); font-weight: 400; }
+
+  .quoteband { margin: 46px 0; padding: 40px; background: #fff; border: 1px solid var(--line); border-radius: 22px; text-align: center; }
+  .quoteband p { font-family: "Fraunces", serif; font-style: italic; font-size: 23px; line-height: 1.45; color: var(--olive-deep); max-width: 34ch; margin: 0 auto; }
+  .quoteband .who { margin-top: 14px; font-size: 13px; color: var(--muted); }
+
+  footer { margin-top: 30px; padding: 24px 0 40px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="logo"><span class="star">✦</span> Halal Atlas</div>
+      <nav><a href="#">City guide</a><a href="#">Verified list</a><a href="#">Map</a><a href="#">About</a></nav>
+      <a class="signin" href="#">Sign in</a>
+    </header>
+
+    <section class="hero">
+      <div>
+        <div class="kicker">Brooklyn, NY · updated weekly</div>
+        <h1 class="display">Good halal food, <em>no guesswork.</em></h1>
+        <p>A curated guide to hand-cut, verified halal food near you. Every certificate is checked before a place earns its badge.</p>
+        <div class="search">
+          <input type="text" placeholder="Where to?">
+          <button>Find food</button>
+        </div>
+      </div>
+      <div class="heroart"><span class="cap"><span class="v">✓</span> Karachi Kitchen · verified this week</span></div>
+    </section>
+
+    <div class="filters">
+      <button class="f on">🔪 Hand-cut</button>
+      <button class="f">Machine-cut</button>
+      <button class="f">✓ Verified only</button>
+      <button class="f">Under 1 mi</button>
+      <button class="f">$$</button>
+      <button class="f more">+ More filters</button>
+    </div>
+
+    <div class="sectionhead">
+      <span class="sectiontitle">Hand-cut near you <small>23 places</small></span>
+      <span style="font-size:13px;color:var(--muted)">Sorted by nearest</span>
+    </div>
+
+    <div class="stories">
+      <article class="story">
+        <div class="photo ph1"><span class="verified">✓</span></div>
+        <div class="name display">Karachi Kitchen</div>
+        <p class="desc">Pakistani · biryani that people cross boroughs for</p>
+        <div class="facts"><span>★ 4.8</span><span class="sep"></span><span>$$</span><span class="sep"></span><span class="cut-tag">🔪 Hand-cut</span><span class="dist">0.4 mi</span></div>
+      </article>
+      <article class="story">
+        <div class="photo ph2"><span class="verified">✓</span></div>
+        <div class="name display">Shawarma Brothers</div>
+        <p class="desc">Middle Eastern · open till 2am, worth the line</p>
+        <div class="facts"><span>★ 4.6</span><span class="sep"></span><span>$</span><span class="sep"></span><span class="cut-tag">🔪 Hand-cut</span><span class="dist">1.1 mi</span></div>
+      </article>
+      <article class="story">
+        <div class="photo ph3"></div>
+        <div class="name display">Dave's Hot Chicken</div>
+        <p class="desc">Nashville hot · community listing, not yet verified</p>
+        <div class="facts"><span>★ 4.4</span><span class="sep"></span><span>$$</span><span class="sep"></span><span class="cut-tag machine">Machine-cut</span><span class="dist">2.3 mi</span></div>
+      </article>
+      <article class="story">
+        <div class="photo ph4"><span class="verified">✓</span></div>
+        <div class="name display">Al-Sultan Grill</div>
+        <p class="desc">Lebanese · mixed grill done the old way</p>
+        <div class="facts"><span>★ 4.7</span><span class="sep"></span><span>$$</span><span class="sep"></span><span class="cut-tag">🔪 Hand-cut</span><span class="dist">1.8 mi</span></div>
+      </article>
+      <article class="story">
+        <div class="photo ph5"></div>
+        <div class="name display">The Halal Guys</div>
+        <p class="desc">American · the over-rice classic, machine-cut</p>
+        <div class="facts"><span>★ 4.5</span><span class="sep"></span><span>$</span><span class="sep"></span><span class="cut-tag machine">Machine-cut</span><span class="dist">2.6 mi</span></div>
+      </article>
+      <article class="story">
+        <div class="photo ph6"><span class="verified">✓</span></div>
+        <div class="name display">Cafe Acai</div>
+        <p class="desc">Brazilian · acai bowls and pão de queijo</p>
+        <div class="facts"><span>★ 4.9</span><span class="sep"></span><span>$</span><span class="sep"></span><span class="cut-tag">🔪 Hand-cut</span><span class="dist">3.2 mi</span></div>
+      </article>
+    </div>
+
+    <div class="quoteband">
+      <p>“I used to call every restaurant before eating out. Now I just look for the badge.”</p>
+      <div class="who">— Sumayya A., Brooklyn</div>
+    </div>
+
+    <footer>
+      <span>✦ Halal Atlas — a halal food guide</span>
+      <span>Privacy · Terms · Add a restaurant</span>
+    </footer>
+  </div>
+</body>
+</html>

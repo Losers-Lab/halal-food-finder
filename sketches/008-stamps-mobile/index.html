@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tahir's List — Mobile (Stamps & Search)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --paper: #FBF7EE; --kraft: #EFE6D4; --kraft-deep: #E4D7BE;
+    --ink: #211B12; --ink-soft: rgba(33,27,18,.6); --ink-faint: rgba(33,27,18,.4);
+    --red: #C6381F; --green: #1F5C3D; --green-soft: rgba(31,92,61,.07);
+    --line: rgba(33,27,18,.1);
+  }
+  body { font-family: "Space Grotesk", -apple-system, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .head { font-family: "Archivo", sans-serif; }
+
+  /* ===== top app bar ===== */
+  .appbar { position: sticky; top: 0; z-index: 30; background: var(--paper); border-bottom: 1.5px solid var(--line); padding: 14px 18px 12px; }
+  .appbar .row1 { display: flex; align-items: center; justify-content: space-between; }
+  .logo { font-family: "Archivo"; font-weight: 900; font-size: 17px; letter-spacing: -.02em; }
+  .logo em { font-style: normal; color: var(--red); }
+  .iconbtn { width: 42px; height: 42px; border-radius: 12px; border: 1.5px solid var(--line); background: #fff; font-size: 16px; display: grid; place-items: center; }
+  .iconbtn.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .searchslab { margin-top: 12px; background: #fff; border: 2px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--ink); display: flex; align-items: center; padding: 5px 5px 5px 14px; }
+  .searchslab input { flex: 1; min-width: 0; border: none; outline: none; font: inherit; font-size: 15px; font-weight: 500; background: none; }
+  .searchslab .go { border: none; background: var(--red); color: #fff; font-family: "Archivo"; font-weight: 800; font-size: 13.5px; padding: 12px 18px; border-radius: 10px; }
+  .centerpill { display: inline-flex; gap: 6px; margin-top: 10px; font-size: 12px; font-weight: 700; color: var(--ink-soft); background: var(--kraft); border-radius: 999px; padding: 6px 13px; }
+  .centerpill b { color: var(--ink); }
+
+  /* ===== hero (mobile-compressed) ===== */
+  .hero { padding: 22px 18px 0; }
+  .kicker { display: inline-flex; align-items: center; gap: 7px; font-family: "Archivo"; font-weight: 800; font-size: 10px; letter-spacing: .13em; text-transform: uppercase; color: var(--green); border: 2px dashed var(--green); border-radius: 8px; padding: 5px 11px; transform: rotate(-1.5deg); }
+  .hero h1 { font-family: "Archivo"; font-weight: 900; font-size: 33px; letter-spacing: -.02em; line-height: 1.08; margin-top: 16px; }
+  .hero h1 .hl { color: var(--red); position: relative; white-space: nowrap; }
+  .hero h1 .hl::after { content: ""; position: absolute; left: -2%; bottom: 2px; width: 104%; height: 9px; background: rgba(198,56,31,.14); z-index: -1; transform: rotate(-1deg); }
+  .hero p { margin-top: 10px; font-size: 14px; color: var(--ink-soft); }
+
+  /* ===== cut toggle ===== */
+  .cutwrap { padding: 18px 18px 0; }
+  .cuttoggle { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 5px; display: flex; box-shadow: 3px 3px 0 var(--ink); }
+  .cuttoggle button { flex: 1; border: 2px dashed transparent; background: none; font: inherit; font-weight: 700; font-size: 12px; padding: 11px 2px; border-radius: 999px; color: var(--ink-soft); display: flex; gap: 4px; justify-content: center; align-items: center; min-height: 44px; white-space: nowrap; }
+  .cuttoggle button.on { border-color: var(--red); color: var(--red); background: rgba(198,56,31,.05); }
+  .cuttoggle .n { font-size: 10.5px; font-weight: 800; background: var(--kraft); border-radius: 999px; padding: 1px 7px; color: var(--ink); }
+
+  /* ===== filter chips row ===== */
+  .chips { display: flex; gap: 8px; overflow-x: auto; padding: 16px 18px 2px; scrollbar-width: none; }
+  .chips::-webkit-scrollbar { display: none; }
+  .chip { flex: 0 0 auto; min-height: 40px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; padding: 0 16px; border-radius: 999px; border: 1.5px solid var(--line); background: #fff; color: var(--ink-soft); }
+  .chip.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .chip.dark { background: var(--ink); color: var(--paper); border-color: var(--ink); font-weight: 700; }
+  .distgrp { flex: 0 0 auto; display: flex; gap: 6px; align-items: center; padding-left: 12px; margin-left: 4px; border-left: 1.5px solid var(--line); }
+  .distgrp .chip { padding: 0 13px; font-size: 12.5px; }
+
+  .meta { display: flex; justify-content: space-between; align-items: baseline; padding: 16px 18px 14px; }
+  .meta .count { font-family: "Archivo"; font-weight: 800; font-size: 15px; }
+  .meta .count b { color: var(--red); }
+  .meta a { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); }
+
+  /* ===== result cards: horizontal slips ===== */
+  .list { display: grid; gap: 14px; padding: 0 18px; }
+  .slip { background: #fff; border: 1.5px solid var(--line); border-radius: 4px 16px 16px 16px; overflow: hidden; display: grid; grid-template-columns: 118px 1fr; position: relative; }
+  .slip::before { content: ""; position: absolute; top: -1px; left: 20px; width: 56px; height: 12px; background: var(--kraft); border-left: 1px dashed var(--line); border-right: 1px dashed var(--line); transform: rotate(-2deg); z-index: 2; }
+  .slip .photo { position: relative; min-height: 128px; }
+  .ph1 { background: linear-gradient(140deg, #E8A44C, #C96A2B); }
+  .ph2 { background: linear-gradient(140deg, #93B57E, #4E7A44); }
+  .ph3 { background: linear-gradient(140deg, #D9848C, #A04258); }
+  .slip .photo::after { content: "🍛"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 34px; opacity: .45; }
+  .seal { position: absolute; top: 16px; right: 8px; width: 42px; height: 42px; border-radius: 50%; border: 2px dashed var(--green); background: rgba(251,247,238,.94); color: var(--green); display: grid; place-items: center; font-family: "Archivo"; font-weight: 900; font-size: 6.5px; letter-spacing: .06em; line-height: 1.2; text-transform: uppercase; transform: rotate(8deg); text-align: center; }
+  .seal .ck { font-size: 13px; line-height: 1; }
+  .nv { position: absolute; top: 18px; right: 8px; font-size: 8.5px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-faint); border: 1.5px solid var(--line); border-radius: 5px; padding: 3px 6px; transform: rotate(4deg); background: var(--paper); }
+  .stamp { position: absolute; bottom: 8px; left: 8px; background: var(--paper); border: 1.5px dashed var(--red); color: var(--red); border-radius: 5px; padding: 3px 7px; font-family: "Archivo"; font-weight: 800; font-size: 8.5px; letter-spacing: .08em; text-transform: uppercase; transform: rotate(-1.5deg); }
+  .stamp.machine { border-color: var(--ink-faint); color: var(--ink-soft); }
+  .slip .body { padding: 14px 15px 12px 14px; min-width: 0; }
+  .slip .row1 { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .slip h3 { font-family: "Archivo"; font-weight: 800; font-size: 15.5px; letter-spacing: -.01em; }
+  .slip .rating { font-size: 12px; font-weight: 700; flex: 0 0 auto; }
+  .slip .rating .star { color: var(--red); }
+  .slip .sub { font-size: 12.5px; color: var(--ink-soft); margin-top: 2px; }
+  .slip .facts { display: flex; gap: 8px; margin-top: 9px; padding-top: 9px; border-top: 1.5px dashed var(--line); font-size: 11.5px; color: var(--ink-soft); font-weight: 500; align-items: center; flex-wrap: wrap; }
+  .slip .facts .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-faint); }
+  .slip .facts .dist { color: var(--green); font-weight: 700; }
+  .slip.unverified { border-style: dashed; }
+  .fav { position: absolute; bottom: 8px; right: 8px; width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--paper); font-size: 13px; display: grid; place-items: center; }
+
+  /* ===== filter FAB-ish sheet trigger note ===== */
+  .sheetnote { margin: 22px 18px 0; background: var(--kraft-100, #F5EDDE); border: 1.5px dashed var(--line); border-radius: 14px; padding: 14px 16px; font-size: 12.5px; color: var(--ink-soft); }
+
+  /* ===== trust band ===== */
+  .trust { margin: 24px 18px 0; background: var(--ink); color: var(--paper); border-radius: 20px; padding: 24px 22px; position: relative; overflow: hidden; }
+  .trust::after { content: "✓"; position: absolute; right: -18px; bottom: -46px; font-size: 150px; font-weight: 900; color: rgba(251,247,238,.05); }
+  .trust h2 { font-family: "Archivo"; font-weight: 900; font-size: 19px; letter-spacing: -.01em; line-height: 1.25; }
+  .trust h2 em { font-style: normal; color: #E8937D; }
+  .trust p { margin-top: 8px; font-size: 12.5px; color: rgba(251,247,238,.7); }
+  .trust .steps { margin-top: 14px; display: grid; gap: 8px; }
+  .trust .step { display: flex; gap: 10px; font-size: 12px; color: rgba(251,247,238,.75); align-items: center; }
+  .trust .step b { display: grid; place-items: center; width: 22px; height: 22px; flex: 0 0 auto; border-radius: 50%; background: var(--red); color: #fff; font-family: "Archivo"; font-weight: 800; font-size: 10.5px; }
+  .trust button { margin-top: 16px; width: 100%; background: var(--paper); color: var(--ink); border: none; border-radius: 12px; padding: 14px; font: inherit; font-weight: 700; font-size: 13.5px; min-height: 48px; }
+
+  /* ===== bottom tab bar ===== */
+  .tabbar { position: sticky; bottom: 0; z-index: 30; margin-top: 30px; background: rgba(251,247,238,.96); backdrop-filter: blur(8px); border-top: 1.5px solid var(--line); display: flex; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); }
+  .tab { flex: 1; display: grid; justify-items: center; gap: 2px; font-size: 10.5px; font-weight: 700; color: var(--ink-faint); text-decoration: none; padding: 6px 0; border-radius: 12px; min-height: 48px; }
+  .tab .ic { font-size: 19px; }
+  .tab.on { color: var(--green); }
+</style>
+</head>
+<body>
+  <header class="appbar">
+    <div class="row1">
+      <div class="logo head">Tahir<span style="color:var(--red)">'</span>s List</div>
+      <div style="display:flex; gap:8px">
+        <button class="iconbtn" aria-label="Favorites">🤍</button>
+        <button class="iconbtn dark" aria-label="Account">👤</button>
+      </div>
+    </div>
+    <div class="searchslab">
+      <input type="text" value="Brooklyn, NY">
+      <button class="go head">Search</button>
+    </div>
+    <div style="text-align:center"><span class="centerpill">Near <b>Brooklyn, NY</b> ✕</span></div>
+  </header>
+
+  <section class="hero">
+    <span class="kicker head">✓ Certificates checked</span>
+    <h1 class="head">Know it's <span class="hl">actually halal.</span></h1>
+    <p>Hand-cut or machine-cut, verified or not — every listing tells the truth.</p>
+  </section>
+
+  <div class="cutwrap">
+    <div class="cuttoggle">
+      <button class="on head">🔪 Hand-cut <span class="n">14</span></button>
+      <button class="head">⚙ Machine <span class="n">6</span></button>
+      <button class="head">Any <span class="n">23</span></button>
+    </div>
+  </div>
+
+  <div class="chips">
+    <button class="chip dark">⚙ Filters</button>
+    <button class="chip on">✓ Verified only</button>
+    <button class="chip">Middle Eastern</button>
+    <button class="chip">Pakistani</button>
+    <button class="chip">★ 4.5+</button>
+    <span class="distgrp">
+      <button class="chip on">5 mi</button>
+      <button class="chip">10 mi</button>
+    </span>
+  </div>
+
+  <div class="meta">
+    <span class="count head"><b>14 verified</b> hand-cut spots</span>
+    <a href="#">Clear</a>
+  </div>
+
+  <div class="list">
+    <article class="slip">
+      <div class="photo ph1"><span class="seal"><span class="ck">✓</span><br>Verified</span><span class="stamp">🔪 Hand-cut</span></div>
+      <div class="body">
+        <div class="row1"><h3>Karachi Kitchen</h3><span class="rating"><span class="star">★</span> 4.8</span></div>
+        <p class="sub">Pakistani · biryani · $$</p>
+        <div class="facts"><span class="dist">0.4 mi</span><span class="dot"></span><span>HFSAA</span><span class="dot"></span><span>(612)</span></div>
+      </div>
+    </article>
+
+    <article class="slip">
+      <div class="photo ph2"><span class="seal"><span class="ck">✓</span><br>Verified</span><span class="stamp">🔪 Hand-cut</span></div>
+      <div class="body">
+        <div class="row1"><h3>Shawarma Brothers</h3><span class="rating"><span class="star">★</span> 4.6</span></div>
+        <p class="sub">Middle Eastern · platters · $</p>
+        <div class="facts"><span class="dist">1.1 mi</span><span class="dot"></span><span>Open till 2 AM</span></div>
+      </div>
+      <button class="fav" aria-label="Save">🤍</button>
+    </article>
+
+    <article class="slip unverified">
+      <div class="photo ph3"><span class="nv">Not verified</span><span class="stamp machine">⚙ Machine</span></div>
+      <div class="body">
+        <div class="row1"><h3>Dave's Hot Chicken</h3><span class="rating"><span class="star">★</span> 4.4</span></div>
+        <p class="sub">Chicken · Nashville · $$</p>
+        <div class="facts"><span class="dist">2.3 mi</span><span class="dot"></span><span>Community listing</span></div>
+      </div>
+    </article>
+  </div>
+
+  <div class="sheetnote">
+    💡 Tapping <b>⚙ Filters</b> opens the full filter sheet (cuisine AND/OR, price, rating, distance) as a bottom sheet with Apply/Clear — matching the agreed mobile filter pattern.
+  </div>
+
+  <section class="trust">
+    <h2 class="head">Every stamp is <em>checked</em>, not claimed.</h2>
+    <p>Green seal = a real certificate, reviewed. Unverified stays labeled.</p>
+    <div class="steps">
+      <div class="step"><b>1</b> Owner uploads certificate</div>
+      <div class="step"><b>2</b> Committee reviews it</div>
+      <div class="step"><b>3</b> Seal earned — or not</div>
+    </div>
+    <button class="head">How verification works →</button>
+  </section>
+
+  <nav class="tabbar">
+    <a class="tab on" href="#"><span class="ic">🍽</span>Discover</a>
+    <a class="tab" href="#"><span class="ic">🗺</span>Map</a>
+    <a class="tab" href="#"><span class="ic">🤍</span>Favorites</a>
+    <a class="tab" href="#"><span class="ic">👤</span>Profile</a>
+  </nav>
+</body>
+</html>
