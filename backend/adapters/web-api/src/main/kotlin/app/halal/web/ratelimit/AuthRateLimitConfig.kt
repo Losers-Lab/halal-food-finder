@@ -44,8 +44,9 @@ class AuthRateLimitConfig {
     fun authRateLimitFilter(
         authRateLimiter: AuthRateLimiter,
         objectMapper: ObjectMapper,
+        authRateLimitProperties: AuthRateLimitProperties,
     ): FilterRegistrationBean<AuthRateLimitFilter> {
-        val filter = AuthRateLimitFilter(authRateLimiter, objectMapper)
+        val filter = AuthRateLimitFilter(authRateLimiter, objectMapper, authRateLimitProperties.trustProxy)
         val registration = FilterRegistrationBean(filter)
         // Run before Spring Security's filter chain so rate-limited requests are
         // refused before any auth processing (deny-by-default, cheap reject).
@@ -62,6 +63,12 @@ class AuthRateLimitConfig {
 class AuthRateLimitFilter(
     private val limiter: AuthRateLimiter,
     private val objectMapper: ObjectMapper,
+    /**
+     * Opt-in trust for the client-supplied X-Forwarded-For header. Enable ONLY
+     * behind a proxy that overwrites XFF; leaving it false keeps the key
+     * unspoofable by clients.
+     */
+    private val trustProxy: Boolean = false,
 ) : OncePerRequestFilter() {
 
     private val log = LoggerFactory.getLogger(AuthRateLimitFilter::class.java)
@@ -83,13 +90,22 @@ class AuthRateLimitFilter(
         }
     }
 
-    /** The rate-limit budget key: route + client IP so login and refresh never starve each other. */
+    /**
+     * The rate-limit budget key: route + client IP so login and refresh never
+     * starve each other. X-Forwarded-For is client-controlled and is trusted
+     * only when [trustProxy] is explicitly enabled (app.ratelimit.trust-proxy);
+     * otherwise the socket peer (remoteAddr) keys the bucket, so clients cannot
+     * rotate their budget by forging headers.
+     */
     internal fun clientKey(request: HttpServletRequest): String {
-        // X-Forwarded-For is only trusted behind the same-origin proxy/load
-        // balancer; when absent, remoteAddr is the immediate peer. The filter
-        // does not enumerate IPs — it only buckets them.
-        val forwarded = request.getHeader("X-Forwarded-For")?.substringBefore(",")?.trim()
-        val ip = forwarded?.takeIf { it.isNotBlank() } ?: request.remoteAddr ?: "unknown"
+        val ip = if (trustProxy) {
+            request.getHeader("X-Forwarded-For")?.substringBefore(",")?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?: request.remoteAddr
+                ?: "unknown"
+        } else {
+            request.remoteAddr ?: "unknown"
+        }
         val route = request.requestURI
         return "$route|$ip"
     }

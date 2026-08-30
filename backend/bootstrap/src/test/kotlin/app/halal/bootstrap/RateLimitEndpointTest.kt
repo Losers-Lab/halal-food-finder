@@ -32,6 +32,11 @@ import org.springframework.web.client.RestTemplate
         "app.ratelimit.capacity=2",
         "app.ratelimit.refill-per-window=2",
         "app.ratelimit.refill-window=1m",
+        // XFF trust is opt-in since the sc-136 review fix; these tests simulate
+        // distinct client IPs via X-Forwarded-For, so the proxy trust is enabled
+        // here explicitly (the default remoteAddr-only path is covered by unit
+        // tests in web-api and by the two tests above, which share one socket peer).
+        "app.ratelimit.trust-proxy=true",
     ],
 )
 class RateLimitEndpointTest : PostgresBootTest() {

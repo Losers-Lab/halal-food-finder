@@ -15,4 +15,11 @@ data class AuthRateLimitProperties(
     var refillPerWindow: Long = 20,
     /** The refill window for [refillPerWindow]. */
     var refillWindow: Duration = Duration.ofMinutes(1),
+    /**
+     * Trust the client-supplied X-Forwarded-For header when deriving the
+     * rate-limit key. Enable ONLY when the app runs behind a proxy that
+     * overwrites (not appends to) XFF; otherwise the key is client-spoofable.
+     * Default false: the immediate socket peer (remoteAddr) keys the bucket.
+     */
+    var trustProxy: Boolean = false,
 )
