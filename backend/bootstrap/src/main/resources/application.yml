@@ -34,7 +34,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # Only health is exposed. Info, env, beans, mappings, configprops,
+        # metrics, loggers, ... are all OFF (ActuatorLockdownTest enforces it).
+        include: health
   endpoint:
     health:
       # sc-134 (finding #8): never expose detailed health internals outside dev.
