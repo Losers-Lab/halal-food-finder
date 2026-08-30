@@ -37,4 +37,16 @@ management:
         include: health,info
   endpoint:
     health:
+      # sc-134 (finding #8): never expose detailed health internals outside dev.
+      show-details: never
+
+---
+# Local-development override: expose full health details for engineering.
+spring:
+  config:
+    activate:
+      on-profile: dev
+management:
+  endpoint:
+    health:
       show-details: always

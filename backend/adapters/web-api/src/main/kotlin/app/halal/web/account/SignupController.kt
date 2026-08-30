@@ -58,11 +58,6 @@ class SignupController(private val createAccount: CreateAccount) {
     fun onWeakPassword(ex: WeakPasswordException): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ErrorResponse("weak_password", ex.message))
 
-    @ExceptionHandler(IllegalArgumentException::class)
-    @ApiResponse(responseCode = "400", description = "Invalid input")
-    fun onInvalidInput(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse("invalid_input", ex.message))
-
     data class SignupRequest(
         @field:NotBlank(message = "email is required")
         @field:Email(message = "email must be a valid address")
