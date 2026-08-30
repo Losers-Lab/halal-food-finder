@@ -86,4 +86,39 @@ class RestaurantListingTest : FunSpec({
     test("Cuisine normalises to trimmed, lowercase value") {
         Cuisine(" Mediterranean ").value shouldBe "mediterranean"
     }
+
+    test("Provenance accepts the closed seed vocabulary") {
+        Provenance(" research-seed ").value shouldBe "research-seed"
+        Provenance("photon-geocode") shouldBe Provenance.PHOTON_GEOCODE
+        Provenance("research-seed / photon-geocode") shouldBe Provenance.RESEARCH_SEED_PHOTON_GEOCODE
+    }
+
+    test("Provenance rejects an out-of-vocabulary value") {
+        shouldThrow<IllegalArgumentException> { Provenance("some-other-source") }
+        shouldThrow<IllegalArgumentException> { Provenance("") }
+    }
+
+    test("fromStorage materialises a seed-style row with nullable cuisine/owner and provenance") {
+        val seedId = UUID.randomUUID()
+        val brandId = UUID.randomUUID()
+        val listing = RestaurantListing.fromStorage(
+            id = seedId,
+            name = "The Halal Guys",
+            address = "307 E 14th St",
+            location = LatLng(40.732288, -73.984423),
+            cuisine = null,
+            cuttingMethod = CuttingMethod.UNSPECIFIED,
+            ownerId = null,
+            brandId = brandId,
+            provenance = Provenance.RESEARCH_SEED_PHOTON_GEOCODE,
+            verificationStatus = VerificationStatus.UNVERIFIED,
+            createdAt = java.time.Instant.now(),
+        )
+
+        listing.id shouldBe seedId
+        listing.cuisine shouldBe null
+        listing.ownerId shouldBe null
+        listing.brandId shouldBe brandId
+        listing.provenance shouldBe Provenance.RESEARCH_SEED_PHOTON_GEOCODE
+    }
 })

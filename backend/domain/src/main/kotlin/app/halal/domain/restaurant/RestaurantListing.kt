@@ -9,9 +9,14 @@ import java.util.UUID
  * Per the PRD's listing-first model, the canonical way to create a listing is
  * [RestaurantListing.new], which always starts [VerificationStatus.UNVERIFIED]:
  * anyone can add a restaurant, and it only becomes verified via the separate
- * owner-claim + certification-verification vertical. The listing links to the
- * owning account via [ownerId]. The location is a [LatLng] stored as a PostGIS
- * `geography(Point, 4326)`.
+ * owner-claim + certification-verification vertical.
+ *
+ * [ownerId] and [cuisine] are nullable because the listing-first model admits
+ * community/research seed rows with no owning account and no ratified cuisine
+ * (see V6 — Omar adjudication). [RestaurantListing.new] still requires both for
+ * the authenticated Add Listing flow; seed rows are reconstituted via
+ * [fromStorage] with nulls. [brandId] links a location to its brand (brand /
+ * location split) and [provenance] stamps the row's origin.
  *
  * NOTE: ODbL share-alike on OSM/Photon-derived listing fields is an open founder
  * decision (docs/reviews/sc-138-external-services.md §5). Flagged here, not
@@ -22,9 +27,11 @@ data class RestaurantListing(
     val name: String,
     val address: String,
     val location: LatLng,
-    val cuisine: Cuisine,
+    val cuisine: Cuisine?,
     val cuttingMethod: CuttingMethod,
-    val ownerId: UUID,
+    val ownerId: UUID?,
+    val brandId: UUID?,
+    val provenance: Provenance?,
     val verificationStatus: VerificationStatus,
     val createdAt: Instant,
 ) {
@@ -33,6 +40,9 @@ data class RestaurantListing(
         /**
          * Create a brand-new listing. Names/addresses are trimmed; blank values
          * are rejected. Always unverified (listing-first model) and timestamped now.
+         *
+         * The authenticated Add Listing flow requires a cuisine and an owning
+         * account; brand/provenance are null for user-added rows.
          *
          * @throws IllegalArgumentException if [name] or [address] is blank.
          */
@@ -56,20 +66,28 @@ data class RestaurantListing(
                 cuisine = cuisine,
                 cuttingMethod = cuttingMethod,
                 ownerId = ownerId,
+                brandId = null,
+                provenance = null,
                 verificationStatus = VerificationStatus.DEFAULT,
                 createdAt = Instant.now(),
             )
         }
 
-        /** Reconstitute a listing that was previously persisted (any status). */
+        /**
+         * Reconstitute a listing that was previously persisted (any status).
+         * [cuisine], [ownerId], [brandId] and [provenance] may be null — this is
+         * how unclaimed, no-cuisine community seed rows are materialised.
+         */
         fun fromStorage(
             id: UUID,
             name: String,
             address: String,
             location: LatLng,
-            cuisine: Cuisine,
+            cuisine: Cuisine?,
             cuttingMethod: CuttingMethod,
-            ownerId: UUID,
+            ownerId: UUID?,
+            brandId: UUID?,
+            provenance: Provenance?,
             verificationStatus: VerificationStatus,
             createdAt: Instant,
         ): RestaurantListing = RestaurantListing(
@@ -80,6 +98,8 @@ data class RestaurantListing(
             cuisine = cuisine,
             cuttingMethod = cuttingMethod,
             ownerId = ownerId,
+            brandId = brandId,
+            provenance = provenance,
             verificationStatus = verificationStatus,
             createdAt = createdAt,
         )

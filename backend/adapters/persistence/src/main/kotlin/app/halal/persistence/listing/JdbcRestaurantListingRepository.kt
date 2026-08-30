@@ -4,6 +4,7 @@ import app.halal.application.listing.RestaurantListingRepository
 import app.halal.domain.restaurant.Cuisine
 import app.halal.domain.restaurant.CuttingMethod
 import app.halal.domain.restaurant.LatLng
+import app.halal.domain.restaurant.Provenance
 import app.halal.domain.restaurant.RestaurantListing
 import app.halal.domain.restaurant.VerificationStatus
 import org.springframework.jdbc.core.JdbcTemplate
@@ -27,11 +28,11 @@ class JdbcRestaurantListingRepository(private val jdbc: JdbcTemplate) : Restaura
     override fun save(listing: RestaurantListing): RestaurantListing {
         val id = jdbc.queryForObject(
             """
-            INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, verification_status)
+            INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
             VALUES (
                 ?, ?,
                 ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-                ?, ?, ?, ?
+                ?, ?, ?, ?, ?, ?
             )
             RETURNING id
             """.trimIndent(),
@@ -40,9 +41,11 @@ class JdbcRestaurantListingRepository(private val jdbc: JdbcTemplate) : Restaura
             listing.address,
             listing.location.lng, // ST_MakePoint(x = longitude, y = latitude)
             listing.location.lat,
-            listing.cuisine.value,
+            listing.cuisine?.value,
             listing.cuttingMethod.name,
             listing.ownerId,
+            listing.brandId,
+            listing.provenance?.value,
             listing.verificationStatus.name,
         ) ?: error("INSERT RETURNING id returned no row")
 
@@ -61,6 +64,8 @@ class JdbcRestaurantListingRepository(private val jdbc: JdbcTemplate) : Restaura
                 cuisine,
                 cutting_method,
                 owner_id,
+                brand_id,
+                provenance,
                 verification_status,
                 created_at
             FROM restaurant_listings
@@ -77,9 +82,11 @@ class JdbcRestaurantListingRepository(private val jdbc: JdbcTemplate) : Restaura
         name = getString("name"),
         address = getString("address"),
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
-        cuisine = Cuisine(getString("cuisine")),
+        cuisine = getString("cuisine")?.let { Cuisine(it) },
         cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
         ownerId = getObject("owner_id", UUID::class.java),
+        brandId = getObject("brand_id", UUID::class.java),
+        provenance = getString("provenance")?.let { Provenance(it) },
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
         createdAt = getTimestamp("created_at").toInstant(),
     )
