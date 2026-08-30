@@ -20,6 +20,12 @@ export function AuthHeader() {
   if (session) {
     return (
       <div className="flex items-center gap-3 text-neutral-500">
+        <Link
+          href="/add-listing"
+          className="rounded-md bg-brand-500 px-3 py-1.5 text-small font-medium text-white hover:bg-brand-600"
+        >
+          Add a listing
+        </Link>
         <span className="text-small">
           Signed in as <strong className="text-neutral-700">{session.email}</strong>
         </span>
