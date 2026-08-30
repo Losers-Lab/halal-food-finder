@@ -10,4 +10,6 @@ dependencies {
     implementation(libs.spring.boot.starter.validation)
     // Kotlin data-class JSON serialization.
     implementation(libs.jackson.module.kotlin)
+    // In-process token-bucket rate limiting for auth endpoints (sc-136).
+    implementation(libs.bucket4j)
 }
