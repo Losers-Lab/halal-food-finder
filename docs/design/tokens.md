@@ -4,7 +4,7 @@ Status: FOUNDER-RATIFIED 2026-08-30 (Option A) · **Rebranded for Tahir's List 2
 Supersedes the teal M1 palette entirely. One look across every page — consistency is an explicit founder requirement.
 Brand: **Tahir's List** (tahirslist.com) — founder pivot 2026-08-30 from "Halal Food Finder"/"HalalMarket". Tagline: **"find halal food"** (lowercase).
 - Wordmark: Archivo 900, tracking ≈ -3%. The **apostrophe is always brand red** (#C6381F; soft red #E07B63 on dark surfaces). Never render the wordmark without it.
-- Primary lockup (C2): Tahir head app-icon + wordmark + tagline — site header, footer, favicon, app icon. Mascot canonical image & rules: `brand/tahir/CHARACTER.md`. Logo lockups: `brand/tahir/logo-lockups.html`. Decision log: `brand/tahir/BRAND-DECISIONS.md`.
+- Primary lockup (C2): Tahir head app-icon + wordmark + tagline — **used as the site header on every screen** (desktop: 56px icon; mobile: 40px icon), plus favicon/app icon. Mascot canonical image & rules: `brand/tahir/CHARACTER.md`. Logo lockups: `brand/tahir/logo-lockups.html`. Decision log: `brand/tahir/BRAND-DECISIONS.md`.
 - **Dark theme:** planned future pass (light is the launch default). Direction: ink ground, cream text, soft-red accent — see the dark cell in `logo-lockups.html`.
 
 ## Design principles
