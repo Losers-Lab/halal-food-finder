@@ -142,6 +142,18 @@ find yourself reaching for `apt`/`pip`/`npm install -g` on the host, stop.
     the first letter, no trailing period, imperative mood (e.g. `Add feature`,
     `Fix bug`). Full: `[SC-131] Add JWT verification filter`.
   - Keep commits focused and logically separated; write clear messages.
+- **PR-based review flow (MANDATORY — founder directive, all agents and humans):**
+  - **Every** feature/fix goes: branch → push → **open a GitHub PR** → merge
+    to `main` only after merge. Direct pushes/merges to `main` from feature
+    branches without a PR are not allowed.
+  - **Reviews are PR artifacts:** reviewers (Omar for security/code review,
+    Yusuf for QA where applicable) post their findings **as PR review
+    comments** on the PR itself — not only in task-manager comments. The PR
+    diff + review must be auditable on GitHub.
+  - **No merge without an approving review** recorded on the PR. Security-
+    sensitive work (auth, trust, integrations) additionally requires Omar's
+    explicit approval.
+  - CI/build status must be green on the PR head before merging.
 - **Honesty in status reporting (amanah):** report real results; surface
   blockers and unknowns rather than papering over them.
 
