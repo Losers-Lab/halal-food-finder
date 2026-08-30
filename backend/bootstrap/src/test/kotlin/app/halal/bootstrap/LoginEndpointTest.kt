@@ -4,9 +4,10 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldMatch
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient
+import org.apache.hc.client5.http.impl.classic.HttpClients
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.HttpEntity
@@ -22,10 +23,12 @@ import org.springframework.web.client.RestTemplate
 import javax.sql.DataSource
 
 /**
- * End-to-end Log In + Refresh (sc-40) test against the full application graph:
- * web controller -> AuthenticateAccount / RefreshSession use cases ->
- * Argon2id hasher + JwtTokenIssuer + JdbcAccountRepository + JdbcRefreshTokenStore,
- * with the real Flyway V1+V2 migrations applied on boot.
+ * End-to-end Log In + Refresh (sc-40) test against the full application graph,
+ * updated for the sc-133 cookie contract: the access JWT is returned in the JSON
+ * body (frontend keeps it memory-only), but the refresh token is delivered ONLY
+ * as an HttpOnly; Secure; SameSite=Lax cookie scoped to the auth routes — it must
+ * never appear in the JSON body. Refresh now presents the cookie (no request
+ * body) and rotates it via a fresh Set-Cookie.
  */
 class LoginEndpointTest : PostgresBootTest() {
 
@@ -38,12 +41,15 @@ class LoginEndpointTest : PostgresBootTest() {
     // The default TestRestTemplate client refuses to read a 401 ("cannot retry due
     // to server authentication, in streaming mode"), so auth calls use a plain
     // JDK HttpURLConnection client that returns 4xx responses as ordinary bodies.
+    // Cookie management is disabled so the test controls exactly which refresh
+    // cookie each request presents (automatic jar replay would mask rotation bugs).
     @LocalServerPort
     var port: Int = 0
 
     private val client: RestTemplate by lazy {
+        val httpClient: CloseableHttpClient = HttpClients.custom().disableCookieManagement().build()
         RestTemplate().apply {
-            requestFactory = HttpComponentsClientHttpRequestFactory()
+            requestFactory = HttpComponentsClientHttpRequestFactory(httpClient)
             setErrorHandler(object : ResponseErrorHandler {
                 override fun hasError(response: ClientHttpResponse): Boolean = false
                 override fun handleError(response: ClientHttpResponse) { /* return body as-is */ }
@@ -54,30 +60,42 @@ class LoginEndpointTest : PostgresBootTest() {
     private fun url(path: String) = "http://localhost:$port$path"
 
     init {
-        test("valid login returns access + refresh tokens and the access JWT carries the RBAC role") {
-            val tokens = signupAndLogin("gina@example.com")
+        test("login returns the access token in the body and the refresh token ONLY as an HttpOnly Secure SameSite=Lax cookie (never in JSON)") {
+            val (tokens, cookie) = signupAndLogin("gina@example.com")
 
+            // Access JWT stays in the JSON body (frontend holds it memory-only).
             tokens["accessToken"].toString().isNotBlank() shouldBe true
-            tokens["refreshToken"].toString().isNotBlank() shouldBe true
             tokens["tokenType"] shouldBe "Bearer"
             tokens["expiresIn"] shouldBe 900
             tokens["accountId"].toString().isNotBlank() shouldBe true
             tokens["role"] shouldBe "USER"
+
+            // The refresh token must NOT be in the JSON body (JS-readable storage contract removed).
+            tokens.containsKey("refreshToken") shouldBe false
 
             // The access token is an RS256 JWT whose payload embeds sub + role.
             val payload = decodeJwtPayload(tokens["accessToken"].toString())
             payload shouldContain "\"role\":\"USER\""
             payload shouldContain "\"sub\""
 
-            // The refresh token is persisted only as a SHA-256 hash of the token.
+            // The refresh token is delivered by Set-Cookie with the hardened attributes.
+            val refreshValue = cookie.refreshValue
+            refreshValue.isNotBlank() shouldBe true
+            cookie.httpOnly shouldBe true
+            cookie.secure shouldBe true
+            cookie.sameSite shouldBe "Lax"
+            cookie.path shouldBe "/v1/auth"
+            cookie.maxAgeSeconds shouldBe 30 * 24 * 60 * 60
+
+            // The refresh cookie persists only a SHA-256 hash of the raw token.
             val storedHash = JdbcTemplate(dataSource).queryForObject(
                 "SELECT token_hash FROM refresh_tokens WHERE token_hash = ?",
                 String::class.java,
-                sha256(tokens["refreshToken"].toString()),
+                sha256(refreshValue),
             )
             storedHash shouldNotBe null
             storedHash shouldMatch "[0-9a-f]{64}"
-            storedHash shouldNotBe tokens["refreshToken"].toString()
+            storedHash shouldNotBe refreshValue
         }
 
         test("wrong password is rejected with a generic 401 invalid_credentials") {
@@ -103,18 +121,24 @@ class LoginEndpointTest : PostgresBootTest() {
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
         }
 
-        test("refresh rotates: old token revoked, new token works for the next refresh") {
-            val tokens = signupAndLogin("iris@example.com")
-            val oldRefresh = tokens["refreshToken"].toString()
+        test("refresh rotates via cookie: old cookie revoked, new cookie works for the next refresh") {
+            val (tokens, cookie) = signupAndLogin("iris@example.com")
+            val oldRefresh = cookie.refreshValue
 
             val first = exchange(url("/v1/auth/refresh"), oldRefresh)
             first.statusCode shouldBe HttpStatus.OK
             val rotated = first.body!!
             rotated["accessToken"].toString().isNotBlank() shouldBe true
-            val newRefresh = rotated["refreshToken"].toString()
+            rotated.containsKey("refreshToken") shouldBe false
+            rotated["role"] shouldBe "USER"
+
+            val newCookie = parseSetCookie(first.headers.getFirst(HttpHeaders.SET_COOKIE))
+            val newRefresh = newCookie.refreshValue
             newRefresh.isNotBlank() shouldBe true
             newRefresh shouldNotBe oldRefresh
-            rotated["role"] shouldBe "USER"
+            newCookie.httpOnly shouldBe true
+            newCookie.secure shouldBe true
+            newCookie.sameSite shouldBe "Lax"
 
             // Old token was single-use: reusing it must be rejected.
             val replay = exchange(url("/v1/auth/refresh"), oldRefresh)
@@ -125,26 +149,60 @@ class LoginEndpointTest : PostgresBootTest() {
             second.statusCode shouldBe HttpStatus.OK
         }
 
-        test("refresh with an unknown/garbage refresh token is rejected with 401") {
+        test("refresh with an unknown/garbage refresh cookie is rejected with 401") {
             val resp = exchange(url("/v1/auth/refresh"), "not-a-real-refresh-token")
             resp.statusCode shouldBe HttpStatus.UNAUTHORIZED
             resp.body!!["code"] shouldBe "invalid_credentials"
         }
 
-        test("refresh with a missing refresh token returns 400") {
-            val resp = exchange(url("/v1/auth/refresh"), "")
+        test("refresh with an expired refresh cookie is rejected with 401 and revoked (negative path)") {
+            val (_, cookie) = signupAndLogin("jules@example.com")
+            val expired = cookie.refreshValue
+
+            // Manually back-date the stored row to the past to simulate expiry.
+            JdbcTemplate(dataSource).update(
+                "UPDATE refresh_tokens SET expires_at = now() - interval '1 second' WHERE token_hash = ?",
+                sha256(expired),
+            )
+
+            val resp = exchange(url("/v1/auth/refresh"), expired)
+            resp.statusCode shouldBe HttpStatus.UNAUTHORIZED
+            resp.body!!["code"] shouldBe "invalid_credentials"
+
+            // Expired handling revokes the row so it cannot be replayed.
+            val rows = JdbcTemplate(dataSource).queryForList(
+                "SELECT 1 FROM refresh_tokens WHERE token_hash = ?",
+                sha256(expired),
+            )
+            rows shouldBe emptyList()
+        }
+
+        test("refresh without a refresh cookie returns 400") {
+            val resp = client.exchange(
+                url("/v1/auth/refresh"),
+                HttpMethod.POST,
+                HttpEntity<Any?>(null, HttpHeaders()),
+                Map::class.java,
+            )
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
         }
     }
 
-    private fun exchange(path: String, refreshToken: String): org.springframework.http.ResponseEntity<Map<*, *>> =
-        client.exchange(path, HttpMethod.POST, refreshBody(refreshToken), Map::class.java)
+    /** Login response body + the refresh cookie it set. */
+    private data class LoginResult(val tokenBody: Map<*, *>, val refreshCookie: RefreshCookie)
 
-    private fun signupAndLogin(email: String): Map<*, *> {
+    private fun exchange(path: String, refreshToken: String): org.springframework.http.ResponseEntity<Map<*, *>> {
+        val headers = HttpHeaders()
+        headers.add(HttpHeaders.COOKIE, "refresh_token=$refreshToken")
+        return client.exchange(path, HttpMethod.POST, HttpEntity<Any?>(null, headers), Map::class.java)
+    }
+
+    private fun signupAndLogin(email: String): LoginResult {
         signup(email, "s3cr3t-password")
         val resp = client.postForEntity(url("/v1/auth/login"), loginBody(email, "s3cr3t-password"), Map::class.java)
         resp.statusCode shouldBe HttpStatus.OK
-        return resp.body!!
+        val cookie = parseSetCookie(resp.headers.getFirst(HttpHeaders.SET_COOKIE))
+        return LoginResult(resp.body!!, cookie)
     }
 
     private fun signup(email: String, password: String) {
@@ -161,11 +219,6 @@ class LoginEndpointTest : PostgresBootTest() {
         return HttpEntity(mapOf("email" to email, "password" to password), headers)
     }
 
-    private fun refreshBody(refreshToken: String): HttpEntity<Map<String, String>> {
-        val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
-        return HttpEntity(mapOf("refreshToken" to refreshToken), headers)
-    }
-
     private fun decodeJwtPayload(jwt: String): String {
         val payload = jwt.split(".")[1]
         val padded = payload + "=".repeat((4 - payload.length % 4) % 4)
@@ -176,4 +229,29 @@ class LoginEndpointTest : PostgresBootTest() {
         java.security.MessageDigest.getInstance("SHA-256")
             .digest(input.toByteArray())
             .joinToString("") { "%02x".format(it) }
+
+    private fun parseSetCookie(header: String?): RefreshCookie {
+        header shouldNotBe null
+        val parts = header!!.split(";").map { it.trim() }
+        val nameValue = parts[0]
+        nameValue shouldContain "refresh_token="
+        val value = nameValue.substringAfter("refresh_token=")
+        return RefreshCookie(
+            refreshValue = value,
+            httpOnly = parts.any { it.equals("HttpOnly", ignoreCase = true) },
+            secure = parts.any { it.equals("Secure", ignoreCase = true) },
+            sameSite = parts.firstOrNull { it.startsWith("SameSite=") }?.substringAfter("SameSite=") ?: "",
+            path = parts.firstOrNull { it.startsWith("Path=") }?.substringAfter("Path=") ?: "",
+            maxAgeSeconds = parts.firstOrNull { it.startsWith("Max-Age=") }?.substringAfter("Max-Age=")?.toLong() ?: 0L,
+        )
+    }
+
+    private data class RefreshCookie(
+        val refreshValue: String,
+        val httpOnly: Boolean,
+        val secure: Boolean,
+        val sameSite: String,
+        val path: String,
+        val maxAgeSeconds: Long,
+    )
 }
