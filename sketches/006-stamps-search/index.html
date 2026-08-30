@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tahir's List — Stamps & Search</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --paper: #FBF7EE; --kraft: #EFE6D4; --kraft-deep: #E4D7BE;
+    --ink: #211B12; --ink-soft: rgba(33,27,18,.6); --ink-faint: rgba(33,27,18,.4);
+    --red: #C6381F; --green: #1F5C3D;
+    --line: rgba(33,27,18,.1);
+  }
+  body { font-family: "Space Grotesk", -apple-system, sans-serif; background: var(--paper); color: var(--ink); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .head { font-family: "Archivo", sans-serif; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 36px; }
+
+  /* Header — C2 lockup: Tahir head icon + wordmark */
+  nav { display: flex; align-items: center; gap: 28px; padding: 20px 0; border-bottom: 1.5px solid var(--line); }
+  .brandlockup { display: flex; align-items: center; gap: 14px; margin-right: 12px; }
+  .brandicon { width: 56px; height: 56px; border-radius: 17px; overflow: hidden; box-shadow: 3px 3px 0 rgba(33,27,18,.9); flex: 0 0 auto; }
+  .brandicon img { width: 100%; height: 100%; object-fit: cover; }
+  .brandtext { display: grid; line-height: 1; }
+  .logo { font-family: "Archivo"; font-weight: 900; font-size: 24px; letter-spacing: -.02em; }
+  .logo .apos { color: var(--red); }
+  .brandtext .tag { font-family: "Space Grotesk", sans-serif; font-size: 12px; font-weight: 500; color: var(--ink-soft); margin-top: 5px; }
+  nav a { font-size: 14px; font-weight: 500; color: var(--ink-soft); text-decoration: none; }
+  nav a:hover { color: var(--ink); }
+  nav .login { margin-left: auto; font-weight: 700; font-size: 13.5px; background: var(--ink); color: var(--paper); padding: 10px 20px; border-radius: 10px; }
+
+  /* Hero — stamp-poster */
+  .hero { text-align: center; padding: 56px 0 0; position: relative; }
+  .hero .tahir { position: absolute; width: 150px; right: 1%; top: 20px; transform: rotate(3deg); border-radius: 28px; border: 3px solid #fff; box-shadow: 6px 6px 0 rgba(33,27,18,.9); }
+  .hero .speech { position: absolute; width: auto; right: calc(1% + 156px); top: 44px; background: #fff; border: 2px solid var(--ink); border-radius: 14px 14px 4px 14px; padding: 9px 13px; font-size: 12px; font-weight: 700; text-align: left; box-shadow: 4px 4px 0 var(--ink); z-index: 2; white-space: nowrap; }
+  .hero .speech::after { content: ""; position: absolute; right: -12px; top: 22px; width: 14px; height: 14px; background: #fff; border-right: 2px solid var(--ink); border-top: 2px solid var(--ink); transform: rotate(45deg); }
+  .hero .speech em { color: var(--green); font-style: normal; }
+  .kicker { display: inline-flex; align-items: center; gap: 8px; font-family: "Archivo"; font-weight: 800; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--green); border: 2px dashed var(--green); border-radius: 8px; padding: 6px 14px; transform: rotate(-1.5deg); }
+  .hero h1 { font-family: "Archivo"; font-weight: 900; font-size: 54px; letter-spacing: -.025em; line-height: 1.04; margin-top: 22px; }
+  .hero h1 .hl { color: var(--red); position: relative; white-space: nowrap; }
+  .hero h1 .hl::after { content: ""; position: absolute; left: -2%; bottom: 4px; width: 104%; height: 12px; background: rgba(198,56,31,.14); z-index: -1; transform: rotate(-1deg); }
+  .hero p { margin: 16px auto 0; max-width: 56ch; font-size: 16.5px; color: var(--ink-soft); }
+
+  /* Search — big counter slab */
+  .searchbar { max-width: 780px; margin: 34px auto 0; background: #fff; border: 2px solid var(--ink); border-radius: 16px; box-shadow: 6px 6px 0 var(--ink); display: flex; padding: 7px; }
+  .searchbar .fld { flex: 1; display: flex; align-items: center; gap: 10px; padding-left: 14px; }
+  .searchbar input { flex: 1; border: none; outline: none; font: inherit; font-size: 15.5px; font-weight: 500; background: none; }
+  .searchbar .loc { border: none; background: var(--kraft); color: var(--ink); width: 42px; height: 42px; border-radius: 10px; font-size: 17px; cursor: pointer; }
+  .searchbar .go { border: none; background: var(--red); color: #fff; font: inherit; font-weight: 700; font-size: 15px; padding: 0 30px; border-radius: 10px; cursor: pointer; }
+  .searchbar .go:hover { background: #A32B15; }
+  .centerpill { display: inline-flex; gap: 7px; margin-top: 14px; font-size: 12.5px; font-weight: 700; color: var(--ink-soft); background: var(--kraft); border-radius: 999px; padding: 7px 15px; }
+  .centerpill b { color: var(--ink); }
+
+  /* Cut toggle — signature */
+  .cuttoggle { display: flex; justify-content: center; margin: 30px 0 0; }
+  .cuttoggle .grp { background: #fff; border: 2px solid var(--ink); border-radius: 999px; padding: 5px; display: flex; gap: 4px; box-shadow: 4px 4px 0 var(--ink); }
+  .cuttoggle button { border: 2px dashed transparent; background: none; font: inherit; font-weight: 700; font-size: 13.5px; padding: 10px 20px; border-radius: 999px; cursor: pointer; color: var(--ink-soft); display: flex; gap: 8px; align-items: center; }
+  .cuttoggle button.on { border-color: var(--red); color: var(--red); background: rgba(198,56,31,.05); transform: rotate(-.6deg); }
+  .cuttoggle .n { font-size: 11px; font-weight: 800; background: var(--kraft); border-radius: 999px; padding: 2px 8px; color: var(--ink); }
+
+  /* Filter row */
+  .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 26px 0 8px; }
+  .f { font-size: 13.5px; font-weight: 600; padding: 9px 16px; border-radius: 999px; border: 1.5px solid var(--line); background: #fff; color: var(--ink-soft); cursor: pointer; }
+  .f:hover { border-color: var(--ink); color: var(--ink); }
+  .f.on { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .f.more { margin-left: auto; font-weight: 700; }
+  .distgrp { display: flex; gap: 6px; margin-left: 8px; padding-left: 18px; border-left: 1.5px solid var(--line); }
+
+  .meta { display: flex; justify-content: space-between; align-items: baseline; padding: 14px 0 20px; }
+  .meta .count { font-family: "Archivo"; font-weight: 800; font-size: 17px; }
+  .meta .count b { color: var(--red); }
+  .meta a { font-size: 13px; font-weight: 700; color: var(--ink-soft); }
+
+  /* Grid — slips with stamps */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 26px; }
+  .slip { background: #fff; border: 1.5px solid var(--line); border-radius: 4px 16px 16px 16px; overflow: hidden; cursor: pointer; transition: transform .15s, box-shadow .15s; position: relative; }
+  .slip:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(33,27,18,.12); }
+  .slip::before { content: ""; position: absolute; top: -1px; left: 24px; width: 70px; height: 14px; background: var(--kraft); border-left: 1px dashed var(--line); border-right: 1px dashed var(--line); transform: rotate(-2deg); z-index: 2; }
+  .slip .photo { height: 150px; position: relative; }
+  .ph1 { background: linear-gradient(120deg, #E8A44C, #C96A2B); }
+  .ph2 { background: linear-gradient(120deg, #93B57E, #4E7A44); }
+  .ph3 { background: linear-gradient(120deg, #D9848C, #A04258); }
+  .ph4 { background: linear-gradient(120deg, #C9A227, #8C6D1F); }
+  .ph5 { background: linear-gradient(120deg, #7FA8C9, #3D6B94); }
+  .ph6 { background: linear-gradient(120deg, #B07CB8, #6B3D75); }
+  .slip .photo::after { content: "🍽"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 46px; opacity: .45; }
+  .seal { position: absolute; top: 22px; right: 14px; width: 52px; height: 52px; border-radius: 50%; border: 2.5px dashed var(--green); background: rgba(251,247,238,.94); color: var(--green); display: grid; place-items: center; text-align: center; font-family: "Archivo"; font-weight: 900; font-size: 8px; letter-spacing: .08em; line-height: 1.25; text-transform: uppercase; transform: rotate(8deg); box-shadow: 0 3px 10px rgba(33,27,18,.18); }
+  .seal svg { width: 20px; height: 20px; margin-bottom: 1px; }
+  .stamp { position: absolute; bottom: 12px; left: 12px; display: inline-flex; gap: 6px; align-items: center; background: var(--paper); border: 2px dashed var(--red); color: var(--red); border-radius: 6px; padding: 4px 10px; font-family: "Archivo"; font-weight: 800; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; transform: rotate(-1.5deg); }
+  .stamp.machine { border-color: var(--ink-faint); color: var(--ink-soft); }
+  .slip .body { padding: 16px 18px 15px; }
+  .slip .row1 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .slip h3 { font-family: "Archivo"; font-weight: 800; font-size: 17px; letter-spacing: -.01em; }
+  .slip .rating { font-size: 13px; font-weight: 700; }
+  .slip .rating .star { color: var(--red); }
+  .slip .sub { font-size: 13px; color: var(--ink-soft); margin-top: 2px; }
+  .slip .facts { display: flex; gap: 10px; margin-top: 11px; font-size: 12px; color: var(--ink-soft); font-weight: 500; align-items: center; border-top: 1.5px dashed var(--line); padding-top: 11px; }
+  .slip .facts .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-faint); }
+  .slip .facts .dist { margin-right: auto; color: var(--green); font-weight: 700; }
+  .slip.unverified { border-style: dashed; }
+  .slip.unverified .sealless-note { position: absolute; top: 22px; right: 14px; font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); border: 1.5px solid var(--line); border-radius: 6px; padding: 4px 8px; transform: rotate(4deg); background: var(--paper); }
+
+  /* Trust band */
+  .trust { margin: 52px 0 0; background: var(--ink); color: var(--paper); border-radius: 22px; padding: 40px 46px; display: flex; align-items: center; justify-content: space-between; gap: 40px; position: relative; overflow: hidden; }
+  .trust::after { content: "✓"; position: absolute; right: -30px; bottom: -60px; font-size: 260px; font-weight: 900; color: rgba(251,247,238,.05); }
+  .trust h2 { font-family: "Archivo"; font-weight: 900; font-size: 26px; letter-spacing: -.02em; }
+  .trust h2 em { font-style: normal; color: #E8937D; }
+  .trust p { margin-top: 8px; font-size: 14px; color: rgba(251,247,238,.7); max-width: 52ch; }
+  .trust .steps { display: flex; gap: 26px; margin-top: 20px; }
+  .trust .step { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; color: rgba(251,247,238,.75); max-width: 180px; }
+  .trust .step b { display: grid; place-items: center; width: 26px; height: 26px; flex: 0 0 auto; border-radius: 50%; background: var(--red); color: #fff; font-family: "Archivo"; font-weight: 800; font-size: 12px; }
+  .trust button { flex: 0 0 auto; background: var(--paper); color: var(--ink); border: none; border-radius: 12px; padding: 14px 24px; font: inherit; font-weight: 700; font-size: 14px; cursor: pointer; }
+
+  footer { margin: 56px 0 0; padding: 26px 0 40px; border-top: 1.5px solid var(--line); display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-soft); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <nav>
+      <div class="brandlockup">
+        <div class="brandicon"><img src="tahir-head.jpg" alt="Tahir's List"></div>
+        <div class="brandtext">
+          <div class="logo head">Tahir<span class="apos">'</span>s List</div>
+          <div class="tag">find halal food</div>
+        </div>
+      </div>
+      <a href="#">Discover</a><a href="#">Verified list</a><a href="#">Favorites</a><a href="#">For restaurants</a>
+      <a class="login head" href="#">Log in</a>
+    </nav>
+
+    <section class="hero">
+      <img class="tahir" src="tahir.jpg" alt="Tahir — your halal food guide">
+      <div class="speech" aria-hidden="true">9 new spots verified ✓</div>
+      <span class="kicker head">✓ Certificates checked by our committee</span>
+      <h1 class="head">Find halal food.<br>Know it's <span class="hl">actually halal.</span></h1>
+      <p>Hand-cut or machine-cut, verified or not — every listing tells you the truth about your food. No guesswork, no calling ahead.</p>
+
+      <div class="searchbar">
+        <span class="fld">📍 <input type="text" value="Brooklyn, NY"></span>
+        <button class="loc" aria-label="Use my location">⌖</button>
+        <button class="go head">Search</button>
+      </div>
+      <div style="text-align:center"><span class="centerpill">Searching near <b>Brooklyn, NY</b> ✕</span></div>
+    </section>
+
+    <div class="cuttoggle">
+      <div class="grp">
+        <button class="on head">🔪 Hand-cut <span class="n">14</span></button>
+        <button class="head">⚙ Machine-cut <span class="n">6</span></button>
+        <button class="head">Any cut <span class="n">23</span></button>
+      </div>
+    </div>
+
+    <div class="filters">
+      <button class="f on">✓ Verified only</button>
+      <button class="f">Middle Eastern</button>
+      <button class="f">Pakistani</button>
+      <button class="f">Under $$</button>
+      <button class="f">★ 4.5+</button>
+      <span class="distgrp">
+        <button class="f on">5 mi</button><button class="f">10 mi</button><button class="f">Any</button>
+      </span>
+      <button class="f more">+ All filters</button>
+    </div>
+
+    <div class="meta">
+      <span class="count head"><b>14 verified</b> hand-cut spots near Brooklyn</span>
+      <a href="#">Clear filters</a>
+    </div>
+
+    <div class="grid">
+      <article class="slip">
+        <div class="photo ph1">
+          <span class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 13l5 5L20 7"/></svg>Verified</span>
+          <span class="stamp">🔪 Hand-cut</span>
+        </div>
+        <div class="body">
+          <div class="row1"><h3>Karachi Kitchen</h3><span class="rating"><span class="star">★</span> 4.8</span></div>
+          <p class="sub">Pakistani · biryani, karahi · $$</p>
+          <div class="facts"><span class="dist">0.4 mi</span><span>Certified · HFSAA</span><span class="dot"></span><span>(612)</span></div>
+        </div>
+      </article>
+
+      <article class="slip">
+        <div class="photo ph2">
+          <span class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 13l5 5L20 7"/></svg>Verified</span>
+          <span class="stamp">🔪 Hand-cut</span>
+        </div>
+        <div class="body">
+          <div class="row1"><h3>Shawarma Brothers</h3><span class="rating"><span class="star">★</span> 4.6</span></div>
+          <p class="sub">Middle Eastern · platters · $</p>
+          <div class="facts"><span class="dist">1.1 mi</span><span>Open till 2 AM</span><span class="dot"></span><span>(1,204)</span></div>
+        </div>
+      </article>
+
+      <article class="slip unverified">
+        <div class="photo ph3">
+          <span class="sealless-note">Not verified</span>
+          <span class="stamp machine">⚙ Machine-cut</span>
+        </div>
+        <div class="body">
+          <div class="row1"><h3>Dave's Hot Chicken</h3><span class="rating"><span class="star">★</span> 4.4</span></div>
+          <p class="sub">Chicken · Nashville hot · $$</p>
+          <div class="facts"><span class="dist">2.3 mi</span><span>Community listing</span><span class="dot"></span><span>(2,377)</span></div>
+        </div>
+      </article>
+
+      <article class="slip">
+        <div class="photo ph4">
+          <span class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 13l5 5L20 7"/></svg>Verified</span>
+          <span class="stamp">🔪 Hand-cut</span>
+        </div>
+        <div class="body">
+          <div class="row1"><h3>Al-Sultan Grill</h3><span class="rating"><span class="star">★</span> 4.7</span></div>
+          <p class="sub">Lebanese · mixed grill · $$</p>
+          <div class="facts"><span class="dist">1.8 mi</span><span>Certified · IFANCA</span><span class="dot"></span><span>(540)</span></div>
+        </div>
+      </article>
+
+      <article class="slip unverified">
+        <div class="photo ph5">
+          <span class="sealless-note">Not verified</span>
+          <span class="stamp machine">⚙ Machine-cut</span>
+        </div>
+        <div class="body">
+          <div class="row1"><h3>The Halal Guys</h3><span class="rating"><span class="star">★</span> 4.5</span></div>
+          <p class="sub">American · over rice · $</p>
+          <div class="facts"><span class="dist">2.6 mi</span><span>Popular</span><span class="dot"></span><span>(8,912)</span></div>
+        </div>
+      </article>
+
+      <article class="slip">
+        <div class="photo ph6">
+          <span class="seal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M4 13l5 5L20 7"/></svg>Verified</span>
+          <span class="stamp">🔪 Hand-cut</span>
+        </div>
+        <div class="body">
+          <div class="row1"><h3>Cafe Acai</h3><span class="rating"><span class="star">★</span> 4.9</span></div>
+          <p class="sub">Brazilian · acai bowls · $</p>
+          <div class="facts"><span class="dist">3.2 mi</span><span>New</span><span class="dot"></span><span>(321)</span></div>
+        </div>
+      </article>
+    </div>
+
+    <section class="trust">
+      <div>
+        <h2 class="head">Every stamp is <em>checked</em>, not claimed.</h2>
+        <p>When you see the green seal, a real certificate has been reviewed. Unverified places stay labeled — honest about what we know.</p>
+        <div class="steps">
+          <div class="step"><b>1</b> Owner uploads their halal certificate</div>
+          <div class="step"><b>2</b> Our committee reviews it</div>
+          <div class="step"><b>3</b> The green seal is earned — or not</div>
+        </div>
+      </div>
+      <button class="head">How verification works →</button>
+    </section>
+
+    <footer>
+      <span>Tahir's List © 2026 — find halal food</span>
+      <span>Privacy · Terms · Add a restaurant</span>
+    </footer>
+  </div>
+</body>
+</html>

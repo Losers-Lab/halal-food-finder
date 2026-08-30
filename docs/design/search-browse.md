@@ -2,7 +2,7 @@
 
 Status: implementation-ready · Matches approved sketch `sketches/006-stamps-search` · Owner: Fatima
 Tokens: `tokens.md` (v2 Stamps & Search). Trust components: `trust-components.md` (v2 restyle below).
-Stack: Next.js + TS + Tailwind v4. Placeholder brand wordmark "HalalMarket" — do not replace.
+Stack: Next.js + TS + Tailwind v4. Brand wordmark: "Tahir's List" (apostrophe brand red) — founder-ratified 2026-08-30.
 
 ## Primary user flow
 
@@ -14,7 +14,7 @@ Land on page → search box is the first thing the eye hits (search-FIRST, no ma
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│ [HalalMarket wordmark, Archivo 800]        Log in   [Sign up]│  ← header, cream-50, kraft-200 bottom border
+│ [Tahir's List wordmark, apostrophe brand-500] Log in   [Sign up]│  ← header, cream-50, kraft-200 bottom border
 ├──────────────────────────────────────────────────────────────┤
 │        Find halal food near you. Stamped & trusted.          │  ← text-display, ink-900
 │  ┌──────────────────────────────────────┐  ┌───────────┐     │
@@ -33,7 +33,7 @@ Land on page → search box is the first thing the eye hits (search-FIRST, no ma
 
 ### Header (all screens)
 - Height 64px, bg `cream-50`, bottom border 1.5px `kraft-200`.
-- Wordmark slot left: placeholder "HalalMarket", `text-title` Archivo 800, `brand-500`, hard shadow-chip on a small red seal behind it (brand logo slot — TBD, flagged to founder).
+- Wordmark slot left: "Tahir's List" Archivo 800, `brand-500`, apostrophe brand red, hard shadow-chip on a small red seal behind it (lockup spec: `brand/tahir/logo-lockups.html`).
 - Right: "Log in" = ghost button (ink-700 text, transparent bg); "Sign up" = primary (brand-500, shadow-chip, press-down interaction).
 - Mobile: header collapses to wordmark + hamburger → slide-down panel (bg cream-50, links stacked, min 44px rows). Hamburger `aria-expanded`, panel closes on Esc/route change.
 
