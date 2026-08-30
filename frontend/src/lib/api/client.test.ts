@@ -9,6 +9,15 @@ function mockFetchResponse(body: unknown, status = 200) {
   });
 }
 
+/** Return a fixed raw response body — e.g. a non-JSON HTML/proxy error. */
+function mockFetchRawText(rawBody: string, status: number) {
+  return vi.fn().mockResolvedValue({
+    ok: status >= 200 && status < 300,
+    status,
+    text: () => Promise.resolve(rawBody),
+  });
+}
+
 describe("api client", () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -120,5 +129,26 @@ describe("api client", () => {
     await expect(api.login({ email: "a@b.co", password: "x" })).rejects.toBeInstanceOf(
       ApiError,
     );
+  });
+
+  // Gap 5 / Defect 5a — a non-JSON body (proxy 502 HTML, malformed JSON) must
+  // never leak a raw SyntaxError; it should normalize to a decorated error.
+  it("maps a non-JSON error body to a typed ApiError, never a bare SyntaxError", async () => {
+    vi.stubGlobal("fetch", mockFetchRawText("<html>Bad Gateway</html>", 502));
+    const err = await api.login({ email: "a@b.co", password: "password1" }).catch(
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(502);
+    expect((err as ApiError).code).toBe("invalid_input");
+  });
+
+  it("normalizes a non-JSON 2xx body to a typed error, not a SyntaxError escaping", async () => {
+    vi.stubGlobal("fetch", mockFetchRawText("not json at all", 200));
+    const err = await api.login({ email: "a@b.co", password: "password1" }).catch(
+      (e: unknown) => e,
+    );
+    expect(err).toBeInstanceOf(Error);
+    expect(err).not.toBeInstanceOf(SyntaxError);
   });
 });

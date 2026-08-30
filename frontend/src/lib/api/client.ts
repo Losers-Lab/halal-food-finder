@@ -67,12 +67,27 @@ async function request<T>(
   }
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+
+  // Defect 5a guard: a non-JSON body (a reverse-proxy 502 HTML page, malformed
+  // or whitespace-padded JSON) must never leak a raw SyntaxError. Normalize it
+  // to a typed error instead. An unexpected 2xx with an unparseable body is a
+  // network-layer failure; an unparseable error body keeps the ApiError
+  // contract so the UI can still render a typed, decorated error.
+  let data: unknown = null;
+  try {
+    data = text ? (JSON.parse(text) as unknown) : null;
+  } catch {
+    if (response.ok) {
+      throw new Error("network_error");
+    }
+    throw new ApiError(response.status, "invalid_input");
+  }
 
   if (!response.ok) {
-    const code =
-      typeof data?.code === "string" ? data.code : "invalid_input";
-    const detail = typeof data?.message === "string" ? data.message : undefined;
+    const body = (data ?? null) as { code?: unknown; message?: unknown } | null;
+    const code = typeof body?.code === "string" ? body.code : "invalid_input";
+    const detail =
+      typeof body?.message === "string" ? body.message : undefined;
     throw new ApiError(response.status, code, detail);
   }
 
