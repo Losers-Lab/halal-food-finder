@@ -18,10 +18,15 @@
   .head { font-family: "Archivo", sans-serif; }
   .wrap { max-width: 1160px; margin: 0 auto; padding: 0 36px; }
 
-  /* Nav */
+  /* Header — C2 lockup: Tahir head icon + wordmark */
   nav { display: flex; align-items: center; gap: 28px; padding: 20px 0; border-bottom: 1.5px solid var(--line); }
-  .logo { font-family: "Archivo"; font-weight: 900; font-size: 19px; letter-spacing: -.02em; }
-  .logo em { font-style: normal; color: var(--red); }
+  .brandlockup { display: flex; align-items: center; gap: 14px; margin-right: 12px; }
+  .brandicon { width: 56px; height: 56px; border-radius: 17px; overflow: hidden; box-shadow: 3px 3px 0 rgba(33,27,18,.9); flex: 0 0 auto; }
+  .brandicon img { width: 100%; height: 100%; object-fit: cover; }
+  .brandtext { display: grid; line-height: 1; }
+  .logo { font-family: "Archivo"; font-weight: 900; font-size: 24px; letter-spacing: -.02em; }
+  .logo .apos { color: var(--red); }
+  .brandtext .tag { font-family: "Space Grotesk", sans-serif; font-size: 12px; font-weight: 500; color: var(--ink-soft); margin-top: 5px; }
   nav a { font-size: 14px; font-weight: 500; color: var(--ink-soft); text-decoration: none; }
   nav a:hover { color: var(--ink); }
   nav .login { margin-left: auto; font-weight: 700; font-size: 13.5px; background: var(--ink); color: var(--paper); padding: 10px 20px; border-radius: 10px; }
@@ -114,7 +119,13 @@
 <body>
   <div class="wrap">
     <nav>
-      <div class="logo head">Tahir<span style="color:var(--red)">'</span>s List</div>
+      <div class="brandlockup">
+        <div class="brandicon"><img src="tahir-head.jpg" alt="Tahir's List"></div>
+        <div class="brandtext">
+          <div class="logo head">Tahir<span class="apos">'</span>s List</div>
+          <div class="tag">find halal food</div>
+        </div>
+      </div>
       <a href="#">Discover</a><a href="#">Verified list</a><a href="#">Favorites</a><a href="#">For restaurants</a>
       <a class="login head" href="#">Log in</a>
     </nav>
