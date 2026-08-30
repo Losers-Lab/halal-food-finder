@@ -24,6 +24,21 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
  */
 const COOKIE_REQUEST = { credentials: "include" as const };
 
+/**
+ * Access-token holder for authenticated API calls (sc-138). The session store
+ * (`auth/session.ts`) feeds the current in-memory access token here on every
+ * auth change; `request()` emits it as a Bearer Authorization header when
+ * present. Kept in the client (not the session module) so the dependency stays
+ * one-way (session → client) with no import cycle. Memory-only by contract —
+ * never persisted, never written to storage.
+ */
+let accessToken: string | null = null;
+
+/** Set the access token used for authenticated calls (pass null to clear it). */
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
 /** One of the machine-readable error codes the backend returns. */
 export type ApiErrorCode =
   | "invalid_input"
@@ -59,9 +74,12 @@ async function request<T>(
 ): Promise<T> {
   let response: Response;
   try {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
     response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+      headers,
       credentials: options.credentials,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: options.signal,
