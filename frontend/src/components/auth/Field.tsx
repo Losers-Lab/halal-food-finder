@@ -40,7 +40,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
         <div className="flex items-baseline justify-between">
           <label
             htmlFor={id}
-            className="text-body font-medium text-neutral-700"
+            className="text-body font-medium text-ink-700"
           >
             {label}
           </label>
@@ -52,8 +52,8 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
           id={id}
           aria-invalid={hasError || undefined}
           aria-describedby={describedBy}
-          className={`h-11 w-full rounded-md border bg-white px-3 text-body text-neutral-900 placeholder:text-neutral-400 focus:outline-2 focus:outline-offset-0 focus:outline-brand-500 ${
-            hasError ? "border-danger-500" : "border-neutral-300"
+          className={`h-11 w-full rounded-md border bg-ink-0 px-3 text-body text-ink-900 placeholder:text-ink-400 focus:outline-2 focus:outline-offset-0 focus:outline-brand-500 ${
+            hasError ? "border-danger-500" : "border-kraft-300"
           }`}
           {...inputProps}
         />
@@ -68,7 +68,7 @@ export const Field = forwardRef<HTMLInputElement, FieldProps>(
             <span>{error}</span>
           </p>
         ) : helper ? (
-          <p id={`${id}-helper`} className="text-small text-neutral-500">
+          <p id={`${id}-helper`} className="text-small text-ink-500">
             {helper}
           </p>
         ) : null}

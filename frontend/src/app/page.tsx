@@ -1,93 +1,71 @@
-import {
-  HandCutIndicator,
-  MachineCutIndicator,
-  UnverifiedTag,
-  VerifiedBadge,
-} from "@/components/trust";
-import { AuthHeader } from "@/components/auth/AuthHeader";
+"use client";
+
+import { useState } from "react";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { MobileTabBar } from "@/components/layout/MobileTabBar";
+import { SearchBar } from "@/components/search/SearchBar";
+import { BrowseChips } from "@/components/search/BrowseChips";
+import { ListingGrid } from "@/components/listing/ListingGrid";
+import { useListings } from "@/lib/listings/useListings";
+import type { BrowseFilter } from "@/lib/listings/data";
+import { SealMark } from "@/components/trust";
 
 /**
- * Static design-system preview (skeleton task). Renders the trust components
- * per docs/design/trust-components.md so tokens + components are visually
- * inspectable. Also hosts the AuthHeader (post-login signed-in state).
+ * Home — the search-first browse screen (docs/design/search-browse.md).
+ * Search box is the first thing the eye hits; browse chips filter the list;
+ * cards link to the detail page. No map on the homepage (founder: map is at
+ * most a list/view toggle, never the entry surface).
  */
 export default function Home() {
+  const [filter, setFilter] = useState<BrowseFilter>("ALL");
+  const { restaurants, verifiedCount, status, retry } = useListings("", filter);
+
   return (
-    <main className="mx-auto max-w-3xl px-5 py-12">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-display text-neutral-900">Halal Food Finder</h1>
-          <p className="mt-2 text-body text-neutral-500">
-            Design-system preview — trust components and tokens (docs/design).
+    <div className="min-h-screen bg-cream-50">
+      <SiteHeader />
+      <main className="mx-auto max-w-[1200px] px-5 py-12 pb-32">
+        {/* Hero */}
+        <section className="text-center">
+          <SealMark
+            className="mx-auto h-10 w-10 text-brand-500"
+            srLabel="HalalMarket seal"
+          />
+          <h1 className="mx-auto mt-4 max-w-[640px] text-display text-ink-900">
+            Find halal food near you. Stamped &amp; trusted.
+          </h1>
+          <p className="mx-auto mt-3 max-w-[56ch] text-body text-ink-500">
+            Real certifications, reviewed by people — not just a label.
           </p>
-        </div>
-        <AuthHeader />
-      </div>
 
-      <section className="mt-10">
-        <h2 className="text-title text-neutral-900">Trust components</h2>
-
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          <VerifiedBadge />
-          <UnverifiedTag />
-        </div>
-
-        <div className="mt-4 flex flex-wrap items-center gap-4">
-          <HandCutIndicator />
-          <MachineCutIndicator />
-        </div>
-      </section>
-
-      <section className="mt-10">
-        <h2 className="text-title text-neutral-900">Composition (listing card)</h2>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-5 shadow-card">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-heading text-neutral-900">Al-Amir Grill</span>
-              <VerifiedBadge />
-            </div>
-            <p className="mt-1 text-small text-neutral-500">
-              Middle Eastern · 1.2 mi · ★ 4.6 (89)
-            </p>
-            <div className="mt-3">
-              <HandCutIndicator />
-            </div>
+          <div className="mx-auto mt-8 max-w-[720px] text-left">
+            <SearchBar />
           </div>
-          <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-5 shadow-card">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-heading text-neutral-900">Saffron House</span>
-              <UnverifiedTag />
-            </div>
-            <p className="mt-1 text-small text-neutral-500">
-              South Asian · 0.8 mi · ★ 4.2 (31)
-            </p>
-            <div className="mt-3">
-              <MachineCutIndicator />
-            </div>
-          </div>
-        </div>
-      </section>
 
-      <section className="mt-10">
-        <h2 className="text-title text-neutral-900">Tokens</h2>
-        <div className="mt-4 flex flex-wrap gap-4">
-          {(
-            [
-              ["brand-500", "bg-brand-500"],
-              ["positive-500", "bg-positive-500"],
-              ["neutral-900", "bg-neutral-900"],
-              ["neutral-200", "bg-neutral-200"],
-              ["danger-500", "bg-danger-500"],
-              ["warning-500", "bg-warning-500"],
-            ] as const
-          ).map(([name, cls]) => (
-            <div key={name} className="flex flex-col items-center gap-1">
-              <div className={`h-10 w-10 rounded-md border border-neutral-200 ${cls}`} />
-              <span className="text-small text-neutral-500">{name}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-    </main>
+          <div className="mx-auto mt-6 max-w-[720px]">
+            <BrowseChips active={filter} onChange={setFilter} />
+          </div>
+        </section>
+
+        {/* Results */}
+        <section className="mt-12" aria-live="polite">
+          <div className="mb-5 flex items-baseline justify-between">
+            <p className="text-body text-ink-500" data-testid="result-count">
+              {status === "success" && restaurants.length > 0
+                ? `${verifiedCount} verified · ${restaurants.length} spots near you`
+                : "Finding halal spots…"}
+            </p>
+          </div>
+          <ListingGrid
+            restaurants={restaurants}
+            status={status}
+            onRetry={retry}
+            emptyHref="/add-listing"
+          />
+        </section>
+      </main>
+      <SiteFooter />
+      <MobileTabBar />
+    </div>
   );
 }

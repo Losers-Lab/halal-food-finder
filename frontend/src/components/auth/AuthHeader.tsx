@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 /**
  * Header auth strip — shows the signed-in account (post-login state) or
  * Sign up / Log in links. Surface the "success → logged-in" outcome on the
- * home page; session is persisted via AuthProvider.
+ * home page; session is persisted via AuthProvider. Stamps system (tokens.md
+ * v2): Log in = ghost button, Sign up = primary brand button (shadow-chip).
  */
 export function AuthHeader() {
   const { session, restoring, signOut } = useAuth();
@@ -14,20 +15,20 @@ export function AuthHeader() {
   // While a persisted session is re-materializing, show a neutral placeholder
   // rather than flashing between logged-out links and the signed-in strip.
   if (restoring && !session) {
-    return <div aria-busy="true" className="h-8 w-56 animate-pulse rounded bg-neutral-100" />;
+    return <div aria-busy="true" className="h-8 w-56 animate-pulse rounded bg-ink-100" />;
   }
 
   if (session) {
     return (
-      <div className="flex items-center gap-3 text-neutral-500">
+      <div className="flex items-center gap-3 text-ink-500">
         <Link
           href="/add-listing"
-          className="rounded-md bg-brand-500 px-3 py-1.5 text-small font-medium text-white hover:bg-brand-600"
+          className="rounded-md bg-brand-500 px-3 py-1.5 text-small font-medium text-cream-50 shadow-chip hover:bg-brand-600"
         >
           Add a listing
         </Link>
         <span className="text-small">
-          Signed in as <strong className="text-neutral-700">{session.email}</strong>
+          Signed in as <strong className="text-ink-700">{session.email}</strong>
         </span>
         <button
           type="button"
@@ -35,7 +36,7 @@ export function AuthHeader() {
             signOut();
             // signOut() flushes local state; no navigation needed on home.
           }}
-          className="rounded-md px-2 py-1 text-small text-brand-500 hover:bg-neutral-100 hover:text-brand-600"
+          className="rounded-md px-2 py-1 text-small text-brand-500 hover:bg-ink-100 hover:text-brand-600"
         >
           Sign out
         </button>
@@ -47,13 +48,13 @@ export function AuthHeader() {
     <div className="flex items-center gap-2">
       <Link
         href="/login"
-        className="rounded-md px-2 py-1 text-small text-brand-500 hover:bg-neutral-100 hover:text-brand-600"
+        className="rounded-md px-2 py-1 text-small text-ink-700 hover:text-brand-600"
       >
         Log in
       </Link>
       <Link
         href="/signup"
-        className="rounded-md bg-brand-500 px-3 py-1.5 text-small font-medium text-white hover:bg-brand-600"
+        className="rounded-md bg-brand-500 px-3 py-1.5 text-small font-medium text-cream-50 shadow-chip hover:bg-brand-600"
       >
         Sign up
       </Link>

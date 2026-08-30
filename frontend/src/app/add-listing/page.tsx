@@ -88,7 +88,7 @@ export default function AddListingPage() {
       <main className="mx-auto max-w-lg px-5 py-12">
         <div
           aria-busy="true"
-          className="h-40 animate-pulse rounded-lg bg-neutral-100"
+          className="h-40 animate-pulse rounded-lg bg-ink-100"
         />
       </main>
     );
@@ -100,14 +100,14 @@ export default function AddListingPage() {
   if (!session) {
     return (
       <main className="mx-auto max-w-lg px-5 py-12 text-center">
-        <h1 className="text-title text-neutral-900">Add a restaurant</h1>
-        <p className="mt-2 text-body text-neutral-500">
+        <h1 className="text-title text-ink-900">Add a restaurant</h1>
+        <p className="mt-2 text-body text-ink-500">
           You need to be signed in to add a listing.
         </p>
         <div className="mt-6">
           <Link
             href="/login"
-            className="inline-flex h-11 items-center justify-center rounded-md bg-brand-500 px-4 text-body font-medium text-white hover:bg-brand-600"
+            className="inline-flex h-11 items-center justify-center rounded-md bg-brand-500 px-4 text-body font-medium text-cream-50 shadow-chip hover:bg-brand-600"
           >
             Log in to continue
           </Link>
@@ -119,17 +119,17 @@ export default function AddListingPage() {
   if (created) {
     return (
       <main className="mx-auto max-w-lg px-5 py-12">
-        <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6 shadow-card">
+        <div className="rounded-lg border border-kraft-200 bg-ink-0 p-6 shadow-card">
           <div className="flex items-center justify-between gap-3">
-            <h1 className="text-title text-neutral-900">Listing saved</h1>
+            <h1 className="text-title text-ink-900">Listing saved</h1>
             <UnverifiedTag />
           </div>
-          <p className="mt-3 text-body text-neutral-500">
-            <span className="font-medium text-neutral-900">
+          <p className="mt-3 text-body text-ink-500">
+            <span className="font-medium text-ink-900">
               {created.name}
             </span>{" "}
-            is now on Halal Food Finder. This listing is currently{" "}
-            <span className="font-medium text-neutral-700">unverified</span> —
+            is now on Halal Market. This listing is currently{" "}
+            <span className="font-medium text-ink-700">unverified</span> —
             the owner can claim it and submit their halal certification for
             review.
           </p>
@@ -159,11 +159,11 @@ export default function AddListingPage() {
 
   return (
     <main className="mx-auto max-w-lg px-5 py-12">
-      <div className="rounded-lg border border-neutral-200 bg-neutral-0 p-6 shadow-card sm:p-8">
-        <h1 className="text-title text-neutral-900">Add a restaurant</h1>
-        <p className="mt-2 text-body text-neutral-500">
+      <div className="rounded-lg border border-kraft-200 bg-ink-0 p-6 shadow-card sm:p-8">
+        <h1 className="text-title text-ink-900">Add a restaurant</h1>
+        <p className="mt-2 text-body text-ink-500">
           Share a halal place you know. Listings start{" "}
-          <span className="font-medium text-neutral-700">unverified</span> and
+          <span className="font-medium text-ink-700">unverified</span> and
           can be claimed by the owner later.
         </p>
 
@@ -224,7 +224,7 @@ export default function AddListingPage() {
               }}
             />
           </div>
-          <p className="text-small text-neutral-500">
+          <p className="text-small text-ink-500">
             Coordinates place this listing on the map. Address-to-coordinate
             lookup is coming in a later release.
           </p>

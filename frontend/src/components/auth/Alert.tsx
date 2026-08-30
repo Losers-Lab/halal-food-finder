@@ -18,7 +18,7 @@ export function Alert({
 }) {
   const styles =
     variant === "banner"
-      ? "border-l-4 border-danger-100 bg-danger-50 text-danger-600"
+      ? "border-l-4 border-danger-500 bg-danger-50 text-danger-600"
       : "border border-danger-100 bg-danger-50 text-danger-600";
 
   return (
