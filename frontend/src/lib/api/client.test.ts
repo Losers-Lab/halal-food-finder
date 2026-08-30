@@ -106,6 +106,16 @@ describe("api client", () => {
     );
   });
 
+  it("refresh never attaches the bearer even when an access token is set (sc-138)", async () => {
+    // Regression guard: an expired access token must not 401 the refresh call
+    // before the (valid) refresh cookie is read by the controller.
+    setAccessToken("stale-at");
+    vi.stubGlobal("fetch", mockFetchResponse({ code: "invalid_credentials" }, 401));
+    await api.refresh().catch(() => undefined);
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(options.headers).not.toHaveProperty("Authorization");
+  });
+
   it("maps a 401 refresh response to an ApiError (expired/rotated refresh cookie)", async () => {
     vi.stubGlobal("fetch", mockFetchResponse({ code: "invalid_credentials" }, 401));
     await expect(api.refresh()).rejects.toMatchObject({
@@ -121,6 +131,15 @@ describe("api client", () => {
       "/v1/auth/logout",
       expect.objectContaining({ method: "POST", credentials: "include", body: undefined }),
     );
+  });
+
+  it("logout never attaches the bearer even when an access token is set (sc-138)", async () => {
+    // Logout is cookie-authenticated; it must rely on the refresh cookie alone.
+    setAccessToken("at-1");
+    vi.stubGlobal("fetch", mockFetchResponse(undefined, 204));
+    await api.logout();
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(options.headers).not.toHaveProperty("Authorization");
   });
 
   it("surfaces a network failure as a network_error (never a fabricated response)", async () => {
