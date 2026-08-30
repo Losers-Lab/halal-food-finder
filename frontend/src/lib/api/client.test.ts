@@ -1,5 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
-import { api, ApiError } from "@/lib/api/client";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api, ApiError, setAccessToken } from "@/lib/api/client";
 
 function mockFetchResponse(body: unknown, status = 200) {
   return vi.fn().mockResolvedValue({
@@ -19,8 +19,14 @@ function mockFetchRawText(rawBody: string, status: number) {
 }
 
 describe("api client", () => {
+  beforeEach(() => {
+    // Ensure a clean access-token slate so header assertions are deterministic.
+    setAccessToken(null);
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
+    setAccessToken(null);
   });
 
   it("signup returns the created account on 201", async () => {
@@ -100,6 +106,16 @@ describe("api client", () => {
     );
   });
 
+  it("refresh never attaches the bearer even when an access token is set (sc-138)", async () => {
+    // Regression guard: an expired access token must not 401 the refresh call
+    // before the (valid) refresh cookie is read by the controller.
+    setAccessToken("stale-at");
+    vi.stubGlobal("fetch", mockFetchResponse({ code: "invalid_credentials" }, 401));
+    await api.refresh().catch(() => undefined);
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(options.headers).not.toHaveProperty("Authorization");
+  });
+
   it("maps a 401 refresh response to an ApiError (expired/rotated refresh cookie)", async () => {
     vi.stubGlobal("fetch", mockFetchResponse({ code: "invalid_credentials" }, 401));
     await expect(api.refresh()).rejects.toMatchObject({
@@ -115,6 +131,15 @@ describe("api client", () => {
       "/v1/auth/logout",
       expect.objectContaining({ method: "POST", credentials: "include", body: undefined }),
     );
+  });
+
+  it("logout never attaches the bearer even when an access token is set (sc-138)", async () => {
+    // Logout is cookie-authenticated; it must rely on the refresh cookie alone.
+    setAccessToken("at-1");
+    vi.stubGlobal("fetch", mockFetchResponse(undefined, 204));
+    await api.logout();
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(options.headers).not.toHaveProperty("Authorization");
   });
 
   it("surfaces a network failure as a network_error (never a fabricated response)", async () => {
@@ -241,5 +266,102 @@ describe("api client", () => {
         cuttingMethod: "HAND_CUT",
       }),
     ).rejects.toMatchObject({ status: 401, code: "invalid_credentials" });
+  });
+
+  it("attaches an Authorization header when an access token is set (sc-138)", async () => {
+    setAccessToken("at-1");
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(
+        {
+          id: "u-1",
+          name: "Al-Amir Grill",
+          address: "123 Main St",
+          lat: 40.7,
+          lng: -74.0,
+          cuisine: "middle eastern",
+          cuttingMethod: "HAND_CUT",
+          ownerId: "acc-1",
+          verificationStatus: "UNVERIFIED",
+          createdAt: "2026-08-30T00:00:00Z",
+        },
+        201,
+      ),
+    );
+    await api.createListing({
+      name: "Al-Amir Grill",
+      address: "123 Main St",
+      lat: 40.7,
+      lng: -74.0,
+      cuisine: "Middle Eastern",
+      cuttingMethod: "HAND_CUT",
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/listings",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: "Bearer at-1",
+        }),
+      }),
+    );
+  });
+
+  it("sends no Authorization header when no access token is set (sc-138)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(
+        {
+          id: "u-1",
+          name: "Al-Amir Grill",
+          address: "123 Main St",
+          lat: 40.7,
+          lng: -74.0,
+          cuisine: "middle eastern",
+          cuttingMethod: "HAND_CUT",
+          ownerId: "acc-1",
+          verificationStatus: "UNVERIFIED",
+          createdAt: "2026-08-30T00:00:00Z",
+        },
+        201,
+      ),
+    );
+    await api.createListing({
+      name: "Al-Amir Grill",
+      address: "123 Main St",
+      lat: 40.7,
+      lng: -74.0,
+      cuisine: "Middle Eastern",
+      cuttingMethod: "HAND_CUT",
+    });
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [
+      string,
+      RequestInit,
+    ];
+    expect(options.headers).not.toHaveProperty("Authorization");
+  });
+
+  it("keeps a typed 401 on an authenticated call so sc-134 can prompt session-expired (sc-138)", async () => {
+    setAccessToken("at-1");
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse({ code: "invalid_credentials" }, 401),
+    );
+    await expect(
+      api.createListing({
+        name: "Al-Amir Grill",
+        address: "123 Main St",
+        lat: 40.7,
+        lng: -74.0,
+        cuisine: "Middle Eastern",
+        cuttingMethod: "HAND_CUT",
+      }),
+    ).rejects.toMatchObject({ status: 401, code: "invalid_credentials" });
+    // The backend was reached with the bearer token even though it 401'd.
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/listings",
+      expect.objectContaining({
+        headers: expect.objectContaining({ Authorization: "Bearer at-1" }),
+      }),
+    );
   });
 });

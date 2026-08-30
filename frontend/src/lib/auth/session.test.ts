@@ -18,11 +18,13 @@ vi.mock("@/lib/api/client", () => ({
     refresh: vi.fn(),
     logout: vi.fn(),
   },
+  setAccessToken: vi.fn(),
 }));
 
-import { api } from "@/lib/api/client";
+import { api, setAccessToken } from "@/lib/api/client";
 
 const auth = vi.mocked(api);
+const authToken = vi.mocked(setAccessToken);
 
 const AUTH_RESPONSE = {
   accessToken: "at-1",
@@ -39,6 +41,7 @@ describe("session store — sc-133 cookie lifecycle", () => {
     window.localStorage.clear();
     auth.refresh.mockReset();
     auth.logout.mockReset();
+    authToken.mockReset();
   });
 
   afterEach(() => {
@@ -215,5 +218,28 @@ describe("session store — sc-133 cookie lifecycle", () => {
     resolve({ ...AUTH_RESPONSE, accessToken: "at-2" });
     await Promise.all([p1, p2]);
     expect(auth.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it("signIn feeds the access token into the api client (sc-138 injection)", async () => {
+    const { signIn } = await LOAD();
+    signIn(AUTH_RESPONSE, "a@b.co");
+    expect(authToken).toHaveBeenCalledWith("at-1");
+  });
+
+  it("signOut clears the access token from the api client (sc-138)", async () => {
+    auth.logout.mockResolvedValue(undefined);
+    const { signIn, signOut } = await LOAD();
+    signIn(AUTH_RESPONSE, "a@b.co");
+    signOut();
+    // Last invocation hands the client a null token so no stale bearer leaks.
+    expect(authToken).toHaveBeenLastCalledWith(null);
+  });
+
+  it("a 401 refresh (expired cookie) also clears the client access token (sc-138)", async () => {
+    auth.refresh.mockRejectedValue(new ApiError(401, "invalid_credentials"));
+    const { signIn } = await LOAD();
+    signIn(AUTH_RESPONSE, "a@b.co");
+    await vi.advanceTimersByTimeAsync(900_000 - 5_000);
+    expect(authToken).toHaveBeenLastCalledWith(null);
   });
 });

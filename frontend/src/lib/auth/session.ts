@@ -1,4 +1,4 @@
-import { api, ApiError, type AuthResponse } from "@/lib/api/client";
+import { api, ApiError, setAccessToken, type AuthResponse } from "@/lib/api/client";
 
 /**
  * Session store for the sc-133 cookie contract.
@@ -138,6 +138,7 @@ function clearRefreshTimer() {
  */
 function applyAuth(auth: AuthResponse, emailFromHint: string | undefined) {
   accessToken = auth.accessToken;
+  setAccessToken(auth.accessToken);
   tokenType = auth.tokenType;
   expiresAt = now() + auth.expiresIn * 1000;
   const email = emailFromHint || identity?.email || "";
@@ -152,6 +153,7 @@ function applyAuth(auth: AuthResponse, emailFromHint: string | undefined) {
 function clearSessionLocally() {
   clearRefreshTimer();
   accessToken = null;
+  setAccessToken(null);
   tokenType = "Bearer";
   expiresAt = 0;
   identity = null;
@@ -190,6 +192,7 @@ export async function refreshAccessToken(): Promise<void> {
 
 export function signIn(auth: AuthResponse, email: string): void {
   accessToken = auth.accessToken;
+  setAccessToken(auth.accessToken);
   tokenType = auth.tokenType;
   expiresAt = now() + auth.expiresIn * 1000;
   identity = { accountId: auth.accountId, role: auth.role, email };

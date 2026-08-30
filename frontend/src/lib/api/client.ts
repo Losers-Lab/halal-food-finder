@@ -24,6 +24,21 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE ?? "").replace(/\/$/, "");
  */
 const COOKIE_REQUEST = { credentials: "include" as const };
 
+/**
+ * Access-token holder for authenticated API calls (sc-138). The session store
+ * (`auth/session.ts`) feeds the current in-memory access token here on every
+ * auth change; `request()` emits it as a Bearer Authorization header when
+ * present. Kept in the client (not the session module) so the dependency stays
+ * one-way (session → client) with no import cycle. Memory-only by contract —
+ * never persisted, never written to storage.
+ */
+let accessToken: string | null = null;
+
+/** Set the access token used for authenticated calls (pass null to clear it). */
+export function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
 /** One of the machine-readable error codes the backend returns. */
 export type ApiErrorCode =
   | "invalid_input"
@@ -55,13 +70,29 @@ export class ApiError extends Error {
 async function request<T>(
   path: string,
   body: unknown,
-  options: { credentials?: RequestCredentials; signal?: AbortSignal } = {},
+  options: {
+    credentials?: RequestCredentials;
+    signal?: AbortSignal;
+    /**
+     * Attach the Bearer Authorization header when an access token is set.
+     * Defaults to true for protected resource calls; set to false for the
+     * cookie-authenticated auth routes so a stale bearer can never short-
+     * circuit refresh/logout before the controller reads the refresh cookie
+     * (sc-138 / sc-133 recovery contract).
+     */
+    attachAuth?: boolean;
+  } = {},
 ): Promise<T> {
   let response: Response;
   try {
+    const headers: Record<string, string> = {};
+    if (body !== undefined) headers["Content-Type"] = "application/json";
+    const shouldAttachAuth = options.attachAuth === false ? false : true;
+    if (accessToken && shouldAttachAuth)
+      headers.Authorization = `Bearer ${accessToken}`;
     response = await fetch(`${API_BASE}${path}`, {
       method: "POST",
-      headers: body !== undefined ? { "Content-Type": "application/json" } : {},
+      headers,
       credentials: options.credentials,
       body: body !== undefined ? JSON.stringify(body) : undefined,
       signal: options.signal,
@@ -111,11 +142,21 @@ export const api = {
 
   /** POST /v1/auth/refresh — rotate via the HttpOnly refresh cookie (no body). */
   refresh: (signal?: AbortSignal): Promise<AuthResponse> =>
-    request("/v1/auth/refresh", undefined, { ...COOKIE_REQUEST, signal }),
+    request("/v1/auth/refresh", undefined, {
+      ...COOKIE_REQUEST,
+      signal,
+      // Cookie-authenticated: never present the (possibly stale) bearer.
+      attachAuth: false,
+    }),
 
   /** POST /v1/auth/logout — revoke the refresh cookie (no body). Resolves on 204. */
   logout: (signal?: AbortSignal): Promise<undefined> =>
-    request("/v1/auth/logout", undefined, { ...COOKIE_REQUEST, signal }),
+    request("/v1/auth/logout", undefined, {
+      ...COOKIE_REQUEST,
+      signal,
+      // Cookie-authenticated: never present the (possibly stale) bearer.
+      attachAuth: false,
+    }),
 
   /**
    * POST /v1/listings — add a restaurant listing (sc-138). Requires the
