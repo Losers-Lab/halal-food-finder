@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tahir's List — Logo Lockup Concepts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@700;800;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Archivo", sans-serif; background: #EFE6D4; color: #211B12;
+    min-height: 100vh; display: grid; place-items: center; padding: 40px 20px; -webkit-font-smoothing: antialiased;
+  }
+  .board { display: grid; gap: 44px; width: 100%; max-width: 660px; }
+  .cell { background: #FBF7EE; border-radius: 20px; padding: 44px 36px; display: grid; place-items: center; gap: 18px; box-shadow: 0 6px 22px rgba(33,27,18,.1); position: relative; }
+  .cell .tag { position: absolute; top: 14px; left: 16px; font-size: 10.5px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: rgba(33,27,18,.4); }
+  .cell.light { background: #fff; }
+  .cell.dark { background: #211B12; }
+
+  .wordmark { font-weight: 900; letter-spacing: -.03em; line-height: 1; }
+  .wm-xl { font-size: 54px; } .wm-lg { font-size: 44px; } .wm-md { font-size: 38px; }
+
+  /* C1 — Tahir hangs off the top of the wordmark: his white "sign"
+     merges seamlessly into the white panel behind the type, so his
+     hooked hands appear to grip the logo's top edge itself */
+  .peek { position: relative; display: inline-block; padding-top: 118px; }
+  .peek img { position: absolute; width: 260px; top: -6px; left: 50%; transform: translateX(-50%); z-index: 1; }
+  .peek .wordmark { position: relative; z-index: 2; padding: 22px 26px 10px; background: #fff; }
+  .cell.light { background: #fff; }
+  .peek .apos { color: #C6381F; }
+
+  /* C2 — head in a rounded square (app-icon style) beside wordmark */
+  .lockup { display: flex; align-items: center; gap: 18px; }
+  .appicon { width: 76px; height: 76px; border-radius: 22px; overflow: hidden; box-shadow: 4px 4px 0 #211B12; }
+  .appicon img { width: 100%; height: 100%; object-fit: cover; }
+
+  /* C3 — inline head as the apostrophe */
+  .inlinehead { position: relative; display: inline-block; }
+  .inlinehead img { position: absolute; width: 74px; top: -62px; left: 24px; transform: rotate(5deg); }
+
+  .sub { font-family: "Space Grotesk", sans-serif; font-weight: 500; font-size: 13px; color: rgba(33,27,18,.55); }
+  .dark .sub { color: rgba(251,247,238,.6); }
+  .dark .wordmark { color: #FBF7EE; }
+  .dark .wordmark .apos { color: #E8937D; }
+</style>
+</head>
+<body>
+  <div class="board">
+    <div class="cell light">
+      <span class="tag">C1 · Peekaboo apostrophe — hero/marketing</span>
+      <div class="peek">
+        <img src="tahir-head.jpg" alt="Tahir peeking">
+        <div class="wordmark wm-xl">Tahir<span class="apos">'</span>s List</div>
+      </div>
+      <div class="sub">Tahir leans over the apostrophe — playful, memorable, hero-section scale.</div>
+    </div>
+
+    <div class="cell">
+      <span class="tag">C2 · App-icon lockup — headers, favicon, app</span>
+      <div class="lockup">
+        <div class="appicon"><img src="tahir-head.jpg" alt="Tahir icon"></div>
+        <div>
+          <div class="wordmark wm-lg">Tahir's List</div>
+          <div class="sub">find halal food</div>
+        </div>
+      </div>
+      <div class="sub">Compact head icon (works down to 16px favicon) + wordmark + tagline.</div>
+    </div>
+
+    <div class="cell light">
+      <span class="tag">C3 · Wordmark-only — footer, legal, small spaces</span>
+      <div class="wordmark wm-md">Tahir<span style="color:#C6381F">'</span>s List</div>
+      <div class="sub">Just the type, red apostrophe as the accent. Scales anywhere.</div>
+    </div>
+
+    <div class="cell dark">
+      <span class="tag">C1 variant · On dark (footer band, extension)</span>
+      <div class="wordmark wm-lg">Tahir<span class="apos">'</span>s List</div>
+      <div class="sub">Ink-on-paper inversion; soft red keeps AA contrast.</div>
+    </div>
+  </div>
+</body>
+</html>
