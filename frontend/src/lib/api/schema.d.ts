@@ -4,6 +4,26 @@
  */
 
 export interface paths {
+    "/v1/listings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a restaurant listing
+         * @description Creates a new, always-unverified restaurant listing owned by the authenticated account. Does not geocode; the client supplies coordinates.
+         */
+        post: operations["create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/auth/signup": {
         parameters: {
             query?: never;
@@ -35,7 +55,7 @@ export interface paths {
         put?: never;
         /**
          * Refresh the session
-         * @description Rotates the refresh token presented as the HttpOnly cookie: revokes it and issues a fresh access token (JSON body) and new refresh cookie (Set-Cookie). No request body.
+         * @description Rotates the refresh token presented in the HttpOnly cookie: revokes it and issues a fresh access token in the body plus a new refresh cookie.
          */
         post: operations["refresh"];
         delete?: never;
@@ -55,7 +75,7 @@ export interface paths {
         put?: never;
         /**
          * Log out
-         * @description Revokes the refresh token presented as the HttpOnly cookie and clears it (Set-Cookie with Max-Age=0). Idempotent: unknown or absent cookies still succeed. No request body.
+         * @description Revokes the refresh token presented in the HttpOnly cookie so it can no longer be used to obtain a fresh access token, and clears the cookie. Idempotent: always succeeds regardless of whether the token was ever valid.
          */
         post: operations["logout"];
         delete?: never;
@@ -75,9 +95,25 @@ export interface paths {
         put?: never;
         /**
          * Log in
-         * @description Verifies the email/password against the stored Argon2id hash and returns a short-lived access JWT (JSON body) plus sets the refresh token as an HttpOnly cookie. The refresh token is never returned in the JSON body.
+         * @description Verifies the email/password against the stored Argon2id hash and returns a short-lived access token (RS256 JWT with the account's RBAC role) in the body; the rotating refresh token is set as an HttpOnly; Secure; SameSite=Lax cookie scoped to the auth routes and is never returned in JSON.
          */
         post: operations["login"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["me"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -107,6 +143,35 @@ export interface components {
         ErrorResponse: {
             code: string;
             message?: string;
+        };
+        CreateListingRequest: {
+            name: string;
+            address: string;
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+            cuisine: string;
+            /** @enum {string} */
+            cuttingMethod: "HAND_CUT" | "MACHINE_CUT" | "UNSPECIFIED";
+        };
+        ListingResponse: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            address: string;
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lng: number;
+            cuisine: string;
+            cuttingMethod: string;
+            /** Format: uuid */
+            ownerId: string;
+            /** @enum {string} */
+            verificationStatus: "UNVERIFIED" | "VERIFIED";
+            /** Format: date-time */
+            createdAt: string;
         };
         SignupRequest: {
             email: string;
@@ -140,6 +205,57 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateListingRequest"];
+            };
+        };
+        responses: {
+            /** @description Listing created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ListingResponse"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Authentication required */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Owning account not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
     signup: {
         parameters: {
             query?: never;
@@ -196,11 +312,13 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                refresh_token?: string;
+            };
         };
         requestBody?: never;
         responses: {
-            /** @description Rotated; fresh access token issued and new refresh cookie set */
+            /** @description Rotated; new access token + refresh cookie issued */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -218,7 +336,7 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Invalid, expired, or already-used refresh cookie */
+            /** @description Invalid, expired, or already-used refresh token */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -234,25 +352,18 @@ export interface operations {
             query?: never;
             header?: never;
             path?: never;
-            cookie?: never;
+            cookie?: {
+                refresh_token?: string;
+            };
         };
         requestBody?: never;
         responses: {
-            /** @description Session revoked and refresh cookie cleared */
+            /** @description Refresh token revoked; cookie cleared */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
-            };
-            /** @description Invalid input */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "*/*": components["schemas"]["ErrorResponse"];
-                };
             };
         };
     };
@@ -269,7 +380,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Authenticated; access token returned, refresh cookie set */
+            /** @description Authenticated; token pair issued */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -294,6 +405,28 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    me: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
