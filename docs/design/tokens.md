@@ -1,121 +1,154 @@
-# Design Tokens — Halal Food Finder (M1 Foundation)
+# Design Tokens — Halal Food Finder ("Stamps & Search" v2)
 
-Status: handoff-ready · Owner: Fatima (design) · Consumer: t_a69abcf7 (frontend skeleton), t_514f91af (auth UI)
+Status: FOUNDER-RATIFIED 2026-08-30 (Option A) · Owner: Fatima (design) · Consumer: Maryam (implementation)
+Supersedes the teal M1 palette entirely. One look across every page — consistency is an explicit founder requirement.
+Brand name in mockups/copy: **"HalalMarket"** is a PLACEHOLDER. Do not invent or hardcode a real brand name (founder undecided) — consume the wordmark slot as a token/component.
 
 ## Design principles
 
-1. **Trust first.** The palette and components exist to make verification status legible and credible at a glance.
-2. **Colorblind-safe.** Never rely on hue alone to convey meaning; pair every color signal with an icon or text label. Verified/unverified are distinguished by shape + icon + neutral-vs-positive treatment, not red/green alone.
-3. **Few colors, consistent roles.** One brand hue, one positive hue (verification), one neutral scale, one semantic error hue used ONLY for genuine errors.
-4. **Fresh, not cloned.** Values are chosen from first principles; Figma is reference-only.
+1. **Warm & appetizing.** Pages feel like kraft paper and a butcher's stamp — cream surfaces, red brand accents, ink-dark type. Nothing clinical, nothing resembling zabihah.com.
+2. **Trust = a stamp.** Verification is rendered as a literal stamp/seal mark (stamp green), never as traffic-light color coding.
+3. **Colorblind-safe (binding).** Never hue alone: every status pairs icon + text. Verified/Unverified differ by filled-stamp vs outlined-neutral + glyph + word.
+4. **Error-red is reserved.** Genuine errors ONLY. Brand red and error red never appear in the same component; errors always carry an alert icon so they're distinguishable from brand red by shape, not hue.
+5. **Focus rings are never removed.**
 
 ## 1. Color tokens
 
-Consumable as Tailwind v4 `@theme` variables (see §5). Scale naming: numeric lightness ramp, 500 = base.
+Numeric ramps, base = 500. Consumable as Tailwind v4 `@theme` (§5).
 
-### Brand (primary) — deep teal, calm and trustworthy
-
-| Token | Hex | Role |
-|---|---|---|
-| --color-brand-50 | #eff8f8 | subtle backgrounds |
-| --color-brand-100 | #d7ecec | hover fills |
-| --color-brand-200 | #aed9da | borders on brand surfaces |
-| --color-brand-300 | #7fc0c3 | accents |
-| --color-brand-400 | #4a9fa4 | secondary buttons |
-| --color-brand-500 | #2b7f86 | PRIMARY actions, links |
-| --color-brand-600 | #22676d | primary hover |
-| --color-brand-700 | #1c5257 | pressed |
-| --color-brand-800 | #174246 | headings on light |
-| --color-brand-900 | #122f32 | darkest brand |
-
-### Positive / verified — green (paired with checkmark icon, never alone)
+### Cream / paper (page + card surfaces)
 
 | Token | Hex | Role |
 |---|---|---|
-| --color-positive-50 | #edf7ef | badge background |
-| --color-positive-100 | #d6eeda | badge hover |
-| --color-positive-200 | #a9dcb4 | border |
-| --color-positive-500 | #2e8b47 | icon fill, text on light bg |
-| --color-positive-600 | #247038 | hover/pressed |
-| --color-positive-700 | #1d5a2e | text on positive-50 for AA |
+| --color-cream-50 | #FBF7EE | page background (every page) |
+| --color-cream-100 | #F5EEDF | alternate section bands |
+| --color-cream-200 | #EFE6D2 | subtle fills, hover on cream |
 
-### Neutral — slate (all "unverified" and general UI)
+### Kraft (borders, paper texture accents)
 
 | Token | Hex | Role |
 |---|---|---|
-| --color-neutral-0 | #ffffff | page background |
-| --color-neutral-50 | #f7f8f9 | card/section background |
-| --color-neutral-100 | #eef0f2 | subtle fill |
-| --color-neutral-200 | #dfe3e8 | borders (default) |
-| --color-neutral-300 | #c6cdd5 | stronger borders, dividers |
-| --color-neutral-400 | #94a0ac | disabled text, icons |
-| --color-neutral-500 | #64707d | secondary text |
-| --color-neutral-700 | #3d4650 | primary text (body) |
-| --color-neutral-900 | #1d2329 | headings, high-emphasis text |
+| --color-kraft-100 | #EADFC9 | card fills on cream, kraft-tinted panels |
+| --color-kraft-200 | #DCCFAF | default borders |
+| --color-kraft-300 | #C9B98F | stronger borders, dashed seal borders |
 
-### Error — reserved exclusively for genuine errors (never for "Unverified")
+### Brand — butcher red
 
 | Token | Hex | Role |
 |---|---|---|
-| --color-danger-50 | #fdf1f0 | error surface |
-| --color-danger-100 | #f9dbd8 | error border tint |
-| --color-danger-500 | #c0392b | error icon/text |
-| --color-danger-600 | #a32f23 | error text (AA on 50) |
-| --color-danger-700 | #8a2620 | pressed |
+| --color-brand-50 | #FBEDE9 | subtle brand tint |
+| --color-brand-100 | #F6D9D1 | hover fills on brand surfaces |
+| --color-brand-300 | #E07B63 | accents, secondary highlights |
+| --color-brand-500 | #C6381F | PRIMARY actions, links, brand marks |
+| --color-brand-600 | #A82D17 | primary hover |
+| --color-brand-700 | #8A2411 | pressed |
+| --color-brand-900 | #5C180B | darkest brand |
+
+Brand red is used for: primary buttons, links, the wordmark/logo, price/urgent accents. It NEVER renders an alert/warning icon, never borders an error message.
+
+### Stamp green — verification only
+
+| Token | Hex | Role |
+|---|---|---|
+| --color-stamp-50 | #EDF3EE | badge background |
+| --color-stamp-100 | #DCE8DF | badge hover |
+| --color-stamp-200 | #C2D6C8 | badge border |
+| --color-stamp-500 | #1F5C3D | stamp mark, icon fill, AA text on light |
+| --color-stamp-600 | #17492F | hover/pressed |
+| --color-stamp-700 | #113A25 | text on stamp-50 (AA) |
+
+Exclusive to the Verified stamp badge / certificate trust panel. Don't use stamp green for generic "success toasts" — form success uses neutral ink confirmation, keeping green synonymous with certification.
+
+### Ink — warm neutrals (text, dark chip buttons)
+
+| Token | Hex | Role |
+|---|---|---|
+| --color-ink-0 | #FFFDF6 | card background (paper white, warm) |
+| --color-ink-100 | #F1EAD9 | subtle fill |
+| --color-ink-200 | #DCD2BE | disabled fills |
+| --color-ink-300 | #B8AB90 | borders (strong), dividers |
+| --color-ink-400 | #8A7D63 | disabled text, placeholder icons |
+| --color-ink-500 | #6B5F4B | secondary text |
+| --color-ink-700 | #453A2B | body text |
+| --color-ink-900 | #2B2118 | headings, dark chip button background |
+
+Dark chip buttons: bg `ink-900`, text `cream-50`. These are the SECONDARY button style (filters, chips, "Map" toggle); primary actions stay brand red.
+
+### Error — reserved exclusively for genuine errors
+
+| Token | Hex | Role |
+|---|---|---|
+| --color-danger-50 | #FBEFEF | error surface |
+| --color-danger-100 | #F3D8D8 | error border tint |
+| --color-danger-500 | #B3261E | error icon/text, error input border |
+| --color-danger-600 | #921D16 | error text (AA on 50) |
+
+Binding separation rules:
+- Danger always appears with the alert triangle icon + text; brand red never does. Users distinguish error vs brand by glyph and context, not hue.
+- "Unverified" NEVER uses danger tokens, red, or warning iconography — it is a neutral ink outline tag (see trust-components.md).
+- Danger-500 is visually distinct from brand-500 (#C6381F is orange-leaning; #B3261E is cooler/deeper) but the icon+text pairing is the binding rule.
 
 ### Warning (informational only — e.g. "certification expires soon")
 
 | Token | Hex | Role |
 |---|---|---|
-| --color-warning-50 | #fdf6ec | surface |
-| --color-warning-500 | #b0731c | icon/text (AA on 50) |
-| --color-warning-100 | #f5e6cd | border |
+| --color-warning-50 | #FBF3E2 | surface |
+| --color-warning-100 | #F3E5C4 | border |
+| --color-warning-700 | #8A6114 | icon/text (AA on 50) |
 
 ### Focus
 
-- --color-focus: #2b7f86 (brand-500); focus ring = 2px solid, offset 2px. Never remove outlines.
+- `--color-focus: #C6381F` (brand-500). Ring: 2px solid, offset 2px. Never remove outlines; on brand-red surfaces use ink-900 ring instead.
 
 ### Colorblind safety rules (binding)
 
-- DO pair green "Verified" with a checkmark glyph and the word "Verified".
-- DO keep "Unverified" in neutral slate with a neutral (outlined) shape — differentiation is hue-independent.
-- DO use icon + text for cut-method indicators (see trust-components spec).
-- DON'T encode meaning in red vs green alone; ~8% of male users cannot distinguish them.
-- DON'T use red for anything other than errors.
+- DO pair stamp green "Verified" with the stamp/seal glyph and the word "Verified".
+- DO keep "Unverified" in warm ink neutral with an outlined shape — hue-independent differentiation.
+- DO use icon + text for hand-cut/machine-cut indicators.
+- DON'T encode meaning in red vs green alone (~8% of male users can't distinguish them).
+- DON'T use stamp green or brand red decoratively where they'd read as status.
 
 ## 2. Typography
 
-Font stack: `Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif`. (Inter is free, excellent numerals for ratings/distances, ships variable weights.)
+Fonts (Google, free): **Archivo** — headings, buttons, labels, wordmark. **Space Grotesk** — body, UI text, numerals (ratings/distances).
 
-| Token | Size / Line | Weight | Use |
+| Token | Size / Line | Weight / Family | Use |
 |---|---|---|---|
-| --text-display | 30/36 | 700 | Page titles (marketing/auth hero) |
-| --text-title | 22/28 | 600 | Screen titles ("Create your account") |
-| --text-heading | 17/24 | 600 | Card headings, restaurant names |
-| --text-body | 15/24 | 400 | Body, form labels 500 |
-| --text-small | 13/18 | 400 | Helper text, captions |
-| --text-mono | 14/20 | 400 | cert IDs, technical strings (`ui-monospace, "SF Mono", Menlo`) |
+| --text-display | 40/44 | Archivo 800 | Homepage hero, page titles |
+| --text-title | 24/30 | Archivo 700 | Screen titles |
+| --text-heading | 18/24 | Archivo 700 | Card headings, restaurant names |
+| --text-label | 14/18 | Archivo 600 | Buttons, chips, badges, form labels |
+| --text-body | 15/24 | Space Grotesk 400 | Body copy |
+| --text-small | 13/18 | Space Grotesk 400 | Helper text, captions |
+| --text-mono | 13/18 | Space Grotesk / ui-monospace | cert IDs, technical strings |
 
-Rules: body text = neutral-700; headings = neutral-900; links = brand-500 with underline on hover; minimum touch target 44px for interactive elements.
+Rules: body = ink-700; headings = ink-900; links = brand-500, underlined on hover; minimum interactive touch target 44px.
 
 ## 3. Spacing scale
 
-Base 4px. Tokens: `--space-1:4px · 2:8px · 3:12px · 4:16px · 5:20px · 6:24px · 8:32px · 10:40px · 12:48px · 16:64px`.
+Base 4px: `--space-1:4 · 2:8 · 3:12 · 4:16 · 5:20 · 6:24 · 8:32 · 10:40 · 12:48 · 16:64`. Form field gaps = space-4; card padding = space-5 (mobile) / space-6 (desktop); section rhythm = space-12.
 
-Conventions: form field gaps = space-4; card padding = space-5 (mobile) / space-6 (desktop); section rhythm = space-12.
+## 4. Radius, borders & elevation
 
-## 4. Radius & elevation
+The stamps look uses squarish shapes and HARD offset shadows — no soft blurs.
 
 | Token | Value | Use |
 |---|---|---|
-| --radius-sm | 6px | tags, inputs (small) |
-| --radius-md | 8px | inputs, buttons |
-| --radius-lg | 12px | cards, modals |
-| --radius-full | 9999px | badges/pills, avatars |
+| --radius-sm | 4px | chips, small tags |
+| --radius-md | 6px | inputs, buttons |
+| --radius-lg | 10px | cards, modals |
+| --radius-full | 9999px | pills, avatars only |
 
-Shadows (subtle; trust comes from clarity, not depth):
-- `--shadow-card: 0 1px 2px rgb(29 35 41 / 0.06), 0 1px 3px rgb(29 35 41 / 0.08)`
-- `--shadow-pop: 0 4px 12px rgb(29 35 41 / 0.12)` (dropdowns, toasts)
+Dashed motif (the "seal"): `--border-dashed: 1.5px dashed kraft-300` — used on the verification stamp badge border, certificate panel edge, and dividers under section titles. Never used on interactive controls (reads as non-interactive by convention).
+
+Shadows (hard offset, ink):
+
+- `--shadow-card: 3px 3px 0 rgb(43 33 24 / 0.9)` — cards, listing tiles
+- `--shadow-chip: 2px 2px 0 rgb(43 33 24 / 0.9)` — buttons, chips
+- `--shadow-stamp: 0 0 0 1px var(--color-stamp-200), 2px 2px 0 rgb(31 92 61 / 0.35)` — verification stamp badge
+- `--shadow-pop: 4px 4px 0 rgb(43 33 24 / 0.9)` — dropdowns, toasts, modals
+
+On press (buttons/chips): translate(2px, 2px) + shadow collapses to 0–1px (the element "stamps down").
 
 ## 5. Tailwind v4 consumption spec
 
@@ -123,50 +156,69 @@ Drop-in `@theme` block for Maryam (`styles/tokens.css`, imported first):
 
 ```css
 @theme {
-  /* Color */
-  --color-brand-50:  #eff8f8;  --color-brand-100:  #d7ecec;
-  --color-brand-200: #aed9da;  --color-brand-300:  #7fc0c3;
-  --color-brand-400: #4a9fa4;  --color-brand-500:  #2b7f86;
-  --color-brand-600: #22676d;  --color-brand-700:  #1c5257;
-  --color-brand-800: #174246;  --color-brand-900:  #122f32;
+  /* Paper surfaces */
+  --color-cream-50: #FBF7EE; --color-cream-100: #F5EEDF; --color-cream-200: #EFE6D2;
+  --color-kraft-100: #EADFC9; --color-kraft-200: #DCCFAF; --color-kraft-300: #C9B98F;
 
-  --color-positive-50:  #edf7ef; --color-positive-100: #d6eeda;
-  --color-positive-200: #a9dcb4; --color-positive-500: #2e8b47;
-  --color-positive-600: #247038; --color-positive-700: #1d5a2e;
+  /* Brand — butcher red */
+  --color-brand-50: #FBEDE9; --color-brand-100: #F6D9D1; --color-brand-300: #E07B63;
+  --color-brand-500: #C6381F; --color-brand-600: #A82D17; --color-brand-700: #8A2411;
+  --color-brand-900: #5C180B;
 
-  --color-neutral-0:  #ffffff; --color-neutral-50:  #f7f8f9;
-  --color-neutral-100: #eef0f2; --color-neutral-200: #dfe3e8;
-  --color-neutral-300: #c6cdd5; --color-neutral-400: #94a0ac;
-  --color-neutral-500: #64707d; --color-neutral-700: #3d4650;
-  --color-neutral-900: #1d2329;
+  /* Verification — stamp green */
+  --color-stamp-50: #EDF3EE; --color-stamp-100: #DCE8DF; --color-stamp-200: #C2D6C8;
+  --color-stamp-500: #1F5C3D; --color-stamp-600: #17492F; --color-stamp-700: #113A25;
 
-  --color-danger-50:  #fdf1f0; --color-danger-100: #f9dbd8;
-  --color-danger-500: #c0392b; --color-danger-600: #a32f23;
-  --color-danger-700: #8a2620;
+  /* Warm ink neutrals */
+  --color-ink-0: #FFFDF6; --color-ink-100: #F1EAD9; --color-ink-200: #DCD2BE;
+  --color-ink-300: #B8AB90; --color-ink-400: #8A7D63; --color-ink-500: #6B5F4B;
+  --color-ink-700: #453A2B; --color-ink-900: #2B2118;
 
-  --color-warning-50: #fdf6ec; --color-warning-100: #f5e6cd;
-  --color-warning-500: #b0731c;
+  /* Errors — reserved */
+  --color-danger-50: #FBEFEF; --color-danger-100: #F3D8D8;
+  --color-danger-500: #B3261E; --color-danger-600: #921D16;
+
+  /* Warning — informational only */
+  --color-warning-50: #FBF3E2; --color-warning-100: #F3E5C4; --color-warning-700: #8A6114;
+
+  --color-focus: #C6381F;
 
   /* Type */
-  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --text-display: 1.875rem; --text-display--line-height: 2.25rem; --text-display--font-weight: 700;
-  --text-title: 1.375rem;  --text-title--line-height: 1.75rem;  --text-title--font-weight: 600;
-  --text-heading: 1.0625rem; --text-heading--line-height: 1.5rem; --text-heading--font-weight: 600;
-  --text-body: 0.9375rem;  --text-body--line-height: 1.5rem;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --text-display: 2.5rem; --text-display--line-height: 2.75rem; --text-display--font-weight: 800; --text-display--font-family: var(--font-display);
+  --text-title: 1.5rem; --text-title--line-height: 1.875rem; --text-title--font-weight: 700; --text-title--font-family: var(--font-display);
+  --text-heading: 1.125rem; --text-heading--line-height: 1.5rem; --text-heading--font-weight: 700; --text-heading--font-family: var(--font-display);
+  --text-label: 0.875rem; --text-label--line-height: 1.125rem; --text-label--font-weight: 600; --text-label--font-family: var(--font-display);
+  --text-body: 0.9375rem; --text-body--line-height: 1.5rem;
   --text-small: 0.8125rem; --text-small--line-height: 1.125rem;
 
   /* Space / radius / shadow */
-  --spacing: 0.25rem; /* default 4px base already; explicit for clarity */
-  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
-  --shadow-card: 0 1px 2px rgb(29 35 41 / 0.06), 0 1px 3px rgb(29 35 41 / 0.08);
-  --shadow-pop: 0 4px 12px rgb(29 35 41 / 0.12);
+  --spacing: 0.25rem;
+  --radius-sm: 4px; --radius-md: 6px; --radius-lg: 10px;
+  --shadow-card: 3px 3px 0 rgb(43 33 24 / 0.9);
+  --shadow-chip: 2px 2px 0 rgb(43 33 24 / 0.9);
+  --shadow-stamp: 0 0 0 1px var(--color-stamp-200), 2px 2px 0 rgb(31 92 61 / 0.35);
+  --shadow-pop: 4px 4px 0 rgb(43 33 24 / 0.9);
 }
 ```
 
-Usage: `bg-brand-500 text-white rounded-md shadow-card` etc. Do not hardcode hex values in components — always consume tokens.
+Load fonts via `next/font/google` (Archivo weights 600/700/800; Space Grotesk 400/500/700), `display: swap`.
+
+Usage: `bg-cream-50 text-ink-700 shadow-card`, primary button `bg-brand-500 text-cream-50 shadow-chip`, secondary "dark chip" `bg-ink-900 text-cream-50 shadow-chip`. Never hardcode hex values.
+
+## 6. Component color bindings (summary — details in trust-components.md / screen specs)
+
+- Primary button: brand-500 bg, cream-50 text, ink-900 hard shadow.
+- Secondary chip/button: ink-900 bg, cream-50 text.
+- Tertiary/ghost: transparent bg, ink-700 text, kraft-200 border.
+- Verified: stamp badge (stamp-50 bg, stamp-200 border, stamp-700 text/icon, dashed seal edge, shadow-stamp). On photos: solid stamp-500, cream text.
+- Unverified: ink-100 bg, ink-300 border, ink-500 text, outlined circle icon. NEVER red.
+- Errors: danger tokens + alert triangle, always.
+- Links: brand-500.
 
 ## Accessibility baseline
 
-- Text contrast ≥ 4.5:1 (body) / 3:1 (large text ≥ 18.66px bold or 24px). All listed text tokens on their stated backgrounds meet this.
-- Focus ring: 2px brand-500, offset 2px, on all interactive elements.
-- Hit areas ≥ 44×44px; form errors announced via `aria-describedby` + `role="alert"`.
+- Contrast: ink-700 on cream-50 = 9.2:1 ✓; stamp-700 on stamp-50 ≥ 4.5:1 ✓; cream-50 on brand-500 = 4.6:1 ✓; cream-50 on ink-900 = 13:1 ✓; ink-500 on cream-50 ≥ 4.5:1 ✓. (Verify final values at implementation with a contrast checker.)
+- Focus ring 2px brand-500 offset 2px everywhere; ink-900 ring on brand-red surfaces.
+- Hit areas ≥ 44×44px; errors announced via `aria-describedby` + `role="alert"`.
