@@ -28,6 +28,10 @@
 
   /* Hero — stamp-poster */
   .hero { text-align: center; padding: 56px 0 0; position: relative; }
+  .hero .tahir { position: absolute; width: 150px; right: 1%; top: 20px; transform: rotate(3deg); border-radius: 28px; border: 3px solid #fff; box-shadow: 6px 6px 0 rgba(33,27,18,.9); }
+  .hero .speech { position: absolute; width: auto; right: calc(1% + 156px); top: 44px; background: #fff; border: 2px solid var(--ink); border-radius: 14px 14px 4px 14px; padding: 9px 13px; font-size: 12px; font-weight: 700; text-align: left; box-shadow: 4px 4px 0 var(--ink); z-index: 2; white-space: nowrap; }
+  .hero .speech::after { content: ""; position: absolute; right: -12px; top: 22px; width: 14px; height: 14px; background: #fff; border-right: 2px solid var(--ink); border-top: 2px solid var(--ink); transform: rotate(45deg); }
+  .hero .speech em { color: var(--green); font-style: normal; }
   .kicker { display: inline-flex; align-items: center; gap: 8px; font-family: "Archivo"; font-weight: 800; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--green); border: 2px dashed var(--green); border-radius: 8px; padding: 6px 14px; transform: rotate(-1.5deg); }
   .hero h1 { font-family: "Archivo"; font-weight: 900; font-size: 54px; letter-spacing: -.025em; line-height: 1.04; margin-top: 22px; }
   .hero h1 .hl { color: var(--red); position: relative; white-space: nowrap; }
@@ -116,6 +120,8 @@
     </nav>
 
     <section class="hero">
+      <img class="tahir" src="tahir.jpg" alt="Tahir — your halal food guide">
+      <div class="speech" aria-hidden="true">9 new spots verified ✓</div>
       <span class="kicker head">✓ Certificates checked by our committee</span>
       <h1 class="head">Find halal food.<br>Know it's <span class="hl">actually halal.</span></h1>
       <p>Hand-cut or machine-cut, verified or not — every listing tells you the truth about your food. No guesswork, no calling ahead.</p>
