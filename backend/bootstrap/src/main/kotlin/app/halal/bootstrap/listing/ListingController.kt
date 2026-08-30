@@ -116,9 +116,15 @@ class ListingController(private val createListing: CreateListing) {
                 address = listing.address,
                 lat = listing.location.lat,
                 lng = listing.location.lng,
-                cuisine = listing.cuisine.value,
+                // The Add Listing flow always requires a cuisine, so the response
+                // echoes a non-null value; the nullable domain field is only NULL
+                // for community seed rows, which this endpoint does not create.
+                cuisine = listing.cuisine!!.value,
                 cuttingMethod = listing.cuttingMethod.name,
-                ownerId = listing.ownerId,
+                // Add Listing always attaches the authenticated owner, so the
+                // response echoes a non-null id; only community seed rows have
+                // ownerId NULL, and this endpoint does not create those.
+                ownerId = listing.ownerId!!,
                 verificationStatus = listing.verificationStatus,
                 createdAt = listing.createdAt,
             )
