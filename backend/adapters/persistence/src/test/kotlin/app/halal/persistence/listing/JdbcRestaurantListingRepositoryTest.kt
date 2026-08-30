@@ -121,9 +121,11 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             found!!.name shouldBe "Halal Grill"
             found.address shouldBe "123 Main St"
             found.ownerId shouldBe owner.id
-            found.cuisine.value shouldBe "mediterranean"
+            found.cuisine!!.value shouldBe "mediterranean"
             found.cuttingMethod shouldBe CuttingMethod.HAND_CUT
             found.verificationStatus shouldBe VerificationStatus.UNVERIFIED
+            found.brandId shouldBe null
+            found.provenance shouldBe null
             found.location.lat shouldBe (40.7128 plusOrMinus 0.0001)
             found.location.lng shouldBe (-74.0060 plusOrMinus 0.0001)
         }
@@ -157,16 +159,20 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             }
         }
 
-        test("migration enforces NOT NULL on every required column") {
+        test("migration enforces NOT NULL on every still-required column") {
             val owner = newOwner()
             shouldThrow<DataIntegrityViolationException> { tryInsert(owner = owner, name = null) }
             shouldThrow<DataIntegrityViolationException> { tryInsert(owner = owner, address = null) }
             shouldThrow<DataIntegrityViolationException> {
                 tryInsert(owner = owner, locationExpr = "NULL")
             }
-            shouldThrow<DataIntegrityViolationException> { tryInsert(owner = owner, cuisine = null) }
             shouldThrow<DataIntegrityViolationException> { tryInsert(owner = owner, cuttingMethod = null) }
-            shouldThrow<DataIntegrityViolationException> { tryInsert(owner = null) }
+        }
+
+        test("migration accepts NULL cuisine, owner and provenance (community seed contract)") {
+            // V6 makes cuisine/owner_id nullable for research-seed rows; brand_id
+            // and provenance are nullable too. A row with all of them NULL is legal.
+            tryInsert(owner = null, cuisine = null)
         }
 
         test("migration enforces the cuisine VARCHAR(64) boundary") {
