@@ -7,6 +7,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 import jakarta.validation.ConstraintViolationException
 
 /**
@@ -70,6 +71,19 @@ class GlobalErrorHandler {
         return ResponseEntity
             .status(HttpStatus.BAD_REQUEST)
             .body(ErrorResponse("invalid_input", "Invalid input."))
+    }
+
+    /**
+     * Unknown route / no static resource (e.g. a disabled actuator endpoint):
+     * a plain 404, NOT a 500. Routing a client's URL choice to `internal_error`
+     * would both mislead monitoring and imply server fault for client error.
+     */
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun onNoResourceFound(ex: NoResourceFoundException): ResponseEntity<ErrorResponse> {
+        log.debug("No handler for request path", ex)
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(ErrorResponse("not_found", "Resource not found."))
     }
 
     /** Unexpected failure: fixed generic envelope; full cause is logged only. */
