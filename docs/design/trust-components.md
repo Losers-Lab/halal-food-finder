@@ -1,5 +1,7 @@
 # Trust-Language Component Specs — Halal Food Finder
 
+> **v2 restyle note (2026-08-30):** tokens are superseded by `tokens.md` ("Stamps & Search", founder-ratified). Structure/behavior below stands; colors change as follows — VerifiedBadge: `stamp-50` bg, 1.5px **dashed** `stamp-200` border, `stamp-700` text/icon, `radius-sm`, `shadow-stamp`; on-photo variant: solid `stamp-500`, cream text; compact variant: solid stamp-500 circle. UnverifiedTag: `ink-100` bg, `ink-300` border, `ink-500` text (was neutral-slate; now warm ink). CutMethodIndicator unchanged except border `kraft-200`. All other rules (icon+text pairing, never-red-for-unverified, omit-when-unknown) remain binding.
+
 MVP-wide primitives, defined once here. Consumers: listing cards, restaurant pages, search results, auth UI (t_514f91af). Tokens: see `tokens.md`.
 
 The core UX question: **"What does the user think is happening here?"** — a verification signal must be instantly readable and impossible to misread. These components carry the product's central promise (amanah), so their rules are binding.
