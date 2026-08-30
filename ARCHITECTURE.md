@@ -1,6 +1,6 @@
-# ARCHITECTURE.md — Halal Food Finder
+# ARCHITECTURE.md — Tahir's List
 
-This document describes the architecture of Halal Food Finder. It is split into
+This document describes the architecture of Tahir's List. It is split into
 two distinct parts:
 
 1. **Agreed** — the domain model and engineering process we have actually agreed
@@ -9,10 +9,11 @@ two distinct parts:
 2. **Unresolved** — technical decisions that are **not yet agreed**. These are
    deliberately left open and marked clearly; **do not treat them as decided.**
 
-> Status: **Greenfield / DRAFT.** This document accompanies the first commit of
-> an empty repository. Nothing here implies implementation exists. Hosting,
-> geo, reviews, verification provider, auth tuning, and SEO were ratified
-> 2026-08-29 (see §1.0); partial-halal and alcohol-served added to MVP scope.
+> Status: **Active.** Milestone 1 (auth + scaffold vertical slices) is
+> implemented and merged; this document tracks the agreed architecture and the
+> decisions still open. Hosting, geo, reviews, verification provider, auth
+> tuning, and SEO were ratified 2026-08-29 (see §1.0); partial-halal and
+> alcohol-served added to MVP scope.
 
 ---
 

@@ -1,4 +1,4 @@
-# Halal Food Finder
+# Tahir's List
 
 > بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
 
@@ -8,20 +8,20 @@ restaurants.
 
 ## Status
 
-**Greenfield.** This repository currently contains no implementation code.
+**Active development — Milestone 1 in progress.** The repo contains backend +
+frontend implementations (see [ARCHITECTURE.md](./ARCHITECTURE.md)).
 
 - The product requirements and documentation live in **Shortcut**
   (`app.shortcut.com/halal-food-finder`), which is the source of truth for
   product and project management.
-- The `main` branch has **no commits yet**; this documentation commit is the
-  first content.
-- No technical stack has been chosen yet. See
-  [ARCHITECTURE.md](./ARCHITECTURE.md#unresolved-decisions) for the decisions
-  that are still open.
+- The technical stack is **ratified**: Kotlin/Spring Boot 3 + PostgreSQL/PostGIS
+  backend, Next.js (TypeScript) frontend. See
+  [ARCHITECTURE.md](./ARCHITECTURE.md) for the resolved decisions and what is
+  still open.
 
 ## What this product is
 
-Halal Food Finder is designed to solve a real problem for Muslims: verifying
+Tahir's List is designed to solve a real problem for Muslims: verifying
 that food is genuinely halal is hard, especially outside Muslim-majority
 countries, and the distinction between **hand-cut** and **machine-cut** meat
 matters to many people. The product's core ideas (from the Shortcut PRD):
