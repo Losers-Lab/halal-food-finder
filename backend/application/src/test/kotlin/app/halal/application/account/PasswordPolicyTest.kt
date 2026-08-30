@@ -12,6 +12,14 @@ class PasswordPolicyTest : FunSpec({
         shouldNotThrow<RuntimeException> { PasswordPolicy.validate("password123") }
     }
 
+    test("accepts a password of exactly the 8-char minimum (sc-135 Gap 5 boundary)") {
+        shouldNotThrow<RuntimeException> { PasswordPolicy.validate("abcdefgh") }
+    }
+
+    test("rejects a password of exactly 7 chars (sc-135 Gap 5 boundary)") {
+        shouldThrow<WeakPasswordException> { PasswordPolicy.validate("abcdefg") }
+    }
+
     test("rejects a password that is too short") {
         shouldThrow<WeakPasswordException> { PasswordPolicy.validate("short") }
             .shouldBeInstanceOf<WeakPasswordException>()

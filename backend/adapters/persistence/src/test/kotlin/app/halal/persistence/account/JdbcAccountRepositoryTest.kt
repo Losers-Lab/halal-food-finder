@@ -1,9 +1,11 @@
 package app.halal.persistence.account
 
 import app.halal.application.account.AccountRepository
+import app.halal.application.account.EmailAlreadyExistsException
 import app.halal.domain.account.Account
 import app.halal.domain.account.Email
 import app.halal.domain.account.Role
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
@@ -86,6 +88,42 @@ class JdbcAccountRepositoryTest : FunSpec() {
             found shouldNotBe null
             found!!.role shouldBe Role.RESTAURANT_OWNER
             found.passwordHash shouldBe "argon2id\$owner-hash"
+        }
+
+        test("V1 migration enforces a unique constraint on users.email") {
+            val dataSource = DriverManagerDataSource().apply {
+                setDriverClassName("org.postgresql.Driver")
+                setUrl(postgres.jdbcUrl)
+                setUsername(postgres.username)
+                setPassword(postgres.password)
+            }
+            val uniqueIndexCount = JdbcTemplate(dataSource).queryForObject(
+                """
+                SELECT count(*)
+                FROM pg_index
+                WHERE indisunique = true
+                  AND indisprimary = false
+                  AND indrelid = 'users'::regclass
+                """.trimIndent(),
+                Int::class.java,
+            )
+            uniqueIndexCount shouldBe 1
+        }
+
+        test("a second save of the same email surfaces EmailAlreadyExistsException (sc-135 Gap 6: unique-constraint race backstop, not a 500)") {
+            val first = Account.new(email = Email("race@example.com"), passwordHash = "argon2id\$one")
+            repository.save(first)
+
+            // Simulate the lost TOCTOU race: a concurrent signup that already passed
+            // the application-layer findByEmail check now hits the DB unique constraint.
+            val racer = Account.new(email = Email("race@example.com"), passwordHash = "argon2id\$two")
+            val ex = shouldThrow<EmailAlreadyExistsException> { repository.save(racer) }
+
+            ex.email.value shouldBe "race@example.com"
+
+            // Exactly one row survives; the unique constraint is the backstop.
+            repository.findByEmail(Email("race@example.com")) shouldNotBe null
+            repository.findByEmail(Email("race@example.com"))!!.passwordHash shouldBe "argon2id\$one"
         }
     }
 }

@@ -1,9 +1,11 @@
 package app.halal.persistence.account
 
 import app.halal.application.account.AccountRepository
+import app.halal.application.account.EmailAlreadyExistsException
 import app.halal.domain.account.Account
 import app.halal.domain.account.Email
 import app.halal.domain.account.Role
+import org.springframework.dao.DuplicateKeyException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import java.sql.ResultSet
@@ -36,17 +38,26 @@ class JdbcAccountRepository(private val jdbc: JdbcTemplate) : AccountRepository 
     }
 
     override fun save(account: Account): Account {
-        val id = jdbc.queryForObject(
-            """
-            INSERT INTO users (email, password_hash, role)
-            VALUES (?, ?, ?)
-            RETURNING id
-            """.trimIndent(),
-            UUID::class.java,
-            account.email.value,
-            account.passwordHash,
-            account.role.name,
-        ) ?: error("INSERT RETURNING id returned no row")
+        val id = try {
+            jdbc.queryForObject(
+                """
+                INSERT INTO users (email, password_hash, role)
+                VALUES (?, ?, ?)
+                RETURNING id
+                """.trimIndent(),
+                UUID::class.java,
+                account.email.value,
+                account.passwordHash,
+                account.role.name,
+            ) ?: error("INSERT RETURNING id returned no row")
+        } catch (e: DuplicateKeyException) {
+            // sc-135 Gap 6 / Defect 4a: the application-level findByEmail check is
+            // TOCTOU-racy — two concurrent signups can both pass it, then one INSERT
+            // hits the `uk_users_email` unique constraint. The DB is the real
+            // backstop; translate its signal into the domain exception so the web
+            // layer maps it to 409 (email_already_exists) instead of a raw 500.
+            throw EmailAlreadyExistsException(account.email)
+        }
 
         return account.copy(id = id)
     }
