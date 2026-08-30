@@ -54,6 +54,12 @@ class ResourceServerSecurityConfig {
         http
             .csrf { it.disable() }
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
+            .headers { headers ->
+                headers.contentTypeOptions { }
+                headers.frameOptions { it.deny() }
+                // CSP: this API serves no HTML frames/pages; deny embedding outright.
+                headers.contentSecurityPolicy("default-src 'none'; frame-ancestors 'none'")
+            }
             .authorizeHttpRequests { auth ->
                 auth
                     .requestMatchers(HttpMethod.POST, "/v1/auth/signup", "/v1/auth/login", "/v1/auth/refresh", "/v1/auth/logout").permitAll()

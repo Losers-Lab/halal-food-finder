@@ -4,16 +4,9 @@ import app.halal.application.account.TokenIssuer
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import java.security.KeyFactory
 import java.security.KeyPair
-import java.security.KeyPairGenerator
-import java.security.interfaces.RSAPrivateCrtKey
 import java.security.interfaces.RSAPrivateKey
-import java.security.interfaces.RSAPublicKey
-import java.security.spec.PKCS8EncodedKeySpec
-import java.security.spec.RSAPublicKeySpec
 import java.time.Duration
-import java.util.Base64
 
 /**
  * Wires the [TokenIssuer] and (via the shared [KeyPair]) the OAuth2 resource
@@ -25,6 +18,11 @@ import java.util.Base64
  * matching public key is reconstructed from its CRT parameters, so the issuer
  * (signs with the private key) and the resource server (verifies with the
  * public key) always agree on the pair.
+ *
+ * Fail-fast (sc-134): if `app.jwt.rsa-private-key-base64` IS provided but is
+ * invalid (not base64 / not a PKCS#8 RSA key), startup aborts with a clear,
+ * secret-safe message instead of silently generating a key or failing later
+ * with an obscure crypto exception. See [JwtRsaKeyPairLoader].
  *
  * Security note: an ephemeral key is regenerated on every boot, which
  * invalidates previously-issued access tokens after restart and is only for
@@ -39,7 +37,7 @@ class TokenIssuerConfig {
     @Bean
     fun jwtRsaKeyPair(
         @Value("\${app.jwt.rsa-private-key-base64:}") privateKeyB64: String,
-    ): KeyPair = loadOrGenerateKeyPair(privateKeyB64)
+    ): KeyPair = JwtRsaKeyPairLoader.loadKeyPair(privateKeyB64)
 
     @Bean
     fun tokenIssuer(
@@ -51,18 +49,4 @@ class TokenIssuerConfig {
         issuer = issuer,
         accessTokenTtl = Duration.ofSeconds(accessTtlSeconds),
     )
-
-    private fun loadOrGenerateKeyPair(privateKeyB64: String): KeyPair {
-        if (privateKeyB64.isNotBlank()) {
-            val der = Base64.getDecoder().decode(privateKeyB64)
-            val keyFactory = KeyFactory.getInstance("RSA")
-            val private = keyFactory.generatePrivate(PKCS8EncodedKeySpec(der)) as RSAPrivateCrtKey
-            val public = keyFactory.generatePublic(
-                RSAPublicKeySpec(private.modulus, private.publicExponent),
-            ) as RSAPublicKey
-            return KeyPair(public, private)
-        }
-        val keyGen = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }
-        return keyGen.generateKeyPair()
-    }
 }

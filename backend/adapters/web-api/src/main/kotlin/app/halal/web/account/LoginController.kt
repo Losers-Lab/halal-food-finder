@@ -51,11 +51,6 @@ class LoginController(private val authenticateAccount: AuthenticateAccount) {
         ResponseEntity.status(HttpStatus.UNAUTHORIZED)
             .body(ErrorResponse("invalid_credentials", "Invalid email or password."))
 
-    @ExceptionHandler(IllegalArgumentException::class)
-    @ApiResponse(responseCode = "400", description = "Invalid input")
-    fun onInvalidInput(ex: IllegalArgumentException): ResponseEntity<ErrorResponse> =
-        ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ErrorResponse("invalid_input", ex.message))
-
     data class LoginRequest(
         @field:NotBlank(message = "email is required")
         @field:Email(message = "email must be a valid address")
