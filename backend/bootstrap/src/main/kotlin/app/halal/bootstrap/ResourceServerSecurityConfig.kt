@@ -31,8 +31,9 @@ import java.security.interfaces.RSAPublicKey
  *
  * Every request must present a valid RS256 access JWT (verified server-side
  * against the same RSA pair that issued it) EXCEPT the explicitly-permitted
- * public routes (signup / login / refresh, health, OpenAPI docs, actuator).
- * Anything else is denied with a generic 401 until a valid token is supplied.
+ * public routes (signup / login / refresh / logout, health, OpenAPI docs,
+ * actuator). Anything else is denied with a generic 401 until a valid token
+ * is supplied.
  *
  * Verification (per docs/security/auth-security-review-2026-08-29.md finding #1
  * recommendation): signature (RS256), `iss`, `exp`, and the `role` claim (must
@@ -55,7 +56,7 @@ class ResourceServerSecurityConfig {
             .sessionManagement { it.sessionCreationPolicy(SessionCreationPolicy.STATELESS) }
             .authorizeHttpRequests { auth ->
                 auth
-                    .requestMatchers(HttpMethod.POST, "/v1/auth/signup", "/v1/auth/login", "/v1/auth/refresh").permitAll()
+                    .requestMatchers(HttpMethod.POST, "/v1/auth/signup", "/v1/auth/login", "/v1/auth/refresh", "/v1/auth/logout").permitAll()
                     // `/error` is Spring MVC's forwarded error dispatch (e.g. for
                     // bean-validation 400s); it must stay public so those replies surface.
                     .requestMatchers("/error").permitAll()
