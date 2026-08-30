@@ -151,4 +151,95 @@ describe("api client", () => {
     expect(err).toBeInstanceOf(Error);
     expect(err).not.toBeInstanceOf(SyntaxError);
   });
+
+  it("createListing posts to /v1/listings and returns the created listing on 201 (sc-138)", async () => {
+    const body = {
+      id: "u-1",
+      name: "Al-Amir Grill",
+      address: "123 Main St",
+      lat: 40.7,
+      lng: -74.0,
+      cuisine: "middle eastern",
+      cuttingMethod: "HAND_CUT",
+      ownerId: "acc-1",
+      verificationStatus: "UNVERIFIED",
+      createdAt: "2026-08-30T00:00:00Z",
+    };
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(body, 201),
+    );
+    const result = await api.createListing({
+      name: "Al-Amir Grill",
+      address: "123 Main St",
+      lat: 40.7,
+      lng: -74.0,
+      cuisine: "Middle Eastern",
+      cuttingMethod: "HAND_CUT",
+    });
+    expect(result.verificationStatus).toBe("UNVERIFIED");
+    expect(result.id).toBe("u-1");
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/listings",
+      expect.objectContaining({ method: "POST" }),
+    );
+  });
+
+  it("maps a 400 invalid_input to an ApiError carrying the backend field message (sc-138)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(
+        { code: "invalid_input", message: "name is required; lat is required" },
+        400,
+      ),
+    );
+    await expect(
+      api.createListing({
+        name: "",
+        address: "123 Main St",
+        lat: 40.7,
+        lng: -74.0,
+        cuisine: "Middle Eastern",
+        cuttingMethod: "UNSPECIFIED",
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: "invalid_input",
+      detail: "name is required; lat is required",
+    });
+  });
+
+  it("maps a 404 owner_not_found (auth-tied) to an ApiError for the UI to surface (sc-138)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse({ code: "owner_not_found" }, 404),
+    );
+    await expect(
+      api.createListing({
+        name: "Al-Amir Grill",
+        address: "123 Main St",
+        lat: 40.7,
+        lng: -74.0,
+        cuisine: "Middle Eastern",
+        cuttingMethod: "HAND_CUT",
+      }),
+    ).rejects.toMatchObject({ status: 404, code: "owner_not_found" });
+  });
+
+  it("maps a 401 to invalid_credentials for an unauthenticated listing submit (sc-138)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse({ code: "invalid_credentials" }, 401),
+    );
+    await expect(
+      api.createListing({
+        name: "Al-Amir Grill",
+        address: "123 Main St",
+        lat: 40.7,
+        lng: -74.0,
+        cuisine: "Middle Eastern",
+        cuttingMethod: "HAND_CUT",
+      }),
+    ).rejects.toMatchObject({ status: 401, code: "invalid_credentials" });
+  });
 });

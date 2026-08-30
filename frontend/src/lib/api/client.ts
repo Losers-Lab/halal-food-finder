@@ -5,8 +5,11 @@ import type {
 
 type SignupBody = operations["signup"]["requestBody"]["content"]["application/json"];
 type LoginBody = operations["login"]["requestBody"]["content"]["application/json"];
+export type CreateListingBody =
+  operations["create"]["requestBody"]["content"]["application/json"];
 export type SignupResponse = components["schemas"]["SignupResponse"];
 export type AuthResponse = components["schemas"]["AuthResponse"];
+export type ListingResponse = components["schemas"]["ListingResponse"];
 
 // Same-origin by default: Next.js rewrites proxy /v1/* to the backend (see
 // next.config.ts), so no CORS config is needed on the API. Override with
@@ -26,7 +29,10 @@ export type ApiErrorCode =
   | "invalid_input"
   | "email_already_exists"
   | "weak_password"
-  | "invalid_credentials";
+  | "invalid_credentials"
+  | "owner_not_found"
+  | "not_found"
+  | "internal_error";
 
 /**
  * Typed error thrown for any non-2xx API response. `code` is the backend's
@@ -110,4 +116,15 @@ export const api = {
   /** POST /v1/auth/logout — revoke the refresh cookie (no body). Resolves on 204. */
   logout: (signal?: AbortSignal): Promise<undefined> =>
     request("/v1/auth/logout", undefined, { ...COOKIE_REQUEST, signal }),
+
+  /**
+   * POST /v1/listings — add a restaurant listing (sc-138). Requires the
+   * authenticated account (the access JWT is presented via the auth surface);
+   * a listing is always created UNVERIFIED. The client supplies coordinates
+   * directly — this endpoint does not geocode.
+   */
+  createListing: (
+    body: CreateListingBody,
+    signal?: AbortSignal,
+  ): Promise<ListingResponse> => request("/v1/listings", body, { signal }),
 };
