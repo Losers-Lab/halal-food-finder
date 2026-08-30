@@ -22,4 +22,6 @@ data class AuthRateLimitProperties(
      * Default false: the immediate socket peer (remoteAddr) keys the bucket.
      */
     var trustProxy: Boolean = false,
+    /** Upper bound on tracked client keys (memory-growth guard; LRU-evicted). */
+    var maxKeys: Long = 100_000,
 )

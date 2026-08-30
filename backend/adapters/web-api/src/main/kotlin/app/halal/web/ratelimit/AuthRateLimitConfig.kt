@@ -38,6 +38,7 @@ class AuthRateLimitConfig {
         capacity = authRateLimitProperties.capacity,
         refillTokensPerWindow = authRateLimitProperties.refillPerWindow,
         refillWindow = authRateLimitProperties.refillWindow,
+        maxKeys = authRateLimitProperties.maxKeys,
     )
 
     @Bean

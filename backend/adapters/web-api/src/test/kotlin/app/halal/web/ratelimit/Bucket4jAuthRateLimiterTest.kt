@@ -76,6 +76,33 @@ class Bucket4jAuthRateLimiterTest : FunSpec({
         meter.advance(window.dividedBy(2))
         limiter.tryAcquire("ip-d") shouldBe true
     }
+
+    test("the bucket map is bounded: keys are evicted beyond maxKeys (memory-growth guard)") {
+        val limiter = Bucket4jAuthRateLimiter(
+            capacity = 5,
+            refillTokensPerWindow = 5,
+            refillWindow = Duration.ofMinutes(1),
+            maxKeys = 3,
+        )
+
+        // Touch more distinct keys than the bound allows.
+        listOf("ip-1", "ip-2", "ip-3", "ip-4", "ip-5").forEach { limiter.tryAcquire(it) shouldBe true }
+
+        limiter.trackedKeyCount shouldBe 3
+    }
+
+    test("the default bound is finite (no unbounded growth possible)") {
+        val limiter = Bucket4jAuthRateLimiter(
+            capacity = 5,
+            refillTokensPerWindow = 5,
+            refillWindow = Duration.ofMinutes(1),
+        )
+
+        (1..2000).forEach { limiter.tryAcquire("client-$it") }
+
+        limiter.maxKeys shouldBe 100_000L
+        (limiter.trackedKeyCount <= limiter.maxKeys) shouldBe true
+    }
 })
 
 /** [io.github.bucket4j.TimeMeter] whose time the test controls, making refill deterministic. */
