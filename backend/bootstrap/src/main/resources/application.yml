@@ -40,6 +40,23 @@ management:
       # sc-134 (finding #8): never expose detailed health internals outside dev.
       show-details: never
 
+# sc-136 auth rate limiting (in-process Bucket4j token buckets, single node).
+app:
+  ratelimit:
+    # Token-bucket capacity: max burst before the budget empties.
+    capacity: 20
+    # Refill: 20 tokens per minute per client IP context.
+    refill-per-window: 20
+    refill-window: 1m
+
+# Security parameter — zombie access-token TTL (Omar's sc-136 case 6).
+# The short-lived access JWT default is 900s (app.jwt.access-ttl-seconds, wired
+# in TokenIssuerConfig). This TTL is the accepted "zombie JWT" window: once an
+# account's refresh token is revoked, an already-issued access JWT can remain
+# valid for up to this long. Deliberately NO in-memory denylist is kept (per the
+# adjudicated case 6 acceptance) — revocation takes effect for the REFRESH/session
+# grant, and the short TTL bounds the residual risk. Do not silently raise it.
+
 ---
 # Local-development override: expose full health details for engineering.
 spring:

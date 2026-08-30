@@ -13,6 +13,10 @@ bouncycastle = "1.77"
 flyway = "10.15.0"
 # JWT (RS256) signing/parsing for the short-lived access token.
 nimbus-jose-jwt = "9.48"
+# In-process token-bucket rate limiting for auth endpoints (security review
+# finding #4 / Part 3 #5: recommended in-app Bucket4j at MVP scale — $0, no
+# external service, resets on restart which is acceptable for a single node).
+bucket4j = "8.10.1"
 
 [libraries]
 # --- Spring Boot (versions managed by the spring-boot-dependencies BOM) ---
@@ -25,6 +29,8 @@ spring-boot-starter-validation = { module = "org.springframework.boot:spring-boo
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 # Kotlin data-class JSON support (Spring Boot does not pull this in automatically).
 jackson-module-kotlin = { module = "com.fasterxml.jackson.module:jackson-module-kotlin" }
+# In-process rate limiting for auth endpoints (security review finding #4).
+bucket4j = { module = "com.bucket4j:bucket4j-core", version.ref = "bucket4j" }
 springdoc = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
 # Spring Security Crypto: Argon2PasswordEncoder (Argon2id) for password hashing.
 spring-security-crypto = { module = "org.springframework.security:spring-security-crypto" }
