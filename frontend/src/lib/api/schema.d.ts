@@ -35,9 +35,29 @@ export interface paths {
         put?: never;
         /**
          * Refresh the session
-         * @description Rotates a refresh token: revokes it and issues a fresh access token + new refresh token.
+         * @description Rotates the refresh token presented as the HttpOnly cookie: revokes it and issues a fresh access token (JSON body) and new refresh cookie (Set-Cookie). No request body.
          */
         post: operations["refresh"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/auth/logout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Log out
+         * @description Revokes the refresh token presented as the HttpOnly cookie and clears it (Set-Cookie with Max-Age=0). Idempotent: unknown or absent cookies still succeed. No request body.
+         */
+        post: operations["logout"];
         delete?: never;
         options?: never;
         head?: never;
@@ -55,7 +75,7 @@ export interface paths {
         put?: never;
         /**
          * Log in
-         * @description Verifies the email/password against the stored Argon2id hash and returns a short-lived access token (RS256 JWT with the account's RBAC role) and a rotating refresh token.
+         * @description Verifies the email/password against the stored Argon2id hash and returns a short-lived access JWT (JSON body) plus sets the refresh token as an HttpOnly cookie. The refresh token is never returned in the JSON body.
          */
         post: operations["login"];
         delete?: never;
@@ -98,12 +118,8 @@ export interface components {
             email: string;
             role: string;
         };
-        RefreshRequest: {
-            refreshToken: string;
-        };
         AuthResponse: {
             accessToken: string;
-            refreshToken: string;
             tokenType: string;
             /** Format: int64 */
             expiresIn: number;
@@ -182,13 +198,9 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RefreshRequest"];
-            };
-        };
+        requestBody?: never;
         responses: {
-            /** @description Rotated; new token pair issued */
+            /** @description Rotated; fresh access token issued and new refresh cookie set */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -197,7 +209,7 @@ export interface operations {
                     "*/*": components["schemas"]["AuthResponse"];
                 };
             };
-            /** @description Invalid input */
+            /** @description Missing refresh cookie */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -206,8 +218,35 @@ export interface operations {
                     "*/*": components["schemas"]["ErrorResponse"];
                 };
             };
-            /** @description Invalid, expired, or already-used refresh token */
+            /** @description Invalid, expired, or already-used refresh cookie */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    logout: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session revoked and refresh cookie cleared */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid input */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -230,7 +269,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Authenticated; token pair issued */
+            /** @description Authenticated; access token returned, refresh cookie set */
             200: {
                 headers: {
                     [name: string]: unknown;

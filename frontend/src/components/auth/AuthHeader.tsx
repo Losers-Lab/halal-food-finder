@@ -9,7 +9,13 @@ import { useAuth } from "@/lib/auth/AuthProvider";
  * home page; session is persisted via AuthProvider.
  */
 export function AuthHeader() {
-  const { session, signOut } = useAuth();
+  const { session, restoring, signOut } = useAuth();
+
+  // While a persisted session is re-materializing, show a neutral placeholder
+  // rather than flashing between logged-out links and the signed-in strip.
+  if (restoring && !session) {
+    return <div aria-busy="true" className="h-8 w-56 animate-pulse rounded bg-neutral-100" />;
+  }
 
   if (session) {
     return (
