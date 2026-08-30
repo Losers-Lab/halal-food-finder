@@ -11,6 +11,9 @@ dependencies {
     // Persistence adapter on the runtime classpath so its @Repository beans and the
     // Flyway auto-migration (users table) are picked up by component scan.
     implementation(project(":persistence"))
+    // Object storage adapter (sc-157): provides the S3ImagePort bean when
+    // `app.storage.s3.endpoint` is configured; bootstrap falls back to in-memory.
+    implementation(project(":storage-s3"))
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.actuator)

@@ -17,6 +17,9 @@ nimbus-jose-jwt = "9.48"
 # finding #4 / Part 3 #5: recommended in-app Bucket4j at MVP scale — $0, no
 # external service, resets on restart which is acceptable for a single node).
 bucket4j = "8.10.1"
+# AWS SDK v2 (S3 only) for the object-storage adapter. MinIO now, Cloudflare R2
+# later by config change — no AWS-only features (signed requests only).
+aws-sdk-s3 = "2.39.6"
 
 [libraries]
 # --- Spring Boot (versions managed by the spring-boot-dependencies BOM) ---
@@ -25,6 +28,10 @@ spring-boot-starter-actuator = { module = "org.springframework.boot:spring-boot-
 spring-boot-starter-test = { module = "org.springframework.boot:spring-boot-starter-test" }
 spring-boot-starter-jdbc = { module = "org.springframework.boot:spring-boot-starter-jdbc" }
 spring-boot-starter-validation = { module = "org.springframework.boot:spring-boot-starter-validation" }
+# Bare Spring context + autoconfigure for adapter modules that register beans
+# without a full starter (storage-s3). Versions managed by the Boot BOM.
+spring-context = { module = "org.springframework:spring-context" }
+spring-boot-autoconfigure = { module = "org.springframework.boot:spring-boot-autoconfigure" }
 # OAuth2 resource server: RS256 JWT verification / deny-by-default (sc-131).
 spring-boot-starter-oauth2-resource-server = { module = "org.springframework.boot:spring-boot-starter-oauth2-resource-server" }
 # Kotlin data-class JSON support (Spring Boot does not pull this in automatically).
@@ -59,6 +66,14 @@ testcontainers = { module = "org.testcontainers:testcontainers", version.ref = "
 testcontainers-postgresql = { module = "org.testcontainers:postgresql", version.ref = "testcontainers" }
 # Test-only SLF4J binding so Testcontainers/docker-java diagnostics are visible.
 slf4j-simple = { module = "org.slf4j:slf4j-simple" }
+
+# --- Object storage (sc-157) ---
+# AWS SDK v2 S3 client, pointed at a configurable endpoint (MinIO now, R2 later).
+aws-sdk-s3 = { module = "software.amazon.awssdk:s3", version.ref = "aws-sdk-s3" }
+# URL-connection HTTP client for the S3 client (bundled; no extra native deps).
+aws-sdk-url-connection-client = { module = "software.amazon.awssdk:url-connection-client", version.ref = "aws-sdk-s3" }
+# Testcontainers module with a ready MinIO container (swap/contract test).
+testcontainers-minio = { module = "org.testcontainers:minio", version.ref = "testcontainers" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
