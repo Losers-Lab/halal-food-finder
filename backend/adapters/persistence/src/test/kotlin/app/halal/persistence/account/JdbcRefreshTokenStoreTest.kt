@@ -13,19 +13,28 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.string.shouldMatch
 import org.flywaydb.core.Flyway
 import org.springframework.jdbc.core.JdbcTemplate
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.jdbc.datasource.DriverManagerDataSource
+import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
+import java.util.concurrent.Callable
+import java.util.concurrent.CyclicBarrier
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 /**
  * Persistence adapter test for the rotating-hashed refresh-token store (sc-40):
  * proves the V2 migration creates the refresh_tokens table and that
  * [JdbcRefreshTokenStore] stores only a SHA-256 hash of each token, resolves it
- * back by hash, and revokes it — against a real PostGIS container.
+ * back by hash, revokes it, and — for the sc-133 fix — atomically
+ * consume-and-rotates in one transaction with an affected-row gate that makes
+ * concurrent use of the same token exact-one-winner. Runs against a real PostGIS
+ * container.
  */
 class JdbcRefreshTokenStoreTest : FunSpec() {
 
@@ -56,7 +65,10 @@ class JdbcRefreshTokenStoreTest : FunSpec() {
             }
             jdbc = JdbcTemplate(dataSource)
             repository = JdbcAccountRepository(jdbc)
-            refreshTokens = JdbcRefreshTokenStore(jdbc)
+            refreshTokens = JdbcRefreshTokenStore(
+                jdbc,
+                TransactionTemplate(DataSourceTransactionManager(dataSource)),
+            )
         }
         afterSpec { postgres.stop() }
 
@@ -111,6 +123,71 @@ class JdbcRefreshTokenStoreTest : FunSpec() {
             refreshTokens.revoke("to-revoke")
 
             refreshTokens.findByToken("to-revoke").shouldBeNull()
+        }
+
+        test("consumeAndRotate deletes the old token and stores the new one in one call") {
+            val account = repository.save(Account.new(Email("grace@example.com"), "argon2id\$stored-hash"))
+            refreshTokens.store("token-old", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
+
+            val rotated = refreshTokens.consumeAndRotate(
+                presentedToken = "token-old",
+                newToken = "token-new",
+                accountId = account.id,
+                expiresAt = Instant.now().plus(20, ChronoUnit.DAYS),
+            )
+
+            rotated shouldBe true
+            refreshTokens.findByToken("token-old").shouldBeNull()
+            refreshTokens.findByToken("token-new")!!.accountId shouldBe account.id
+        }
+
+        test("consumeAndRotate returns false and inserts nothing when the presented token is already gone") {
+            val account = repository.save(Account.new(Email("hans@example.com"), "argon2id\$stored-hash"))
+
+            val rotated = refreshTokens.consumeAndRotate(
+                presentedToken = "never-issued",
+                newToken = "should-not-appear",
+                accountId = account.id,
+                expiresAt = Instant.now().plus(20, ChronoUnit.DAYS),
+            )
+
+            rotated shouldBe false
+            refreshTokens.findByToken("should-not-appear").shouldBeNull()
+        }
+
+        test("concurrent consumeAndRotate of the same token is exact-one-winner: one true, one false, one live row (sc-133 fix)") {
+            val account = repository.save(Account.new(Email("ira@example.com"), "argon2id\$stored-hash"))
+            refreshTokens.store("contended", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
+
+            // Two threads race to consume-and-rotate the SAME live token into two
+            // different replacements. Exactly one may win the gated delete.
+            val start = CyclicBarrier(2)
+            val pool = Executors.newFixedThreadPool(2)
+            val results = try {
+                val futures = (1..2).map { i ->
+                    pool.submit(Callable {
+                        start.await()
+                        refreshTokens.consumeAndRotate(
+                            presentedToken = "contended",
+                            newToken = "replacement-$i",
+                            accountId = account.id,
+                            expiresAt = Instant.now().plus(20, ChronoUnit.DAYS),
+                        )
+                    })
+                }
+                futures.map { it.get(30, TimeUnit.SECONDS) }
+            } finally {
+                pool.shutdownNow()
+            }
+
+            results.count { it } shouldBe 1
+
+            // Exactly one live row survives for this account (the winner's token).
+            val live = jdbc.queryForList(
+                "SELECT token_hash FROM refresh_tokens WHERE account_id = ?",
+                account.id,
+            )
+            live.size shouldBe 1
         }
 
         test("tokens for the same account can coexist (one per active session)") {

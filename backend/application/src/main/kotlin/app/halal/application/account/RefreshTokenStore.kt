@@ -20,6 +20,23 @@ interface RefreshTokenStore {
 
     /** Irrevocably invalidate a refresh token (rotation / expiry). */
     fun revoke(token: String)
+
+    /**
+     * Atomically consume-and-rotate a refresh token in a single transactional
+     * operation: delete [presentedToken] and — only if exactly one row was
+     * actually deleted (i.e. the token was still live and this caller owns it) —
+     * persist [newToken] as its replacement. Returns `false` (and inserts
+     * nothing) when the presented token was already consumed or unknown, so a
+     * concurrent refresh presenting the same token cannot mint a second live
+     * record. The affected-row count of the conditional delete is what makes the
+     * rotation race-safe: exact-one-winner under concurrency.
+     */
+    fun consumeAndRotate(
+        presentedToken: String,
+        newToken: String,
+        accountId: UUID,
+        expiresAt: Instant,
+    ): Boolean
 }
 
 /** A live refresh-token record as read back from storage. */
