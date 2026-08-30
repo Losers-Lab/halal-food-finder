@@ -20,6 +20,9 @@ dependencies {
     implementation(libs.bouncycastle)
     // RS256 JWT access-token issuance (ratified auth stack, short access JWT).
     implementation(libs.nimbus.jose.jwt)
+    // OAuth2 resource server: verifies the RS256 access JWT at the HTTP edge and
+    // enforces deny-by-default (sc-131). Brings in Spring Security + request matcher support.
+    implementation(libs.spring.boot.starter.oauth2.resource.server)
     // PostgreSQL JDBC driver at runtime (datasource for the users table).
     runtimeOnly(libs.postgresql)
 
