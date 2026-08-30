@@ -1,0 +1,75 @@
+{
+  "purpose": "Seed halal restaurants for Halal Food Finder. Constraint (Arham): ONLY include restaurants that resolve on Photon/OSM (Hamza's stack), because unsupported geocoders can't seed them. No invented coordinates.",
+  "method": "Photon (Komoot) geocoder over OpenStreetMap. Query = full 'Name, City' string. Each row match-confirmed: returned country+state must match target AND at least one distinguishing name token must overlap. status=OK means a real OSM venue resolved in the right place with a matching name.",
+  "data_source": "OpenStreetMap via Photon, ODbL 1.0; coordinates WGS84.",
+  "verified_seeds": {
+    "Toronto": [
+      {"name": "Osmow's", "address": "505 St. Clair Ave W", "city": "Toronto", "province": "ON", "postal": "M6C 1A1", "country": "CA", "lat": 43.682921, "lon": -79.418493},
+      {"name": "Paramount Fine Foods", "address": "The Queensway", "city": "Toronto", "province": "ON", "postal": "M8Z 1V1", "country": "CA", "lat": 43.617063, "lon": -79.542104},
+      {"name": "The Halal Guys", "address": "563 Yonge St", "city": "Toronto", "province": "ON", "postal": "M4Y 1Z2", "country": "CA", "lat": 43.665206, "lon": -79.384523},
+      {"name": "Iqbal Foods", "address": "Birchmount Rd", "city": "Toronto", "province": "ON", "postal": "M1K 1C7", "country": "CA", "lat": 43.707410, "lon": -79.269949},
+      {"name": "Karahi Point", "address": "Overlea Blvd", "city": "Toronto", "province": "ON", "postal": "M4H 1C3", "country": "CA", "lat": 43.707742, "lon": -79.344214},
+      {"name": "Lazeez Shawarma", "address": "Rogers Rd", "city": "Toronto", "province": "ON", "postal": "M6N 2B5", "country": "CA", "lat": 43.681855, "lon": -79.470950},
+      {"name": "Aroma Fine Indian Cuisine", "address": "287 King St W", "city": "Toronto", "province": "ON", "postal": "M5V 0W3", "country": "CA", "lat": 43.646238, "lon": -79.389767},
+      {"name": "Sultan of Samosas", "address": "1677 O'Connor Dr", "city": "Toronto", "province": "ON", "postal": "M4A 1W5", "country": "CA", "lat": 43.718833, "lon": -79.304067},
+      {"name": "Bamiyan Kabob", "address": "62 Overlea Blvd", "city": "Toronto", "province": "ON", "postal": "M4H 1E7", "country": "CA", "lat": 43.707949, "lon": -79.343431},
+      {"name": "Watan Kabob", "address": "6974 Financial Dr", "city": "Mississauga (GTA)", "province": "ON", "postal": "L5N 7H5", "country": "CA", "lat": 43.609900, "lon": -79.751092},
+      {"name": "Madina Naan & Kabob", "address": "Overlea Blvd", "city": "Toronto", "province": "ON", "postal": "M4H 1H1", "country": "CA", "lat": 43.704492, "lon": -79.349801}
+    ],
+    "New_York": [
+      {"name": "The Halal Guys", "address": "307 E 14th St", "city": "Manhattan", "province": "NY", "postal": "10003", "country": "US", "lat": 40.732288, "lon": -73.984423},
+      {"name": "Sami's Kabab House", "address": "35-57 Crescent St", "city": "Queens", "province": "NY", "postal": "11106", "country": "US", "lat": 40.758313, "lon": -73.933112},
+      {"name": "Ayat", "address": "Hull Ave", "city": "Staten Island", "province": "NY", "postal": "10306", "country": "US", "lat": 40.580655, "lon": -74.098708},
+      {"name": "Tanoreen", "address": "7523 3rd Ave", "city": "Bay Ridge, Brooklyn", "province": "NY", "postal": "11209", "country": "US", "lat": 40.630815, "lon": -74.027888},
+      {"name": "Bedouin Tent", "address": "405 Atlantic Ave", "city": "Boerum Hill, Brooklyn", "province": "NY", "postal": "11217", "country": "US", "lat": 40.686966, "lon": -73.984465},
+      {"name": "Mamoun's Falafel", "address": "30 St Marks Pl", "city": "Manhattan", "province": "NY", "postal": "10003", "country": "US", "lat": 40.728801, "lon": -73.988505},
+      {"name": "The Kati Roll Company", "address": "99 MacDougal St", "city": "Manhattan", "province": "NY", "postal": "10012", "country": "US", "lat": 40.729656, "lon": -74.001091},
+      {"name": "Yemen Cafe", "address": "176 Atlantic Ave", "city": "Brooklyn", "province": "NY", "postal": "11201", "country": "US", "lat": 40.689878, "lon": -73.993663},
+      {"name": "Punjabi Deli", "address": "114 E 1st St", "city": "Manhattan", "province": "NY", "postal": "10002", "country": "US", "lat": 40.722647, "lon": -73.986706}
+    ],
+    "Jackson_Heights": [
+      {"name": "Kabab King", "address": "73-01 37th Rd", "city": "Jackson Heights, Queens", "province": "NY", "postal": "11372", "country": "US", "lat": 40.747267, "lon": -73.892270},
+      {"name": "Dera", "address": "72-09 Broadway", "city": "Jackson Heights, Queens", "province": "NY", "postal": "11372", "country": "US", "lat": 40.747705, "lon": -73.893450}
+    ],
+    "Dallas": [
+      {"name": "The Halal Guys", "address": "5444 Lemmon Ave", "city": "Dallas", "province": "TX", "postal": "75209", "country": "US", "lat": 32.828011, "lon": -96.823657},
+      {"name": "Al-Amir Lebanese Restaurant & Club", "address": "3885 Belt Line Rd", "city": "Addison", "province": "TX", "postal": "75001", "country": "US", "lat": 32.953530, "lon": -96.849844},
+      {"name": "Afrah", "address": "E Main St", "city": "Richardson (DFW)", "province": "TX", "postal": "75081", "country": "US", "lat": 32.948070, "lon": -96.728031},
+      {"name": "Andalous Mediterranean Buffet", "address": "1601 N Central Expwy", "city": "Richardson (DFW)", "province": "TX", "postal": "75080", "country": "US", "lat": 32.969601, "lon": -96.720983},
+      {"name": "Ali Baba Mediterranean", "address": "2103 N Central Expwy", "city": "Richardson (DFW)", "province": "TX", "postal": "75080", "country": "US", "lat": 32.978694, "lon": -96.715556}
+    ],
+    "Austin": [
+      {"name": "Halal Bros", "address": "11521 N FM 620", "city": "Austin", "province": "TX", "postal": "78726", "country": "US", "lat": 30.452930, "lon": -97.827540},
+      {"name": "Halal Wings", "address": "1200 Barbara Jordan Blvd", "city": "Austin", "province": "TX", "postal": "78723", "country": "US", "lat": 30.306530, "lon": -97.707527},
+      {"name": "Caspian Grill", "address": "12518 Research Blvd", "city": "Austin", "province": "TX", "postal": "78759", "country": "US", "lat": 30.428596, "lon": -97.760465}
+    ]
+  },
+  "resolved_on_photon_but_halal_status_unconfirmed": [
+    {"name": "The Kebab Shop", "city": "Austin", "address": "1011 E 5th St", "postal": "78702", "lat": 30.263850, "lon": -97.732405, "note": "Popular kebab spot; confirm halal certification before seeding."},
+    {"name": "Arpeggio Grill", "city": "Austin", "address": "6619 Airport Blvd", "postal": "78752", "lat": 30.331191, "lon": -97.715149, "note": "Halal status not confirmed."},
+    {"name": "Santorini Cafe", "city": "Austin", "address": "11800 N Lamar Blvd", "postal": "78758", "lat": 30.387725, "lon": -97.684065, "note": "Greek; halal status not confirmed."}
+  ],
+  "not_on_photon_popular_but_not_seedable": {
+    "note": "Famous popular candidates that did NOT resolve on Photon/OSM under their real identity (either a wrong-name alias or nothing). Per Arham's constraint (Photon-only), these are excluded from seeding for now; they need an official-sources address pass IF/WHEN a non-Photon geocoder or manual entry is supported.",
+    "candidates": [
+      {"name": "Adel's Famous Halal Food", "city": "New York", "note": "Famous Midtown cart (55th St & 7th Ave). Photon only returns 'Afridi's Halal Food' in Little Neck - a DIFFERENT restaurant. Not on Photon as Adel's."},
+      {"name": "Jackson Diner", "city": "Jackson Heights", "note": "The famous Indian restaurant. Photon returns 'Jax Inn Diner' - a DIFFERENT diner. Not on Photon as Jackson Diner."},
+      {"name": "The Halal Guys", "city": "Austin", "note": "No Austin OSM/Photon node found."},
+      {"name": "Afghan Grill", "city": "Dallas", "note": "No Dallas-area match."},
+      {"name": "Warm Donuts", "city": "Dallas", "note": "Only 'JC Donuts' at that spot."},
+      {"name": "Fattoush Cafe", "city": "Plano", "note": "No match."},
+      {"name": "Kashmir Palace", "city": "Austin", "note": "No Austin-area match."},
+      {"name": "King Kebab", "city": "Austin", "note": "No Austin-area match."},
+      {"name": "Kismet Kebab", "city": "Austin", "note": "Only UK match."}
+    ]
+  },
+  "notes_for_hamza": [
+    "All rows start UNVERIFIED with provenance 'research-seed / photon-geocode' (listing-first product model).",
+    "Coordinates are OSM node locations (WGS84) - good for seeding and search-bounding, not formally verified business coordinates.",
+    "Multiple addresses/branches per restaurant is expected (e.g. The Halal Guys appears in Toronto, NYC, Dallas; Osmow's/Paramount across GTA). Model locations keyed by geolocation, brand is separate.",
+    "Toronto (11) is the richest set and the non-US (CAD / Canadian postal / CA) locale test bed - do not assume US zip format in validation.",
+    "Jackson Heights set (Kabab King, Dera) covers the founder's home area for testing."
+  ],
+  "generated_by": "aisha (research/data) via Photon geocoder",
+  "date": "2026-08-30"
+}
