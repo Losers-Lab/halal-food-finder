@@ -125,8 +125,8 @@ class LoginEndpointTest : PostgresBootTest() {
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
         }
 
-        test("refresh rotates via cookie: old cookie revoked, new cookie works for the next refresh") {
-            val (tokens, cookie) = signupAndLogin("iris@example.com")
+        test("refresh rotates within a family: old cookie consumed, new cookie progressively rotates") {
+            val (_, cookie) = signupAndLogin("iris@example.com")
             val oldRefresh = cookie.refreshValue
 
             val first = exchange(url("/v1/auth/refresh"), oldRefresh)
@@ -144,13 +144,30 @@ class LoginEndpointTest : PostgresBootTest() {
             newCookie.secure shouldBe true
             newCookie.sameSite shouldBe "Lax"
 
-            // Old token was single-use: reusing it must be rejected.
+            // The new token is still valid and rotates again (no replay involved).
+            val second = exchange(url("/v1/auth/refresh"), newRefresh)
+            second.statusCode shouldBe HttpStatus.OK
+            second.body!!["accessToken"].toString().isNotBlank() shouldBe true
+        }
+
+        test("reuse of an already-consumed refresh token revokes the ENTIRE family (sc-136)") {
+            val (_, cookie) = signupAndLogin("yara@example.com")
+            val oldRefresh = cookie.refreshValue
+
+            // First refresh consumes the login token and issues its family child.
+            val first = exchange(url("/v1/auth/refresh"), oldRefresh)
+            first.statusCode shouldBe HttpStatus.OK
+            val newRefresh = parseSetCookie(first.headers.getFirst(HttpHeaders.SET_COOKIE)).refreshValue
+
+            // Repeating the OLD (now consumed) token is a reuse signal → 401.
             val replay = exchange(url("/v1/auth/refresh"), oldRefresh)
             replay.statusCode shouldBe HttpStatus.UNAUTHORIZED
 
-            // The new token is still valid and rotates again.
-            val second = exchange(url("/v1/auth/refresh"), newRefresh)
-            second.statusCode shouldBe HttpStatus.OK
+            // sc-136: reuse tears down the whole family, so the fresh child token
+            // (same family) has been revoked along with it.
+            val childAfterReuse = exchange(url("/v1/auth/refresh"), newRefresh)
+            childAfterReuse.statusCode shouldBe HttpStatus.UNAUTHORIZED
+            childAfterReuse.body!!["code"] shouldBe "invalid_credentials"
         }
 
         test("refresh with an unknown/garbage refresh cookie is rejected with 401") {
@@ -182,16 +199,24 @@ class LoginEndpointTest : PostgresBootTest() {
             }
 
             val statuses = responses.map { it.statusCode }
+            // The atomic consume-and-rotate gate guarantees exactly ONE winner
+            // under concurrency (sc-133 baseline, unchanged).
             statuses.count { it == HttpStatus.OK } shouldBe 1
+            // The loser is rejected — either cleanly (the conditional consume
+            // reported the token already claimed) or via sc-136 reuse detection.
             statuses.count { it == HttpStatus.UNAUTHORIZED } shouldBe 1
 
-            // Rotation must be single-use under concurrency: exactly one token
-            // row survives for this account (the winner's), never two.
+            // The core rotation invariant: NEVER more than one live token row can
+            // survive for this account — a second live token must never be minted
+            // from a single-use refresh token. (Under sc-136, a loser that reaches
+            // the reuse path additionally tears down the whole family, which can
+            // reduce live rows to ZERO — that is the theft response, not a second
+            // token. The hard guarantee is the upper bound of one live row.)
             val liveRows = JdbcTemplate(dataSource).queryForList(
-                "SELECT token_hash FROM refresh_tokens WHERE account_id = ?",
+                "SELECT token_hash FROM refresh_tokens WHERE account_id = ? AND consumed_at IS NULL",
                 java.util.UUID.fromString(accountId),
             )
-            liveRows.size shouldBe 1
+            (liveRows.size <= 1) shouldBe true
         }
 
         test("refresh with an expired refresh cookie is rejected with 401 and revoked (negative path)") {

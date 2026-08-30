@@ -22,19 +22,13 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
-import java.util.concurrent.Callable
-import java.util.concurrent.CyclicBarrier
-import java.util.concurrent.Executors
-import java.util.concurrent.TimeUnit
 
 /**
- * Persistence adapter test for the rotating-hashed refresh-token store (sc-40):
- * proves the V2 migration creates the refresh_tokens table and that
- * [JdbcRefreshTokenStore] stores only a SHA-256 hash of each token, resolves it
- * back by hash, revokes it, and — for the sc-133 fix — atomically
- * consume-and-rotates in one transaction with an affected-row gate that makes
- * concurrent use of the same token exact-one-winner. Runs against a real PostGIS
- * container.
+ * Persistence adapter test for the rotating-hashed refresh-token store (sc-40,
+ * hardened for sc-136). Proves the V2+V3 migrations create the necessary tables
+ * and columns, that [JdbcRefreshTokenStore] stores only a SHA-256 hash of each
+ * token, resolves live vs consumed records, keeps rotation within a token family,
+ * and supports whole-family revocation on reuse.
  */
 class JdbcRefreshTokenStoreTest : FunSpec() {
 
@@ -72,7 +66,7 @@ class JdbcRefreshTokenStoreTest : FunSpec() {
         }
         afterSpec { postgres.stop() }
 
-        test("V1+V2 migration creates the users and refresh_tokens tables") {
+        test("V1+V2+V3 migrations create the users and refresh_tokens tables with family columns") {
             val users = jdbc.queryForObject(
                 "SELECT count(*) FROM information_schema.tables WHERE table_name = 'users'",
                 Int::class.java,
@@ -83,17 +77,28 @@ class JdbcRefreshTokenStoreTest : FunSpec() {
             )
             users shouldBe 1
             refresh shouldBe 1
+
+            val familyCol = jdbc.queryForList(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'refresh_tokens' AND column_name = 'family_id'",
+            )
+            val consumedCol = jdbc.queryForList(
+                "SELECT column_name FROM information_schema.columns WHERE table_name = 'refresh_tokens' AND column_name = 'consumed_at'",
+            )
+            familyCol.size shouldBe 1
+            consumedCol.size shouldBe 1
         }
 
-        test("store persists only the SHA-256 hash, then findByToken resolves the account + expiry") {
+        test("store persists a live token in the given family; findByToken resolves account, family, and expiry") {
             val account = repository.save(Account.new(Email("dave@example.com"), "argon2id\$stored-hash"))
+            val family = UUID.randomUUID()
             val expiresAt = Instant.now().plus(30, ChronoUnit.DAYS)
 
-            refreshTokens.store("opaque-refresh-token", account.id, expiresAt)
+            refreshTokens.store("opaque-refresh-token", account.id, family, expiresAt)
 
             val found = refreshTokens.findByToken("opaque-refresh-token")
             found shouldNotBe null
             found!!.accountId shouldBe account.id
+            found.familyId shouldBe family
             // Postgres stores TIMESTAMPTZ at microsecond precision; compare the
             // round-tripped expiry within a microsecond, not bit-for-bit.
             val precisionDiff = Duration.between(found.expiresAt, expiresAt).abs().toNanos()
@@ -110,94 +115,105 @@ class JdbcRefreshTokenStoreTest : FunSpec() {
             storedHash shouldMatch "[0-9a-f]{64}"
         }
 
-        test("findByToken returns null for an unknown refresh token") {
+        test("findByToken returns null for an unknown token and for a consumed token") {
             refreshTokens.findByToken("never-issued-token").shouldBeNull()
+
+            val account = repository.save(Account.new(Email("bob@example.com"), "argon2id\$stored-hash"))
+            val family = UUID.randomUUID()
+            refreshTokens.store("live-token", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
+            val live = refreshTokens.findByToken("live-token")
+            live!!.familyId shouldBe family
+            // After signing it out, it is no longer live.
+            refreshTokens.revoke("live-token")
+            refreshTokens.findByToken("live-token").shouldBeNull()
         }
 
-        test("revoke invalidates the token so it can no longer resolve") {
-            val account = repository.save(Account.new(Email("erin@example.com"), "argon2id\$stored-hash"))
+        test("revokeFamily removes every token in the family (live and consumed)") {
+            val account = repository.save(Account.new(Email("carl@example.com"), "argon2id\$stored-hash"))
+            val family = UUID.randomUUID()
+            refreshTokens.store("live-1", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
+            refreshTokens.store("live-2", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
 
-            refreshTokens.store("to-revoke", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
+            refreshTokens.revokeFamily(family)
+
+            refreshTokens.findByToken("live-1").shouldBeNull()
+            refreshTokens.findByToken("live-2").shouldBeNull()
+        }
+
+        test("revokeFamily leaves a different family's tokens untouched") {
+            val account = repository.save(Account.new(Email("carol@example.com"), "argon2id\$stored-hash"))
+            val doomed = UUID.randomUUID()
+            val unrelated = UUID.randomUUID()
+            refreshTokens.store("doomed-token", account.id, doomed, Instant.now().plus(10, ChronoUnit.DAYS))
+            refreshTokens.store("safe-token", account.id, unrelated, Instant.now().plus(10, ChronoUnit.DAYS))
+
+            refreshTokens.revokeFamily(doomed)
+
+            refreshTokens.findByToken("doomed-token").shouldBeNull()
+            refreshTokens.findByToken("safe-token").shouldNotBe(null)
+        }
+
+        test("consumeAndRotate keeps the new token in the same family and records the old one as consumed") {
+            val account = repository.save(Account.new(Email("erin@example.com"), "argon2id\$stored-hash"))
+            val family = UUID.randomUUID()
+            refreshTokens.store("first-token", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
+
+            val rotated = refreshTokens.consumeAndRotate(
+                presentedToken = "first-token",
+                newToken = "second-token",
+                accountId = account.id,
+                familyId = family,
+                expiresAt = Instant.now().plus(10, ChronoUnit.DAYS),
+            )
+
+            rotated shouldBe true
+            // The old token is no longer live, but a consumed record exists.
+            refreshTokens.findByToken("first-token").shouldBeNull()
+            val consumed = refreshTokens.findConsumedByToken("first-token")
+            consumed shouldNotBe null
+            consumed!!.familyId shouldBe family
+            // The new token lives in the SAME family.
+            val live = refreshTokens.findByToken("second-token")
+            live shouldNotBe null
+            live!!.familyId shouldBe family
+        }
+
+        test("consumeAndRotate returns false when the presented token is already consumed (reuse race loser)") {
+            val account = repository.save(Account.new(Email("frank@example.com"), "argon2id\$stored-hash"))
+            val family = UUID.randomUUID()
+            refreshTokens.store("only-token", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
+
+            // First caller wins the race: consumes "only-token" and mints its child.
+            refreshTokens.consumeAndRotate("only-token", "winner-token", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
+            // Second caller loses: presents the now-consumed token.
+            val second = refreshTokens.consumeAndRotate("only-token", "loser-token-2", account.id, family, Instant.now().plus(10, ChronoUnit.DAYS))
+
+            second shouldBe false
+            // The winner's replacement is live; the old token is a consumed record.
+            refreshTokens.findByToken("winner-token").shouldNotBe(null)
+            refreshTokens.findByToken("only-token").shouldBeNull()
+            refreshTokens.findConsumedByToken("only-token").shouldNotBe(null)
+            // The losing caller must not mint a live record.
+            refreshTokens.findByToken("loser-token-2").shouldBeNull()
+        }
+
+        test("consumeAndRotate returns false for an unknown token without inserting anything") {
+            val account = repository.save(Account.new(Email("gina@example.com"), "argon2id\$stored-hash"))
+            val other = refreshTokens.consumeAndRotate(
+                "never-issued", "wont-land", account.id, UUID.randomUUID(), Instant.now().plus(10, ChronoUnit.DAYS),
+            )
+            other shouldBe false
+            refreshTokens.findByToken("wont-land").shouldBeNull()
+        }
+
+        test("revoke invalidates the token so it can no longer resolve as live") {
+            val account = repository.save(Account.new(Email("hani@example.com"), "argon2id\$stored-hash"))
+            refreshTokens.store("to-revoke", account.id, UUID.randomUUID(), Instant.now().plus(10, ChronoUnit.DAYS))
             refreshTokens.findByToken("to-revoke").shouldNotBe(null)
 
             refreshTokens.revoke("to-revoke")
 
             refreshTokens.findByToken("to-revoke").shouldBeNull()
-        }
-
-        test("consumeAndRotate deletes the old token and stores the new one in one call") {
-            val account = repository.save(Account.new(Email("grace@example.com"), "argon2id\$stored-hash"))
-            refreshTokens.store("token-old", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
-
-            val rotated = refreshTokens.consumeAndRotate(
-                presentedToken = "token-old",
-                newToken = "token-new",
-                accountId = account.id,
-                expiresAt = Instant.now().plus(20, ChronoUnit.DAYS),
-            )
-
-            rotated shouldBe true
-            refreshTokens.findByToken("token-old").shouldBeNull()
-            refreshTokens.findByToken("token-new")!!.accountId shouldBe account.id
-        }
-
-        test("consumeAndRotate returns false and inserts nothing when the presented token is already gone") {
-            val account = repository.save(Account.new(Email("hans@example.com"), "argon2id\$stored-hash"))
-
-            val rotated = refreshTokens.consumeAndRotate(
-                presentedToken = "never-issued",
-                newToken = "should-not-appear",
-                accountId = account.id,
-                expiresAt = Instant.now().plus(20, ChronoUnit.DAYS),
-            )
-
-            rotated shouldBe false
-            refreshTokens.findByToken("should-not-appear").shouldBeNull()
-        }
-
-        test("concurrent consumeAndRotate of the same token is exact-one-winner: one true, one false, one live row (sc-133 fix)") {
-            val account = repository.save(Account.new(Email("ira@example.com"), "argon2id\$stored-hash"))
-            refreshTokens.store("contended", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
-
-            // Two threads race to consume-and-rotate the SAME live token into two
-            // different replacements. Exactly one may win the gated delete.
-            val start = CyclicBarrier(2)
-            val pool = Executors.newFixedThreadPool(2)
-            val results = try {
-                val futures = (1..2).map { i ->
-                    pool.submit(Callable {
-                        start.await()
-                        refreshTokens.consumeAndRotate(
-                            presentedToken = "contended",
-                            newToken = "replacement-$i",
-                            accountId = account.id,
-                            expiresAt = Instant.now().plus(20, ChronoUnit.DAYS),
-                        )
-                    })
-                }
-                futures.map { it.get(30, TimeUnit.SECONDS) }
-            } finally {
-                pool.shutdownNow()
-            }
-
-            results.count { it } shouldBe 1
-
-            // Exactly one live row survives for this account (the winner's token).
-            val live = jdbc.queryForList(
-                "SELECT token_hash FROM refresh_tokens WHERE account_id = ?",
-                account.id,
-            )
-            live.size shouldBe 1
-        }
-
-        test("tokens for the same account can coexist (one per active session)") {
-            val account = repository.save(Account.new(Email("fay@example.com"), "argon2id\$stored-hash"))
-
-            refreshTokens.store("token-a", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
-            refreshTokens.store("token-b", account.id, Instant.now().plus(10, ChronoUnit.DAYS))
-
-            refreshTokens.findByToken("token-a").shouldNotBe(null)
-            refreshTokens.findByToken("token-b").shouldNotBe(null)
         }
 
         test("findById round-trips a persisted account by its database id") {

@@ -10,13 +10,15 @@ import io.mockk.verify
 import java.time.Clock
 import java.time.Duration
 import java.time.Instant
+import java.util.UUID
 
 /**
- * Log In (sc-40): RefreshSession use case — rotating hashed refresh tokens. A
- * fresh access token + new refresh token are issued; rotation is delegated to a
- * single atomic store operation (consumeAndRotate) whose affected-row gate
- * guarantees exact-one-winner under concurrency (sc-133 fix). Unknown, expired,
- * or already-rotated tokens are rejected generically.
+ * Refresh Session (sc-40) — rotating hashed refresh tokens, hardened with
+ * token-family reuse detection (sc-136). A token that exists only as a
+ * *consumed* record (already rotated) is a reuse/theft signal: the use case
+ * revokes the ENTIRE family before rejecting. Unknown, expired, or already-rotated
+ * tokens are otherwise rejected with the same generic [InvalidCredentialsException].
+ * Rotation stays a single atomic consume-and-rotate (sc-133 baseline preserved).
  */
 class RefreshSessionTest : FunSpec({
 
@@ -24,6 +26,8 @@ class RefreshSessionTest : FunSpec({
     val refreshTokenStore = mockk<RefreshTokenStore>()
     val accountRepository = mockk<AccountRepository>()
     val clock = Clock.systemUTC()
+
+    val family = UUID.randomUUID()
 
     val refresh = RefreshSession(
         tokenIssuer = tokenIssuer,
@@ -34,53 +38,69 @@ class RefreshSessionTest : FunSpec({
 
     beforeTest { clearMocks(tokenIssuer, refreshTokenStore, accountRepository) }
 
-    test("rotates: atomically consumes the old token and stores the new one via the store") {
+    test("rotates within the family: atomically consumes the old token and stores the new one under the same family") {
         val account = AccountFixture.someAccount(email = "alice@example.com")
-        val stored = StoredRefreshToken(account.id, clock.instant().plus(Duration.ofDays(29)))
+        val stored = StoredRefreshToken(account.id, family, clock.instant().plus(Duration.ofDays(29)))
         every { refreshTokenStore.findByToken("old-refresh-token") } returns stored
         every { accountRepository.findById(account.id) } returns account
         every { tokenIssuer.issue(account) } returns SessionTokens("new.access", "new-refresh-token", "Bearer", 900)
-        every { refreshTokenStore.consumeAndRotate("old-refresh-token", "new-refresh-token", account.id, any()) } returns true
+        every { refreshTokenStore.consumeAndRotate("old-refresh-token", "new-refresh-token", account.id, family, any()) } returns true
 
         val session = refresh.execute("old-refresh-token")
 
         session.tokens.accessToken shouldBe "new.access"
         session.tokens.refreshToken shouldBe "new-refresh-token"
         session.account.id shouldBe account.id
-        verify { refreshTokenStore.consumeAndRotate("old-refresh-token", "new-refresh-token", account.id, any()) }
+        verify { refreshTokenStore.consumeAndRotate("old-refresh-token", "new-refresh-token", account.id, family, any()) }
         // The old flow of a bare revoke followed by a bare store must no longer happen.
         verify(exactly = 0) { refreshTokenStore.revoke("old-refresh-token") }
-        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any()) }
+        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any(), any()) }
     }
 
     test("rejects when a concurrent refresh already consumed the token (loses the rotation race)") {
         val account = AccountFixture.someAccount(email = "bob@example.com")
-        val stored = StoredRefreshToken(account.id, clock.instant().plus(Duration.ofDays(29)))
+        val stored = StoredRefreshToken(account.id, family, clock.instant().plus(Duration.ofDays(29)))
         every { refreshTokenStore.findByToken("contended-token") } returns stored
         every { accountRepository.findById(account.id) } returns account
         every { tokenIssuer.issue(account) } returns SessionTokens("a", "r", "Bearer", 900)
-        // The gated delete reports we did NOT own the row — this caller loses.
-        every { refreshTokenStore.consumeAndRotate("contended-token", "r", account.id, any()) } returns false
+        // The gated consume reports we did NOT own the row — this caller loses.
+        every { refreshTokenStore.consumeAndRotate("contended-token", "r", account.id, family, any()) } returns false
 
         shouldThrow<InvalidCredentialsException> { refresh.execute("contended-token") }
 
         // Nothing was persisted or stored for the loser.
-        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any()) }
+        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any(), any()) }
     }
 
-    test("rejects an unknown/revoked refresh token without issuing a new session") {
+    test("reuse of a consumed token revokes the ENTIRE family before rejecting") {
+        // The token is no longer live but a consumed record exists for it.
+        every { refreshTokenStore.findByToken("stolen-consumed-token") } returns null
+        every { refreshTokenStore.findConsumedByToken("stolen-consumed-token") } returns
+            StoredRefreshToken(UUID.randomUUID(), family, clock.instant().plus(Duration.ofDays(29)))
+        every { refreshTokenStore.revokeFamily(family) } returns Unit
+
+        shouldThrow<InvalidCredentialsException> { refresh.execute("stolen-consumed-token") }
+
+        // Reuse is a theft signal: the whole family must be torn down.
+        verify { refreshTokenStore.revokeFamily(family) }
+        verify(exactly = 0) { tokenIssuer.issue(any()) }
+        verify(exactly = 0) { refreshTokenStore.consumeAndRotate(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any(), any()) }
+    }
+
+    test("rejects an unknown (never-issued) token without revoking any family") {
         every { refreshTokenStore.findByToken("garbage") } returns null
+        every { refreshTokenStore.findConsumedByToken("garbage") } returns null
 
         shouldThrow<InvalidCredentialsException> { refresh.execute("garbage") }
 
+        verify(exactly = 0) { refreshTokenStore.revokeFamily(any()) }
         verify(exactly = 0) { tokenIssuer.issue(any()) }
-        verify(exactly = 0) { refreshTokenStore.consumeAndRotate(any(), any(), any(), any()) }
-        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any()) }
     }
 
     test("rejects an expired refresh token and revokes it so it cannot be replayed") {
         val account = AccountFixture.someAccount(email = "alice@example.com")
-        val expired = StoredRefreshToken(account.id, clock.instant().minusSeconds(1))
+        val expired = StoredRefreshToken(account.id, family, clock.instant().minusSeconds(1))
         every { refreshTokenStore.findByToken("expired-token") } returns expired
         every { refreshTokenStore.revoke("expired-token") } returns Unit
 
@@ -88,17 +108,17 @@ class RefreshSessionTest : FunSpec({
 
         verify { refreshTokenStore.revoke("expired-token") }
         verify(exactly = 0) { tokenIssuer.issue(any()) }
-        verify(exactly = 0) { refreshTokenStore.consumeAndRotate(any(), any(), any(), any()) }
-        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any()) }
+        verify(exactly = 0) { refreshTokenStore.consumeAndRotate(any(), any(), any(), any(), any()) }
+        verify(exactly = 0) { refreshTokenStore.store(any(), any(), any(), any()) }
     }
 
     test("re-issues from the account fetched by id (so current RBAC role is embedded)") {
         val account = AccountFixture.someAccount(email = "alice@example.com")
-        val stored = StoredRefreshToken(account.id, clock.instant().plus(Duration.ofDays(29)))
+        val stored = StoredRefreshToken(account.id, family, clock.instant().plus(Duration.ofDays(29)))
         every { refreshTokenStore.findByToken("tok") } returns stored
         every { accountRepository.findById(account.id) } returns account
         every { tokenIssuer.issue(account) } returns SessionTokens("a", "r", "Bearer", 900)
-        every { refreshTokenStore.consumeAndRotate("tok", "r", account.id, any()) } returns true
+        every { refreshTokenStore.consumeAndRotate("tok", "r", account.id, family, any()) } returns true
 
         refresh.execute("tok")
 
@@ -107,13 +127,12 @@ class RefreshSessionTest : FunSpec({
     }
 
     test("rejects the token when the owning account no longer exists") {
-        val orphaned = StoredRefreshToken(java.util.UUID.randomUUID(), clock.instant().plus(Duration.ofDays(29)))
+        val orphaned = StoredRefreshToken(UUID.randomUUID(), family, clock.instant().plus(Duration.ofDays(29)))
         every { refreshTokenStore.findByToken("orphan") } returns orphaned
         every { accountRepository.findById(orphaned.accountId) } returns null
 
         shouldThrow<InvalidCredentialsException> { refresh.execute("orphan") }
 
         verify(exactly = 0) { tokenIssuer.issue(any()) }
-        verify(exactly = 0) { refreshTokenStore.consumeAndRotate(any(), any(), any(), any()) }
     }
 })

@@ -2,13 +2,16 @@ package app.halal.application.account
 
 import app.halal.domain.account.Email
 import java.time.Clock
+import java.util.UUID
 
 /**
  * Log In (sc-40) use case. Looks up the account by its canonical email, verifies
  * the submitted password against the stored Argon2id hash, and on success issues
- * a short access token + a rotating refresh token (persisted hashed). Any
- * failure — unknown email, wrong password — throws the same
- * [InvalidCredentialsException] so the endpoint cannot leak which field failed.
+ * a short access token + a rotating refresh token (persisted hashed). Each
+ * login mints its refresh token in a FRESH family (sc-136), so separate log-ins
+ * are never joint by a shared family id. Any failure — unknown email, wrong
+ * password — throws the same [InvalidCredentialsException] so the endpoint
+ * cannot leak which field failed.
  */
 class AuthenticateAccount(
     private val repository: AccountRepository,
@@ -33,6 +36,7 @@ class AuthenticateAccount(
         refreshTokenStore.store(
             token = tokens.refreshToken,
             accountId = account.id,
+            familyId = UUID.randomUUID(),
             expiresAt = clock.instant().plus(SessionLifetimes.REFRESH_LIFETIME),
         )
         return AuthSession(account, tokens)

@@ -51,8 +51,9 @@ class PostgisSmokeTest : FunSpec() {
 
             val result = flyway.migrate()
 
-            // The users (V1) and refresh_tokens (V2) migrations run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 2
+            // users (V1), refresh_tokens (V2), and the sc-136 token-family
+            // columns on refresh_tokens (V3) all run cleanly on a real PostGIS DB.
+            result.migrationsExecuted shouldBe 3
         }
     }
 }
