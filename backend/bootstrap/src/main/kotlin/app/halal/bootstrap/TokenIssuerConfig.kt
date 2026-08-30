@@ -37,7 +37,15 @@ class TokenIssuerConfig {
     @Bean
     fun jwtRsaKeyPair(
         @Value("\${app.jwt.rsa-private-key-base64:}") privateKeyB64: String,
-    ): KeyPair = JwtRsaKeyPairLoader.loadKeyPair(privateKeyB64)
+        @Value("\${spring.profiles.active:}") activeProfiles: String,
+    ): KeyPair {
+        // Prod-profile key guard (sc-134 follow-up): refuse to boot when a prod
+        // profile is active and the signing key is blank or a known dev key.
+        // "prod" is the agreed production profile name; anything else (dev, test,
+        // unset local runs) keeps the old lenient behavior.
+        val isProd = activeProfiles.split(",").map { it.trim() }.contains("prod")
+        return JwtRsaKeyPairLoader.loadKeyPair(privateKeyB64, prodProfile = isProd)
+    }
 
     @Bean
     fun tokenIssuer(
