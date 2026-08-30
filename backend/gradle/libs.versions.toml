@@ -46,6 +46,9 @@ httpclient5 = { module = "org.apache.httpcomponents.client5:httpclient5" }
 flyway-core = { module = "org.flywaydb:flyway-core", version.ref = "flyway" }
 flyway-database-postgresql = { module = "org.flywaydb:flyway-database-postgresql", version.ref = "flyway" }
 postgresql = { module = "org.postgresql:postgresql", version.ref = "postgresql" }
+# Photon geocoding adapter: parse the provider's GeoJSON (FeatureCollection) into
+# coordinates/display-name without adding the Kotlin module (tree model is enough).
+jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind" }
 
 # --- Testing ---
 kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
