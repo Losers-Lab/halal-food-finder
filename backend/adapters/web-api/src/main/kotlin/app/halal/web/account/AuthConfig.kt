@@ -2,6 +2,7 @@ package app.halal.web.account
 
 import app.halal.application.account.AccountRepository
 import app.halal.application.account.AuthenticateAccount
+import app.halal.application.account.LogoutSession
 import app.halal.application.account.PasswordHasher
 import app.halal.application.account.RefreshSession
 import app.halal.application.account.RefreshTokenStore
@@ -40,4 +41,8 @@ class AuthConfig {
         refreshTokenStore = refreshTokenStore,
         accountRepository = accountRepository,
     )
+
+    @Bean
+    fun logoutSession(refreshTokenStore: RefreshTokenStore): LogoutSession =
+        LogoutSession(refreshTokenStore)
 }
