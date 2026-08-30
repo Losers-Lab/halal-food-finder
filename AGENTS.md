@@ -154,6 +154,18 @@ find yourself reaching for `apt`/`pip`/`npm install -g` on the host, stop.
     sensitive work (auth, trust, integrations) additionally requires Omar's
     explicit approval.
   - CI/build status must be green on the PR head before merging.
+- **Security review division of labor (founder-ratified):**
+  - **Omar (Security Reviewer — static, code-level):** reviews diffs/PRs for
+    vulnerability classes; approves/blocks PRs on security grounds; defines
+    security requirements, threat models, and attack cases. Does NOT run
+    exploit scripts or own test tooling.
+  - **Yusuf (QA / Adversarial Testing — dynamic, runtime):** verifies
+    acceptance criteria against real behavior; owns the "break it" pass
+    (running app in containers, executing Omar's attack cases); owns QA
+    conventions and regression checks. Reports findings; does NOT adjudicate
+    security risk — Omar adjudicates.
+  - **Handshake:** Omar defines what to attack and why → Yusuf executes and
+    reports → Omar adjudicates (real risk vs. accepted).
 - **Honesty in status reporting (amanah):** report real results; surface
   blockers and unknowns rather than papering over them.
 
