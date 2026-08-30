@@ -3,6 +3,19 @@
 **Author:** Yusuf (QA) · **Date:** 2026-08-29 · **Scope:** Create Account (sc-39), Log In (sc-40), frontend Sign Up / Log In UI (sc-39/sc-40 UI work, design tokens sc-116)
 **Basis:** Read all test sources on `main`; Shortcut story records for sc-39/sc-40. No application code modified.
 
+> ### RATIFIED — project testing standard (sc-135, 2026-08-30)
+> Approved by Yusuf (QA) under Shortcut **sc-135** as the **project testing standard**. Effective for
+> every feature from its "Ready for Development" state (conventions §Part B apply — naming & structure,
+> pyramid, acceptance evidence, QA criteria review at story-start, Definition of Done).
+> **Part A** is retained as a historical snapshot of Sprint 1 (2026-08-29). Where it conflicts with the
+> current tree, it is superseded: sc-131 (JWT resource server), sc-132 (server-side logout),
+> sc-133 (HttpOnly refresh cookie), sc-134 (security headers) have since landed and closed several of
+> the ranked gaps (R1 at the HTTP edge, R2 refresh lifecycle, R8 event-out/revocation). **Part B** is the
+> binding standard. **Part C** has been superseded by the agreed, ranked test list in
+> **`docs/qa/sc-135-auth-test-gap-plan.md`** (dispatch targets for Hamza/Maryam recorded there).
+> Remaining unresolved: see the sc-135 plan's "Status ledger" and defect flags (raced-signup → 500,
+> unguarded `client.ts` JSON.parse, `frontend-test.sh` not running the vitest suite).
+
 ---
 
 ## Part A — What is tested today, and gaps ranked by risk
@@ -122,6 +135,12 @@ A story is **Done** when ALL of:
 ---
 
 ## Part C — Recommended follow-up test tasks for the auth work
+
+> **Superseded 2026-08-30 by sc-135.** The ordered list below was the *initial* ranking. It has been
+> reconciled with the current `main` tree (sc-131/132/133/134 landed) into the **agreed, ranked test
+> list** in `docs/qa/sc-135-auth-test-gap-plan.md`, which names owners (Maryam/Hamza) and flags the
+> defects the tests will expose. It remains here as provenance. Implementers: work from the sc-135
+> plan, not this list.
 
 Create these (order = priority):
 
