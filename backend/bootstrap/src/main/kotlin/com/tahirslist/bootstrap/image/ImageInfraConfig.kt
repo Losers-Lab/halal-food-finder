@@ -15,6 +15,16 @@ import java.net.http.HttpResponse
 import java.time.Duration
 
 /**
+ * Descriptive User-Agent for outbound image fetches. Wikimedia (and some CDNs)
+ * reject clients whose UA is a bare "Java-http-client/..." (their User-Agent
+ * policy: require an identifying product/token), returning HTTP 403 for
+ * otherwise-valid freely-licensed Commons images. Identifying the app lets those
+ * refs (which the manifest image_policy PREFERS) fetch instead of 403ing.
+ */
+private const val DEFAULT_USER_AGENT =
+    "TahirsList/0.1 (halal-food-finder seed-photo ingest; https://github.com/Losers-Lab/halal-food-finder)"
+
+/**
  * Wires the sc-157 image plumbing that lives OUTSIDE the adapters:
  *
  *  - **ImagePort fallback**: when no `app.storage.s3.endpoint` is configured the
@@ -39,6 +49,7 @@ class ImageInfraConfig {
 /** JDK HttpClient downloader: 2xx → bytes, anything else → [ImageFetchException]. */
 class HttpImageFetcher(
     private val timeout: Duration = Duration.ofSeconds(20),
+    private val userAgent: String = DEFAULT_USER_AGENT,
 ) : ImageFetcher {
 
     private val client: HttpClient = HttpClient.newBuilder()
@@ -50,6 +61,11 @@ class HttpImageFetcher(
         val request = HttpRequest.newBuilder(URI.create(url))
             .timeout(timeout)
             .header("Accept", "image/*")
+            // Wikimedia (and some CDNs) reject clients whose UA is a bare
+            // "Java-http-client/..." (their User-Agent policy). We identify the
+            // app so freely-licensed Commons refs (the manifest image_policy
+            // PREFERS) are accepted instead of 403ing.
+            .header("User-Agent", userAgent)
             .GET()
             .build()
         val response = try {
