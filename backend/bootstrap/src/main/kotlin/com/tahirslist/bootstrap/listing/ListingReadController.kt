@@ -55,12 +55,15 @@ class ListingReadController(
     private val search: ListingSearchQuery,
 ) {
 
+    /** Upper bound of the closed 0..5 rating scale (sc-45), mirrored from the domain [Rating]. */
+    private val ratingMax: Double = com.tahirslist.domain.restaurant.Rating.MAX.toDouble()
+
     @GetMapping("/search")
-    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `cuttingMethod` narrows to HAND_CUT/MACHINE_CUT (BOTH default = any); `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range. (sc-10 location, sc-42 cutting, sc-43 price, sc-44 cuisine). Public — the core search UX.")
+    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `cuttingMethod` narrows to HAND_CUT/MACHINE_CUT (BOTH default = any); `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. (sc-10 location, sc-42 cutting, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Search results (distance ascending)"),
-            ApiResponse(responseCode = "400", description = "Malformed centre, radius, cuttingMethod, cuisine, cuisineLogic, or price"),
+            ApiResponse(responseCode = "400", description = "Malformed centre, radius, cuttingMethod, cuisine, cuisineLogic, price, or rating"),
         ],
     )
     fun search(
@@ -71,6 +74,7 @@ class ListingReadController(
         @RequestParam(value = "cuisineLogic", required = false) cuisineLogic: String?,
         @RequestParam(value = "minPrice", required = false) minPrice: Double?,
         @RequestParam(value = "maxPrice", required = false) maxPrice: Double?,
+        @RequestParam(value = "minRating", required = false) minRating: Double?,
         @RequestParam(value = "offset", defaultValue = "0") offset: Int,
         @RequestParam(value = "limit", defaultValue = "50") limit: Int,
     ): List<SearchCard> {
@@ -88,6 +92,7 @@ class ListingReadController(
             cuisineLogic = parseCuisineLogic(cuisineLogic),
             minPrice = parsePrice(minPrice, "minPrice"),
             maxPrice = parsePrice(maxPrice, "maxPrice"),
+            minRating = parseRating(minRating),
         )
         val minBound = filters.minPrice
         val maxBound = filters.maxPrice
@@ -220,6 +225,18 @@ class ListingReadController(
         return value
     }
 
+    /**
+     * Parses the `minRating` filter (sc-45). Absent -> null (any rating).
+     * Out-of-scale (below 0 or above 5) -> IllegalArgumentException (-> 400),
+     * keeping the public contract the closed 0..5 scale.
+     */
+    private fun parseRating(raw: Double?): BigDecimal? {
+        if (raw == null) return null
+        require(raw >= 0.0) { "minRating must not be negative" }
+        require(raw <= ratingMax) { "minRating must be 5.0 or fewer" }
+        return BigDecimal.valueOf(raw)
+    }
+
     private fun toBrowseCard(listing: RestaurantListing): BrowseCard = BrowseCard(
         id = listing.id,
         name = listing.name,
@@ -242,6 +259,7 @@ class ListingReadController(
         cuttingMethod = result.cuttingMethod.name,
         verificationStatus = result.verificationStatus.name,
         imageThumbnailUrl = imageUrl(result.id, ImageVariant.THUMBNAIL),
+        rating = result.rating?.value?.toDouble(),
         distanceMiles = result.distanceMiles,
     )
 
@@ -287,6 +305,7 @@ class ListingReadController(
         val cuttingMethod: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
+        val rating: Double?,
         val distanceMiles: Double,
     )
 

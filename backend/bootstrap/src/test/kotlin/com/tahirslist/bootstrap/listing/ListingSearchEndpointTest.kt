@@ -213,6 +213,41 @@ class ListingSearchEndpointTest : PostgresBootTest() {
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
             bodyOf(resp).get("code").asText() shouldBe "invalid_input"
         }
+
+        test("minRating narrows results through the live search endpoint (sc-45)") {
+            // Controlled rated rows far from the NULL-rating seeds.
+            insertRatedEndpointRows()
+            val base = "/v1/listings/search?center=47.0,-77.0&radius=2.0"
+
+            val resp = get("$base&minRating=4.0")
+            resp.statusCode shouldBe HttpStatus.OK
+            val names = bodyOf(resp).map { it.get("name").asText() }
+            names shouldBe listOf("Star Grill")
+        }
+
+        test("minRating combines with distance radius and all prior filters through the endpoint") {
+            insertRatedEndpointRows()
+            val base = "/v1/listings/search?center=47.0,-77.0&radius=2.0"
+
+            val resp = get("$base&minRating=1.0&cuttingMethod=HAND_CUT&cuisine=mexican&minPrice=12&maxPrice=16")
+            resp.statusCode shouldBe HttpStatus.OK
+            val names = bodyOf(resp).map { it.get("name").asText() }
+            names shouldBe listOf("Star Grill")
+        }
+
+        test("a negative minRating returns 400 invalid_input") {
+            val resp = get("/v1/listings/search?center=45.5,-78.5&radius=2.0&minRating=-1.0")
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
+            bodyOf(resp).get("code").asText() shouldBe "invalid_input"
+        }
+
+        test("a minRating above the 0..5 scale returns 400 invalid_input") {
+            val resp = get("/v1/listings/search?center=45.5,-78.5&radius=2.0&minRating=5.5")
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
+            bodyOf(resp).get("code").asText() shouldBe "invalid_input"
+        }
     }
 
     /**
@@ -262,6 +297,50 @@ class ListingSearchEndpointTest : PostgresBootTest() {
                     id, cuisine as String,
                 )
             }
+        }
+    }
+
+    /**
+     * Inserts four controlled rating rows at 47N/77W and mirrors them into
+     * listing_search, isolating the rating endpoint assertions from the NULL-rating
+     * seeds and the price/cuisine rows at 45.5N/78.5W. Idempotent via ON CONFLICT.
+     */
+    private fun insertRatedEndpointRows() {
+        // (id, name, cuisine, cutting, price, rating)
+        val rows = listOf(
+            listOf("50000000-0000-0000-0000-000000000001", "Star Grill", "mexican", "HAND_CUT", "15.00", "4.8"),
+            listOf("50000000-0000-0000-0000-000000000002", "Clover Cafe", "mexican", "UNSPECIFIED", "10.00", "3.5"),
+            listOf("50000000-0000-0000-0000-000000000003", "Rustic Table", "mediterranean", "MACHINE_CUT", "20.00", "2.5"),
+            listOf("50000000-0000-0000-0000-000000000004", "No Rating Bistro", null, "UNSPECIFIED", "5.00", null),
+        )
+        val ids = rows.map { UUID.fromString(it[0] as String) }
+
+        rows.forEach { row ->
+            jdbc.update(
+                """
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
+                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-77.0, 47.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?, ?)
+                ON CONFLICT (id) DO NOTHING
+                """.trimIndent(),
+                UUID.fromString(row[0] as String), row[1] as String, "47.00, -77.00",
+                row[2] as String?, row[3] as String,
+                (row[4] as String?)?.let { BigDecimal(it) }, (row[5] as String?)?.let { BigDecimal(it) },
+            )
+        }
+        jdbc.update(
+            """
+            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
+            SELECT id, name, address, location, cuisine, cutting_method, verification_status, price, rating
+            FROM restaurant_listings WHERE id IN (?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            ids[0], ids[1], ids[2], ids[3],
+        )
+        rows.filter { (it[2] as String?) != null }.forEach { row ->
+            jdbc.update(
+                "INSERT INTO restaurant_listing_cuisines (listing_id, cuisine) VALUES (?, ?) ON CONFLICT DO NOTHING",
+                UUID.fromString(row[0] as String), row[2] as String,
+            )
         }
     }
 }

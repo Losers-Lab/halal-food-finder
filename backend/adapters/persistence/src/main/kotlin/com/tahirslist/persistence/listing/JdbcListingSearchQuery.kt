@@ -8,6 +8,7 @@ import com.tahirslist.application.listing.ListingSearchResult
 import com.tahirslist.domain.restaurant.Cuisine
 import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
+import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.VerificationStatus
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
@@ -84,6 +85,13 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
             if (filters.maxPrice != null) append("AND listing_search.price <= ? ")
         }.trimEnd()
 
+        // sc-45: minimum rating against the denormalised rating mirror. A
+        // NULL-rating row never satisfies >= and is therefore excluded from a
+        // rating filter, the same null semantics price (V9) and cuisine (V6)
+        // already use.
+        val minRating = filters.minRating
+        val ratingClause = if (minRating != null) "AND listing_search.rating >= ?" else ""
+
         val sql = """
             SELECT
                 id,
@@ -94,6 +102,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 cuisine,
                 cutting_method,
                 verification_status,
+                rating,
                 ST_DistanceSphere(
                     location::geometry,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)
@@ -107,6 +116,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
             $cuttingClause
             $cuisineClause
             $priceClause
+            $ratingClause
             ORDER BY ST_DistanceSphere(
                 location::geometry,
                 ST_SetSRID(ST_MakePoint(?, ?), 4326)
@@ -127,6 +137,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         args.addAll(normalizedCuisines)
         if (minPrice != null) args.add(minPrice)
         if (maxPrice != null) args.add(maxPrice)
+        if (minRating != null) args.add(minRating)
         args.addAll(listOf(center.lng, center.lat, limit, offset))
 
         return jdbc.query(sql, { rs, _ -> rs.toSearchResult() }, *args.toTypedArray())
@@ -140,6 +151,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         cuisine = getString("cuisine")?.let { Cuisine(it) },
         cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
+        rating = getBigDecimal("rating")?.let { Rating(it) },
         distanceMiles = getDouble("distance_miles"),
     )
 }
