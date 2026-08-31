@@ -54,11 +54,12 @@ class PostgisSmokeTest : FunSpec() {
             // users (V1), refresh_tokens (V2), the sc-136 token-family
             // columns on refresh_tokens (V3), restaurant_listings (V4),
             // brands (V5), the seed-listing schema (V6), the seed data
-            // (V7), the sc-10 search projection list (V8), and the sc-43/44
+            // (V7), the sc-10 search projection list (V8), the sc-43/44
             // price + multi-cuisine columns (V9), the sc-45/72 rating
-            // column (V10) and the sc-118 alcohol_served column (V11) all
+            // column (V10), the sc-118 alcohol_served column (V11), and
+            // the sc-50/51/52 favorites table (V12) all
             // run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 11
+            result.migrationsExecuted shouldBe 12
         }
     }
 }
