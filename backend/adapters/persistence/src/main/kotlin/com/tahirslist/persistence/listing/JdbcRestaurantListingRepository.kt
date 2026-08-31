@@ -9,6 +9,7 @@ import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
+import org.springframework.transaction.support.TransactionTemplate
 import java.sql.ResultSet
 import java.util.UUID
 
@@ -21,35 +22,71 @@ import java.util.UUID
  * (ST_MakePoint takes x=longitude first) and cast to the `geography(Point,4326)`
  * column; it is read back by casting the geography to geometry so ST_X/ST_Y
  * yield longitude/latitude.
+ *
+ * [save] writes the denormalised `listing_search` projection in the SAME
+ * transaction, so a newly-added listing is immediately searchable (sc-10) and
+ * the two tables can never diverge on this write path.
  */
 @Repository
-class JdbcRestaurantListingRepository(private val jdbc: JdbcTemplate) : RestaurantListingRepository {
+class JdbcRestaurantListingRepository(
+    private val jdbc: JdbcTemplate,
+    private val tx: TransactionTemplate,
+) : RestaurantListingRepository {
 
     override fun save(listing: RestaurantListing): RestaurantListing {
-        val id = jdbc.queryForObject(
+        val saved: RestaurantListing = tx.execute {
+            val id = jdbc.queryForObject(
+                """
+                INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
+                VALUES (
+                    ?, ?,
+                    ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
+                    ?, ?, ?, ?, ?, ?
+                )
+                RETURNING id
+                """.trimIndent(),
+                UUID::class.java,
+                listing.name,
+                listing.address,
+                listing.location.lng, // ST_MakePoint(x = longitude, y = latitude)
+                listing.location.lat,
+                listing.cuisine?.value,
+                listing.cuttingMethod.name,
+                listing.ownerId,
+                listing.brandId,
+                listing.provenance?.value,
+                listing.verificationStatus.name,
+            ) ?: error("INSERT RETURNING id returned no row")
+
+            val withId = listing.copy(id = id)
+            mirrorIntoListingSearch(withId)
+            withId
+        } ?: error("transaction returned no listing")
+
+        return saved
+    }
+
+    /**
+     * Denormalised read-model mirror (V8): the search surface reads ONLY
+     * `listing_search`. Keeping it in the same transaction as the source write
+     * guarantees a listing is either in both tables or neither — never only the
+     * source. Partial-failure of either INSERT rolls the whole save back.
+     */
+    private fun mirrorIntoListingSearch(listing: RestaurantListing) {
+        jdbc.update(
             """
-            INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
-            VALUES (
-                ?, ?,
-                ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-                ?, ?, ?, ?, ?, ?
-            )
-            RETURNING id
+            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?)
             """.trimIndent(),
-            UUID::class.java,
+            listing.id,
             listing.name,
             listing.address,
-            listing.location.lng, // ST_MakePoint(x = longitude, y = latitude)
+            listing.location.lng,
             listing.location.lat,
             listing.cuisine?.value,
             listing.cuttingMethod.name,
-            listing.ownerId,
-            listing.brandId,
-            listing.provenance?.value,
             listing.verificationStatus.name,
-        ) ?: error("INSERT RETURNING id returned no row")
-
-        return listing.copy(id = id)
+        )
     }
 
     override fun findById(id: UUID): RestaurantListing? {
