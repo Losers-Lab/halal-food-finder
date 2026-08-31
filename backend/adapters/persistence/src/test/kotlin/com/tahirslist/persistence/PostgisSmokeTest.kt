@@ -53,9 +53,10 @@ class PostgisSmokeTest : FunSpec() {
 
             // users (V1), refresh_tokens (V2), the sc-136 token-family
             // columns on refresh_tokens (V3), restaurant_listings (V4),
-            // brands (V5), the seed-listing schema (V6), and the seed data
-            // (V7) all run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 7
+            // brands (V5), the seed-listing schema (V6), the seed data
+            // (V7), and the sc-10 search projection list (V8) all run cleanly
+            // on a real PostGIS DB.
+            result.migrationsExecuted shouldBe 8
         }
     }
 }

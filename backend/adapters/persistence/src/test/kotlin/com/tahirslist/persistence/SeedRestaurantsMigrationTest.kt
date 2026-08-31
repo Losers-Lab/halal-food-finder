@@ -14,6 +14,8 @@ import org.flywaydb.core.Flyway
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DriverManagerDataSource
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.util.UUID
@@ -71,7 +73,10 @@ class SeedRestaurantsMigrationTest : FunSpec() {
                 setPassword(postgres.password)
             }
             jdbc = JdbcTemplate(dataSource)
-            listings = JdbcRestaurantListingRepository(jdbc)
+            listings = JdbcRestaurantListingRepository(
+                jdbc,
+                TransactionTemplate(DataSourceTransactionManager(dataSource)),
+            )
         }
         afterSpec { postgres.stop() }
 

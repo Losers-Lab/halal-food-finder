@@ -17,6 +17,8 @@ import org.flywaydb.core.Flyway
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DriverManagerDataSource
+import org.springframework.jdbc.datasource.DataSourceTransactionManager
+import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
 import java.util.UUID
@@ -78,7 +80,10 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 setPassword(postgres.password)
             }
             jdbc = JdbcTemplate(dataSource)
-            listings = JdbcRestaurantListingRepository(jdbc)
+            listings = JdbcRestaurantListingRepository(
+                jdbc,
+                TransactionTemplate(DataSourceTransactionManager(dataSource)),
+            )
             accounts = JdbcAccountRepository(jdbc)
         }
         afterSpec { postgres.stop() }
@@ -132,6 +137,29 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
 
         test("findById returns null for an unknown id") {
             listings.findById(UUID.randomUUID()) shouldBe null
+        }
+
+        test("save mirrors the listing into the listing_search read model atomically (sc-10)") {
+            val owner = accounts.save(Account.new(email = Email("mirror@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Mirror Test Grill",
+                address = "9 Search Rd",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                cuttingMethod = CuttingMethod.HAND_CUT,
+                ownerId = owner.id,
+            )
+
+            val saved = listings.save(listing)
+
+            // The search projection must carry the same row, immediately searchable.
+            val mirrored = jdbc.queryForMap(
+                "SELECT name, address, verification_status FROM listing_search WHERE id = ?",
+                saved.id,
+            )
+            mirrored["name"] shouldBe "Mirror Test Grill"
+            mirrored["address"] shouldBe "9 Search Rd"
+            mirrored["verification_status"] shouldBe "UNVERIFIED"
         }
 
         test("migration enforces the verification_status contract (only UNVERIFIED)") {
