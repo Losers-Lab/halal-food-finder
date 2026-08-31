@@ -142,5 +142,41 @@ class JdbcSeedPhotoListingResolverTest : FunSpec() {
                 id,
             ) shouldBe 1
         }
+
+        test("sc-178: formerly-UNRESOLVED names now resolve to their exact seed listing") {
+            // sc-178 re-aligned the manifest names to the seeded DB names so each
+            // unique seed row resolves by name. Locking in the specific rows the
+            // live boot previously reported as UNRESOLVED.
+            val cases = mapOf(
+                "Iqbal Foods" to "Iqbal Foods",
+                "Madina Naan & Kabob" to "Madina Naan & Kabob",
+                "Paramount Fine Foods" to "Paramount Fine Foods",
+                "Al-Amir Lebanese Restaurant & Club" to "Al-Amir Lebanese Restaurant & Club",
+                "Andalous Mediterranean Buffet" to "Andalous Mediterranean Buffet",
+                "Halal Wings" to "Halal Wings",
+            )
+            cases.forEach { (manifestName, seedName) ->
+                val id = resolvedId(SeedHeroPhoto(manifestName, null, null, "http://img/" + seedName))
+                jdbc.queryForObject(
+                    "SELECT count(*) FROM restaurant_listings WHERE id = ? AND name = ?",
+                    Int::class.java,
+                    id,
+                    seedName,
+                ) shouldBe 1
+            }
+        }
+
+        test("sc-178: The Halal Guys Manhattan (307 E 14th St) resolves by its unique address") {
+            // Name is shared 3x (Toronto/NYC/Dallas); the corrected manifest
+            // carries the exact seed address so address discriminates exactly one.
+            val photo = SeedHeroPhoto(name = "The Halal Guys", city = null, addressGiven = "307 E 14th St", heroUrl = "http://img/hg")
+            val id = resolvedId(photo)
+            val address = jdbc.queryForObject(
+                "SELECT address FROM restaurant_listings WHERE id = ?",
+                String::class.java,
+                id,
+            )
+            address shouldBe "307 E 14th St"
+        }
     }
 }

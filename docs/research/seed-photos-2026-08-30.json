@@ -1,5 +1,5 @@
 {
-  "purpose": "Hero-photo manifest for Halal Food Finder seed ingest (sc-157). One entry per verified-on-Photon seed location. Compiles the founder-APPROVED initial hero photos (Arham via Adnan, 2026-08-30: 'just go with your initial photos').",
+  "purpose": "Hero-photo manifest for Halal Food Finder seed ingest (sc-157 + sc-178 corrections). One entry per verified-on-Photon seed location. Compiles the founder-APPROVED initial hero photos (Arham via Adnan, 2026-08-30: 'just go with your initial photos'). SC-178 (2026-08-31): names re-aligned to seeded restaurant_listings names so each row resolves to exactly one listing; The Halal Guys x3 disambiguated by unique address; Wikimedia 403s (Ayat / Punjabi Deli / Yemen Cafe) resolved at the source by sending a descriptive User-Agent in the fetch client (HttpImageFetcher), keeping the freely-licensed Commons refs.",
   "method": "gphoto (docs/gphoto_method.md): exact-address match; hero_url is w1200 CDN ref (Google listing) or freely-licensed Commons ref; match flag; hero_url null only where no ref / branch mismatch (none in this approved set).",
   "image_policy": "Freely-licensed (Wikimedia Commons) preferred; Google listing photo as fallback for seed/dev. Google listing photos are (c) uploader/business - production should prefer owner-uploaded photos on claim.",
   "date": "2026-08-30",
@@ -49,9 +49,9 @@
       "note": ""
     },
     {
-      "name": "Iqbal Foods Birchmount",
+      "name": "Iqbal Foods",
       "city": "Toronto",
-      "address_given": "462 Birchmount Rd, Scarborough",
+      "address_given": "Birchmount Rd",
       "address_found": "462 Birchmount Rd, Toronto ON M1K 1N8",
       "address_confirmed_full": "462 Birchmount Rd, Toronto ON M1K 1N8",
       "address_confidence": "google-confirmed",
@@ -81,9 +81,9 @@
       "note": ""
     },
     {
-      "name": "Madina Naan and Kabob",
+      "name": "Madina Naan & Kabob",
       "city": "Toronto",
-      "address_given": "Overlea Blvd (Toronto)",
+      "address_given": "Overlea Blvd",
       "address_found": "Overlea Blvd (Toronto)",
       "address_confirmed_full": null,
       "address_confidence": "brief-approx",
@@ -113,9 +113,9 @@
       "note": ""
     },
     {
-      "name": "Paramount (Middle Eastern Kitchen)",
+      "name": "Paramount Fine Foods",
       "city": "Toronto",
-      "address_given": "1585 The Queensway (Etobicoke)",
+      "address_given": "The Queensway",
       "address_found": "1585 The Queensway, Etobicoke ON M8Z 1V1",
       "address_confirmed_full": "1585 The Queensway, Etobicoke ON M8Z 1V1",
       "address_confidence": "google-confirmed",
@@ -275,7 +275,7 @@
     {
       "name": "The Halal Guys",
       "city": "New York",
-      "address_given": "307 E 14th St (Manhattan)",
+      "address_given": "307 E 14th St",
       "address_found": "307 E 14th St (Manhattan)",
       "address_confirmed_full": null,
       "address_confidence": "brief-approx",
@@ -369,9 +369,9 @@
       "note": ""
     },
     {
-      "name": "Al-Amir",
+      "name": "Al-Amir Lebanese Restaurant & Club",
       "city": "Dallas",
-      "address_given": "Belt Line Rd (Addison)",
+      "address_given": "3885 Belt Line Rd",
       "address_found": "Belt Line Rd (Addison)",
       "address_confirmed_full": null,
       "address_confidence": "brief-approx",
@@ -401,9 +401,9 @@
       "note": ""
     },
     {
-      "name": "Andalous",
+      "name": "Andalous Mediterranean Buffet",
       "city": "Dallas",
-      "address_given": "N Central Expwy (Richardson)",
+      "address_given": "1601 N Central Expwy",
       "address_found": "N Central Expwy (Richardson)",
       "address_confirmed_full": null,
       "address_confidence": "brief-approx",
@@ -465,9 +465,9 @@
       "note": ""
     },
     {
-      "name": "Halal Corner and Halal Wings",
+      "name": "Halal Wings",
       "city": "Austin",
-      "address_given": "Barbara Jordan Blvd (Austin)",
+      "address_given": "1200 Barbara Jordan Blvd",
       "address_found": "Barbara Jordan Blvd (Austin)",
       "address_confirmed_full": null,
       "address_confidence": "brief-approx",
