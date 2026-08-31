@@ -1,6 +1,6 @@
-# Halal Food Finder — Backend
+# Tahir's List — Backend
 
-Kotlin / Spring Boot backend for Halal Food Finder.
+Kotlin / Spring Boot backend for Tahir's List.
 
 **Implemented so far:** M1 skeleton + TDD harness, **Create Account**
 (sc-39) — email-uniqueness check, password-strength validation,

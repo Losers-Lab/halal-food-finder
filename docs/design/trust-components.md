@@ -1,4 +1,4 @@
-# Trust-Language Component Specs — Halal Food Finder
+# Trust-Language Component Specs — Tahir's List
 
 > **v2 restyle note (2026-08-30):** tokens are superseded by `tokens.md` ("Stamps & Search", founder-ratified). Structure/behavior below stands; colors change as follows — VerifiedBadge: `stamp-50` bg, 1.5px **dashed** `stamp-200` border, `stamp-700` text/icon, `radius-sm`, `shadow-stamp`; on-photo variant: solid `stamp-500`, cream text; compact variant: solid stamp-500 circle. UnverifiedTag: `ink-100` bg, `ink-300` border, `ink-500` text (was neutral-slate; now warm ink). CutMethodIndicator unchanged except border `kraft-200`. All other rules (icon+text pairing, never-red-for-unverified, omit-when-unknown) remain binding.
 

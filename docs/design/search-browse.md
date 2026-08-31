@@ -1,4 +1,4 @@
-# Search & Browse Screen Spec — Halal Food Finder ("Stamps & Search")
+# Search & Browse Screen Spec — Tahir's List ("Stamps & Search")
 
 Status: implementation-ready · Matches approved sketch `sketches/006-stamps-search` · Owner: Fatima
 Tokens: `tokens.md` (v2 Stamps & Search). Trust components: `trust-components.md` (v2 restyle below).
