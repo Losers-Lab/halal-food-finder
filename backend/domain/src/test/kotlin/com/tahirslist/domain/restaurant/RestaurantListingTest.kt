@@ -5,6 +5,7 @@ import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldStartWith
+import java.math.BigDecimal
 import java.util.UUID
 
 class RestaurantListingTest : FunSpec({
@@ -41,6 +42,20 @@ class RestaurantListingTest : FunSpec({
 
         a.id shouldNotBe b.id
         a.createdAt shouldNotBe null
+    }
+
+    test("new() carries an optional price") {
+        val listing = RestaurantListing.new(
+            name = "X",
+            address = "1 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            cuttingMethod = CuttingMethod.HAND_CUT,
+            ownerId = UUID.randomUUID(),
+            price = Price(BigDecimal("9.99")),
+        )
+
+        listing.price?.value shouldBe BigDecimal("9.99")
     }
 
     test("new() rejects a blank name") {

@@ -29,6 +29,7 @@ data class RestaurantListing(
     val location: LatLng,
     val cuisine: Cuisine?,
     val cuttingMethod: CuttingMethod,
+    val price: Price?,
     val ownerId: UUID?,
     val brandId: UUID?,
     val provenance: Provenance?,
@@ -53,6 +54,7 @@ data class RestaurantListing(
             cuisine: Cuisine,
             cuttingMethod: CuttingMethod,
             ownerId: UUID,
+            price: Price? = null,
         ): RestaurantListing {
             val trimmedName = name.trim()
             val trimmedAddress = address.trim()
@@ -65,6 +67,7 @@ data class RestaurantListing(
                 location = location,
                 cuisine = cuisine,
                 cuttingMethod = cuttingMethod,
+                price = price,
                 ownerId = ownerId,
                 brandId = null,
                 provenance = null,
@@ -85,6 +88,7 @@ data class RestaurantListing(
             location: LatLng,
             cuisine: Cuisine?,
             cuttingMethod: CuttingMethod,
+            price: Price? = null,
             ownerId: UUID?,
             brandId: UUID?,
             provenance: Provenance?,
@@ -97,6 +101,7 @@ data class RestaurantListing(
             location = location,
             cuisine = cuisine,
             cuttingMethod = cuttingMethod,
+            price = price,
             ownerId = ownerId,
             brandId = brandId,
             provenance = provenance,
