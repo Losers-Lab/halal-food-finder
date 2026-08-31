@@ -77,6 +77,27 @@ class JdbcRestaurantListingRepository(private val jdbc: JdbcTemplate) : Restaura
         return rows.firstOrNull()
     }
 
+    override fun findAll(): List<RestaurantListing> =
+        jdbc.query(
+            """
+            SELECT
+                id,
+                name,
+                address,
+                ST_Y(location::geometry) AS lat,
+                ST_X(location::geometry) AS lng,
+                cuisine,
+                cutting_method,
+                owner_id,
+                brand_id,
+                provenance,
+                verification_status,
+                created_at
+            FROM restaurant_listings
+            ORDER BY created_at, name
+            """.trimIndent(),
+        ) { rs, _ -> rs.toListing() }
+
     private fun ResultSet.toListing(): RestaurantListing = RestaurantListing.fromStorage(
         id = getObject("id", UUID::class.java),
         name = getString("name"),

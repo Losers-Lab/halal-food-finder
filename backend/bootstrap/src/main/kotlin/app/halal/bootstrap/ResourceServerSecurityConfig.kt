@@ -68,6 +68,11 @@ class ResourceServerSecurityConfig {
                     .requestMatchers("/error").permitAll()
                     .requestMatchers("/v1/health", "/v1/api-docs/**", "/v1/swagger-ui/**", "/v3/api-docs/**",
                         "/swagger-ui/**", "/actuator/health", "/actuator/info").permitAll()
+                    // Public read surface (sc-157): search/browse, detail, and the
+                    // image same-origin proxy are core unauthenticated UX (an <img>
+                    // cannot carry a Bearer header). Deny-by-default still guards all
+                    // writes/claims. Posture change flagged for Omar's review.
+                    .requestMatchers(HttpMethod.GET, "/v1/listings", "/v1/listings/**").permitAll()
                     // Deny-by-default: any other request requires a valid token.
                     .anyRequest().authenticated()
             }
