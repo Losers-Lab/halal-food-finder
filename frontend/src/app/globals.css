@@ -61,6 +61,7 @@
      loaded via next/font/google in src/app/layout.tsx; these vars point at them. */
   --font-sans: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Archivo", ui-sans-serif, system-ui, sans-serif;
+  --font-wordmark: "Archivo Black", ui-sans-serif, system-ui, sans-serif;
   --text-display: 2.5rem;
   --text-display--line-height: 2.75rem;
   --text-display--font-weight: 800;
