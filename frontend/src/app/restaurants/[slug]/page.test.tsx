@@ -125,7 +125,7 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     expect(screen.getByText("SiteFooter")).toBeInTheDocument();
   });
 
-  it("shows the error panel and retries on fetch failure", async () => {
+  it("renders the error panel and retries on fetch failure", async () => {
     fetchMock.mockRejectedValueOnce(new Error("boom"));
     fetchMock.mockResolvedValueOnce(
       restaurant({
@@ -147,5 +147,33 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     await waitFor(() =>
       expect(screen.getByText("Halal verification")).toBeInTheDocument(),
     );
+  });
+
+  it("detail hero requests the FULL-res variant (imageUrl), eager (sc-157)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      restaurant({
+        id: "l-1",
+        name: "Al-Amir Grill",
+        imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
+        imageUrl: "/v1/listings/l-1/image?variant=full",
+      }),
+    );
+    render(<RestaurantDetailPage />);
+
+    const img = await screen.findByRole("img", { name: "Al-Amir Grill" });
+    expect(img).toHaveAttribute(
+      "src",
+      "/v1/listings/l-1/image?variant=full",
+    );
+    // Full-res hero is the LCP element — load it immediately, not lazy.
+    expect(img).toHaveAttribute("loading", "eager");
+  });
+
+  it("renders the quiet image placeholder (no <img>) when a listing has no photo (sc-157)", async () => {
+    fetchMock.mockResolvedValueOnce(restaurant({ id: "l-9", name: "New Spot" }));
+    render(<RestaurantDetailPage />);
+
+    expect(await screen.findByText("New Spot")).toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "New Spot" })).not.toBeInTheDocument();
   });
 });

@@ -14,6 +14,7 @@ import {
   VerifiedBadge,
 } from "@/components/trust";
 import { CertificatePanel } from "@/components/detail/CertificatePanel";
+import { RestaurantPhoto } from "@/components/listing/RestaurantPhoto";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
   expiryState,
@@ -123,14 +124,14 @@ function RestaurantDetail({ restaurant }: { restaurant: Restaurant }) {
 
   return (
     <div>
-      {/* Hero */}
+      {/* Hero — full-res variant only, eager (sc-157) */}
       <div className="relative aspect-[16/7] overflow-hidden rounded-lg border border-kraft-200 shadow-card">
-        <div className="absolute inset-0 flex items-center justify-center bg-kraft-100 opacity-40">
-          <svg aria-hidden="true" width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink-400">
-            <rect x="3" y="3" width="18" height="18" rx="3" />
-            <path d="M8 12h8M8 15.5h5" />
-          </svg>
-        </div>
+        <RestaurantPhoto
+          src={restaurant.imageUrl}
+          alt={restaurant.name}
+          sizes="(min-width: 1200px) 1200px, 100vw"
+          eager
+        />
         {showVerifiedBadge ? (
           <div className="absolute right-4 top-4">
             <VerifiedBadge variant="on-photo" />

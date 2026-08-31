@@ -38,6 +38,17 @@ export type Restaurant = {
   distanceMi?: number;
   phone?: string;
   website?: string;
+  /**
+   * sc-157: browse/search card variant (≤400px thumbnail, low bandwidth).
+   * Absent before a photo is ingested for the listing — render the quiet
+   * placeholder, never a broken image. Cards request this ONLY (never imageUrl).
+   */
+  imageThumbnailUrl?: string;
+  /**
+   * sc-157: detail-page full-res original. The detail hero is the only surface
+   * that requests this variant. Absent → same quiet placeholder as cards.
+   */
+  imageUrl?: string;
   /** Edge: absent when unknown — render without the primitive (never "N/A"). */
   hours?: DayHours[];
   certificate?: Certificate;

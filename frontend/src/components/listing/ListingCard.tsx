@@ -5,6 +5,7 @@ import {
   UnverifiedTag,
   VerifiedBadge,
 } from "@/components/trust";
+import { RestaurantPhoto } from "./RestaurantPhoto";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
   verificationStatus,
@@ -17,6 +18,9 @@ import {
  * (cuisine · distance · ★ rating) → CutMethodIndicator if known.
  *
  * Whole-card click is enhancement; the name link is the accessible primary path.
+ *
+ * Image (sc-157): the card requests the SMALL thumbnail variant ONLY, lazy —
+ * never the full-res original ("no oversized fetch on cards").
  */
 export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
   const verified = verificationStatus(restaurant) === "VERIFIED";
@@ -32,15 +36,13 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
 
   return (
     <article className="group relative overflow-hidden rounded-lg border-[1.5px] border-kraft-200 bg-ink-0 shadow-card transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-pop motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-      {/* Photo block */}
+      {/* Photo block — thumbnail variant only (sc-157) */}
       <div className="relative aspect-video bg-kraft-100">
-        <div className="absolute inset-0 flex items-center justify-center opacity-40">
-          {/* decorative stamp-line illustration placeholder */}
-          <svg aria-hidden="true" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="text-ink-400">
-            <rect x="3" y="3" width="18" height="18" rx="3" />
-            <path d="M8 12h8M8 15.5h5" />
-          </svg>
-        </div>
+        <RestaurantPhoto
+          src={restaurant.imageThumbnailUrl}
+          alt={restaurant.name}
+          sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+        />
         {verified ? (
           <div className="absolute right-3 top-3">
             <VerifiedBadge variant="on-photo" />
