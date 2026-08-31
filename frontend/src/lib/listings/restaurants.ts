@@ -4,13 +4,12 @@ import type { CuttingMethod } from "./schemas";
  * Read-model types for the search/browse + detail screens (docs/design/
  * search-browse.md, detail-page.md).
  *
- * NOTE — backend gap: the API currently exposes only POST /v1/listings (create),
- * auth, /v1/me and /v1/health. There is NO GET /v1/listings (search/browse) or
- * GET /v1/listings/{slug} (detail) endpoint yet. These types and the in-memory
- * repository below are the frontend read-model + a local seed so the UI can be
- * built and exercised now; the repository is the single seam that swaps to a
- * real HTTP call (api.searchListings / api.getListing) once Hamza lands those
- * endpoints. Flagged to engineering — not silently papered over.
+ * The live backend (ListingReadController, sc-171) serves GET /v1/listings
+ * (browse cards) and GET /v1/listings/{id} (detail). Both are keyed by a UUID
+ * `id` — the backend has no slug, so the frontend routes by `id` and the image
+ * URLs arrive in the payload and are consumed verbatim (never rebuilt here).
+ * The listing-read seam (`lib/listings/data.ts`) maps those payloads onto this
+ * type; `seed.ts` is retained strictly as a test fixture / mock source.
  */
 
 /** Human display hours; today's row emphasized on the detail page. */
@@ -25,8 +24,8 @@ export type Certificate = {
 };
 
 export type Restaurant = {
+  /** The listing's backend UUID (routes: /restaurants/{id}). */
   id: string;
-  slug: string;
   name: string;
   address: string;
   lat: number;

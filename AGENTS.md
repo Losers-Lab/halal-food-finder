@@ -146,6 +146,17 @@ find yourself reaching for `apt`/`pip`/`npm install -g` on the host, stop.
   - **Every** feature/fix goes: branch → push → **open a GitHub PR** → merge
     to `main` only after merge. Direct pushes/merges to `main` from feature
     branches without a PR are not allowed.
+  - **📛 PR & comment attribution (MANDATORY — founder directive):** commits
+    intentionally attribute to the shared account (Arham4) — **do NOT change
+    that**, and keep the existing PR title convention (`[SC-###] ...`, no
+    agent prefix). Instead, the **acting specialist must be identified in the
+    PR description and in each PR comment / review comment**: state the acting
+    agent's profile name (hamza, maryam, fatima, omar, yusuf, aisha, adnan)
+    in the PR body (e.g. an "Author: hamza" line or `<!-- attribution:
+    hamza -->` marker) and open each comment with `[hamza] ...`. If a human
+    wrote it, use the human's name. This makes PR authorship auditable on
+    GitHub (who made it / who commented) even though git author and PR titles
+    keep their existing style.
   - **Reviews are PR artifacts:** reviewers (Omar for security/code review,
     Yusuf for QA where applicable) post their findings **as PR review
     comments** on the PR itself — not only in task-manager comments. The PR

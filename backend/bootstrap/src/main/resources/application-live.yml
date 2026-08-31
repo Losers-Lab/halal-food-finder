@@ -1,0 +1,26 @@
+# Live dev-stack profile (sc-157). This is the DURABLE switch that turns on the
+# two things the live backend needs to actually serve seeded hero photos:
+#
+#   1. app.storage.s3.endpoint  -> wires the real S3-compatible object store
+#      (S3ImagePort, backed by the compose MinIO) instead of the in-memory stub
+#      that otherwise returns 404/empty for every /image request.
+#   2. app.images.seed-ingest.enabled -> registers the SeedImageIngestRunner
+#      ApplicationRunner, which on boot resolves the seed-photo manifest
+#      (seed-photos.json) to seeded listings and stores FULL + THUMBNAIL bytes.
+#
+# Activated ONLY by launching the backend with SPRING_PROFILES_ACTIVE=live (see
+# scripts/backend-live.sh). The default profile (used by all boot tests) keeps
+# seed-ingest OFF and InMemoryImagePort, so tests never touch the network or a
+# licensed photo CDN. Credentials/environment override via APP_S3_* env vars;
+# defaults match the local compose MinIO (minioadmin/minioadmin).
+app:
+  storage:
+    s3:
+      endpoint: ${APP_S3_ENDPOINT:http://minio:9000}
+      region: ${APP_S3_REGION:us-east-1}
+      access-key: ${APP_S3_ACCESS_KEY:minioadmin}
+      secret-key: ${APP_S3_SECRET_KEY:minioadmin}
+      bucket: ${APP_S3_BUCKET:halal}
+  images:
+    seed-ingest:
+      enabled: true

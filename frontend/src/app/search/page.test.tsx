@@ -8,7 +8,6 @@ import SearchPage from "./page";
 function restaurant(over: Partial<Restaurant>): Restaurant {
   return {
     id: "l-1",
-    slug: "al-amir-grill",
     name: "Al-Amir Grill",
     address: "112 Atlantic Ave, Brooklyn, NY",
     lat: 40.6916,
@@ -49,11 +48,11 @@ vi.mock("@/lib/auth/AuthProvider", () => ({
   useAuth: () => ({ session: null, restoring: false, signOut: vi.fn() }),
 }));
 
-vi.mock("@/lib/listings/seed", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/lib/listings/seed")>();
+vi.mock("@/lib/listings/data", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/listings/data")>();
   return { ...original, searchListings: vi.fn() };
 });
-import { searchListings } from "@/lib/listings/seed";
+import { searchListings } from "@/lib/listings/data";
 const searchMock = vi.mocked(searchListings);
 
 describe("SearchPage — search-first + browse chips (search-browse.md)", () => {
@@ -64,22 +63,22 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
   });
 
   it("renders a result grid from the data layer and links each card to its detail page", async () => {
-    searchMock.mockReturnValue([
+    searchMock.mockResolvedValue([
       restaurant({ id: "l-1", name: "Al-Amir Grill" }),
-      restaurant({ id: "l-2", slug: "karachi-kitchen", name: "Karachi Kitchen" }),
+      restaurant({ id: "l-2", name: "Karachi Kitchen" }),
     ]);
     render(<SearchPage />);
 
     expect(
       await screen.findByRole("link", { name: "Al-Amir Grill" }),
-    ).toHaveAttribute("href", "/restaurants/al-amir-grill");
+    ).toHaveAttribute("href", "/restaurants/l-1");
     expect(
       screen.getByRole("link", { name: "Karachi Kitchen" }),
-    ).toHaveAttribute("href", "/restaurants/karachi-kitchen");
+    ).toHaveAttribute("href", "/restaurants/l-2");
   });
 
   it("cards request the SMALL thumbnail variant only — never the full-res original (sc-157)", async () => {
-    searchMock.mockReturnValue([
+    searchMock.mockResolvedValue([
       restaurant({
         id: "l-1",
         name: "Al-Amir Grill",
@@ -102,7 +101,7 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
 
   it("shows a verified badge on verified cards and an unverified tag otherwise", async () => {
     const future = new Date(Date.now() + 300 * 86_400_000).toISOString();
-    searchMock.mockReturnValue([
+    searchMock.mockResolvedValue([
       restaurant({
         id: "l-1",
         name: "Verified Spot",
@@ -112,7 +111,7 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
           expiresOn: future,
         },
       }),
-      restaurant({ id: "l-2", slug: "plain", name: "Plain Spot" }),
+      restaurant({ id: "l-2", name: "Plain Spot" }),
     ]);
     render(<SearchPage />);
 
@@ -122,7 +121,7 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
   });
 
   it("empty results render the quiet empty panel, not an error", async () => {
-    searchMock.mockReturnValue([]);
+    searchMock.mockResolvedValue([]);
     render(<SearchPage />);
 
     expect(await screen.findByText("Nothing matches yet")).toBeInTheDocument();
@@ -131,7 +130,7 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
   });
 
   it("browse chip filters through the data layer with aria-pressed", async () => {
-    searchMock.mockImplementation(() => []);
+    searchMock.mockResolvedValue([]);
     render(<SearchPage />);
 
     const handCut = await screen.findByRole("button", { name: "Hand-cut" });

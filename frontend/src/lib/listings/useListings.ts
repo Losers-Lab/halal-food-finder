@@ -12,8 +12,8 @@ type Status = "loading" | "success" | "error";
 
 /**
  * Client-side listing read hook for the browse/search screens. Wraps the async
- * read seam so the UI exercises loading + error states; when the backend GET
- * endpoints land, this is the one place to swap to api.searchListings.
+ * read seam (`data.searchListings`, now backed by live GET /v1/listings) so the
+ * UI exercises loading + error states, and drives the search + chip filters.
  *
  * Derives `verifiedCount` during the (async, non-render) read so render stays
  * pure — no Date.now() in the component body (react-hooks/purity).

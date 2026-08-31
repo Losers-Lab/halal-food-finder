@@ -20,17 +20,19 @@ import {
   expiryState,
   verificationStatus,
 } from "@/lib/listings/restaurants";
-import { fetchRestaurantBySlug } from "@/lib/listings/seed";
+import { getRestaurant } from "@/lib/listings/data";
 
 /**
- * Restaurant detail — docs/design/detail-page.md. Route /restaurants/[slug].
+ * Restaurant detail — docs/design/detail-page.md. Route /restaurants/[id].
+ * Backend detail read (sc-171) is keyed by the listing's UUID, so the route
+ * param is the `id` (the backend has no slug; cards link to /restaurants/{id}).
  * Trust centerpiece = CertificatePanel (verified) or the quiet unverified panel.
  * Actions (max 3, priority order): Directions, Call (if phone), Website (if any).
  * States: loading skeleton / not-found / fetch-error / success.
  */
 export default function RestaurantDetailPage() {
-  const params = useParams<{ slug: string }>();
-  const slug = Array.isArray(params?.slug) ? params.slug[0] : params?.slug ?? "";
+  const params = useParams<{ id: string }>();
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id ?? "";
 
   const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
   const [status, setStatus] = useState<"loading" | "success" | "error">(
@@ -44,7 +46,7 @@ export default function RestaurantDetailPage() {
       .then(() => {
         if (cancelled) return undefined;
         setStatus("loading");
-        return fetchRestaurantBySlug(slug);
+        return getRestaurant(id);
       })
       .then((r) => {
         if (cancelled) return;
@@ -58,7 +60,7 @@ export default function RestaurantDetailPage() {
     return () => {
       cancelled = true;
     };
-  }, [slug, reload]);
+  }, [id, reload]);
 
   return (
     <div className="min-h-screen bg-cream-50">

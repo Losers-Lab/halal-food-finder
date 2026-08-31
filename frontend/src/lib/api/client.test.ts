@@ -364,4 +364,71 @@ describe("api client", () => {
       }),
     );
   });
+
+  it("getListings issues a GET to /v1/listings with no body (sc-171 live read)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(
+        [
+          {
+            id: "12ca4fe9-2884-4cac-9528-cc38fc0efa2f",
+            name: "Afrah",
+            address: "E Main St",
+            lat: 32.94807,
+            lng: -96.728031,
+            cuisine: null,
+            cuttingMethod: "UNSPECIFIED",
+            verificationStatus: "UNVERIFIED",
+            imageThumbnailUrl:
+              "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
+          },
+        ],
+        200,
+      ),
+    );
+    const result = await api.getListings();
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("12ca4fe9-2884-4cac-9528-cc38fc0efa2f");
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/listings",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+  });
+
+  it("getListing issues a GET to /v1/listings/{id} and returns the detail (sc-171)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(
+        {
+          id: "12ca4fe9-2884-4cac-9528-cc38fc0efa2f",
+          name: "Afrah",
+          address: "E Main St",
+          lat: 32.94807,
+          lng: -96.728031,
+          cuisine: null,
+          cuttingMethod: "UNSPECIFIED",
+          verificationStatus: "UNVERIFIED",
+          imageThumbnailUrl:
+            "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
+          imageUrl:
+            "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=full",
+        },
+        200,
+      ),
+    );
+    const result = await api.getListing("12ca4fe9-2884-4cac-9528-cc38fc0efa2f");
+    expect(result.imageUrl).toContain("variant=full");
+    // The id is URL-encoded into the path; no body on a GET.
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+  });
+
+  it("getListing maps a 404 to an ApiError with status 404 for the detail not-found state", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse(undefined, 404));
+    await expect(api.getListing("missing")).rejects.toMatchObject({
+      status: 404,
+    });
+  });
 });

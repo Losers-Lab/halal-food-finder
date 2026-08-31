@@ -11,6 +11,28 @@ export type SignupResponse = components["schemas"]["SignupResponse"];
 export type AuthResponse = components["schemas"]["AuthResponse"];
 export type ListingResponse = components["schemas"]["ListingResponse"];
 
+/**
+ * GET /v1/listings browse card (sc-171). The generated schema (`schema.d.ts`)
+ * predates the backend's ListingReadController, so these live read DTOs are
+ * typed locally against the real backend payload rather than stalling on a
+ * schema regeneration. `imageThumbnailUrl` is the only image a browse card
+ * carries — never the full-res object ("no oversized fetch on cards").
+ */
+export type BrowseListing = {
+  id: string;
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  cuisine: string | null;
+  cuttingMethod: string;
+  verificationStatus: string;
+  imageThumbnailUrl: string;
+};
+
+/** GET /v1/listings/{id} detail payload — BrowseListing + the full-res hero. */
+export type ListingDetail = BrowseListing & { imageUrl: string };
+
 // Same-origin by default: Next.js rewrites proxy /v1/* to the backend (see
 // next.config.ts), so no CORS config is needed on the API. Override with
 // NEXT_PUBLIC_API_BASE to point the client at an explicit backend origin.
@@ -74,6 +96,11 @@ async function request<T>(
     credentials?: RequestCredentials;
     signal?: AbortSignal;
     /**
+     * HTTP method for the request. Defaults to POST (the historical default for
+     * this client). The listing READ endpoints (sc-171) pass "GET".
+     */
+    method?: string;
+    /**
      * Attach the Bearer Authorization header when an access token is set.
      * Defaults to true for protected resource calls; set to false for the
      * cookie-authenticated auth routes so a stale bearer can never short-
@@ -91,7 +118,7 @@ async function request<T>(
     if (accessToken && shouldAttachAuth)
       headers.Authorization = `Bearer ${accessToken}`;
     response = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
+      method: options.method ?? "POST",
       headers,
       credentials: options.credentials,
       body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -168,4 +195,21 @@ export const api = {
     body: CreateListingBody,
     signal?: AbortSignal,
   ): Promise<ListingResponse> => request("/v1/listings", body, { signal }),
+
+  /**
+   * GET /v1/listings — browse/search cards (sc-171). Public read surface; the
+   * backend returns minimal cards (thumbnail URL only, never full-res). No auth.
+   */
+  getListings: (signal?: AbortSignal): Promise<BrowseListing[]> =>
+    request("/v1/listings", undefined, { method: "GET", signal }),
+
+  /**
+   * GET /v1/listings/{id} — detail payload incl. the full-res hero `imageUrl`.
+   * Throws ApiError with status 404 when the listing does not exist.
+   */
+  getListing: (id: string, signal?: AbortSignal): Promise<ListingDetail> =>
+    request(`/v1/listings/${encodeURIComponent(id)}`, undefined, {
+      method: "GET",
+      signal,
+    }),
 };

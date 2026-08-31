@@ -5,12 +5,12 @@ import {
 import type { CuttingMethod } from "./schemas";
 
 /**
- * In-memory read repository for the search/browse + detail screens.
- *
- * BACKEND GAP (see restaurants.ts): there is no GET search / GET detail endpoint
- * yet. Until Hamza lands them, this module serves a typed seed so the UI is
- * buildable and testable. Provide a `listings` source (defaults to SEED) so the
- * swap to an HTTP-backed source is a one-line change here.
+ * In-memory read fixture (sc-171). The runtime browse + detail screens now read
+ * from the live backend via `data.ts` (GET /v1/listings / {id}). This module is
+ * retained as a pure TEST FIXTURE / mock source only — rich seed listings
+ * covering every card/detail state (verified/unverified, hand/machine cut,
+ * valid/expiring/expired certs) so the UI is buildable and testable without the
+ * live backend. Nothing in the runtime path imports it as its source.
  */
 
 /** The current date used for expiry-state calculations (test seam). */
@@ -42,7 +42,6 @@ const seedHelpers: Shares = {
 export const SEED: Restaurant[] = [
   {
     id: "l-1",
-    slug: "al-amir-grill",
     name: "Al-Amir Grill",
     address: "112 Atlantic Ave, Brooklyn, NY",
     lat: 40.6916,
@@ -74,7 +73,6 @@ export const SEED: Restaurant[] = [
   },
   {
     id: "l-2",
-    slug: "karachi-kitchen",
     name: "Karachi Kitchen",
     address: "240 Brighton Beach Ave, Brooklyn, NY",
     lat: 40.5774,
@@ -105,7 +103,6 @@ export const SEED: Restaurant[] = [
   },
   {
     id: "l-3",
-    slug: "shawarma-brothers",
     name: "Shawarma Brothers",
     address: "85 Washington St, Brooklyn, NY",
     lat: 40.7027,
@@ -126,7 +123,6 @@ export const SEED: Restaurant[] = [
   },
   {
     id: "l-4",
-    slug: "daves-hot-chicken",
     name: "Dave's Hot Chicken",
     address: "902 Utica Ave, Brooklyn, NY",
     lat: 40.6519,
@@ -141,7 +137,6 @@ export const SEED: Restaurant[] = [
   },
   {
     id: "l-5",
-    slug: "al-sultan-grill",
     name: "Al-Sultan Grill",
     address: "571 Nostrand Ave, Brooklyn, NY",
     lat: 40.6777,
@@ -162,7 +157,6 @@ export const SEED: Restaurant[] = [
   },
   {
     id: "l-6",
-    slug: "the-halal-guys",
     name: "The Halal Guys",
     address: "310 Court St, Brooklyn, NY",
     lat: 40.684,
@@ -177,7 +171,6 @@ export const SEED: Restaurant[] = [
   },
   {
     id: "l-7",
-    slug: "cafe-acai",
     name: "Cafe Acai",
     address: "447 Graham Ave, Brooklyn, NY",
     lat: 40.7143,
@@ -205,21 +198,6 @@ export function searchListings(
     const haystack = `${r.name} ${r.cuisine} ${r.address}`.toLowerCase();
     return haystack.includes(q);
   }).sort((a, b) => (a.distanceMi ?? 0) - (b.distanceMi ?? 0));
-}
-
-export function getRestaurantBySlug(slug: string): Restaurant | undefined {
-  return SEED.find((r) => r.slug === slug);
-}
-
-/**
- * Async read seam — mirrors the future GET search / GET detail endpoints so the
- * screens exercise loading + error states and the swap to HTTP-backed calls is a
- * one-file change here (see restaurants.ts "backend gap"). Tests mock these.
- */
-export function fetchRestaurantBySlug(
-  slug: string,
-): Promise<Restaurant | undefined> {
-  return Promise.resolve(getRestaurantBySlug(slug));
 }
 
 /** Exposed for cards: reusable verification check. */
