@@ -6,6 +6,7 @@ import com.tahirslist.application.image.ImagePort
 import com.tahirslist.application.image.InMemoryImagePort
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
+import org.springframework.context.annotation.Conditional
 import org.springframework.context.annotation.Configuration
 import java.net.URI
 import java.net.http.HttpClient
@@ -27,6 +28,7 @@ import java.time.Duration
 class ImageInfraConfig {
 
     @Bean
+    @Conditional(NoS3EndpointCondition::class)
     @ConditionalOnMissingBean
     fun imagePort(): ImagePort = InMemoryImagePort()
 
