@@ -55,9 +55,9 @@ class PostgisSmokeTest : FunSpec() {
             // columns on refresh_tokens (V3), restaurant_listings (V4),
             // brands (V5), the seed-listing schema (V6), the seed data
             // (V7), the sc-10 search projection list (V8), and the sc-43/44
-            // price + multi-cuisine columns (V9) all run cleanly on a real
-            // PostGIS DB.
-            result.migrationsExecuted shouldBe 9
+            // price + multi-cuisine columns (V9) and the sc-45/72 rating
+            // column (V10) all run cleanly on a real PostGIS DB.
+            result.migrationsExecuted shouldBe 10
         }
     }
 }

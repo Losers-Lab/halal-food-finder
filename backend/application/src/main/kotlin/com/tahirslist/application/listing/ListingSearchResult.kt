@@ -3,6 +3,7 @@ package com.tahirslist.application.listing
 import com.tahirslist.domain.restaurant.Cuisine
 import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
+import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.VerificationStatus
 import java.util.UUID
 
@@ -22,5 +23,6 @@ data class ListingSearchResult(
     val cuisine: Cuisine?,
     val cuttingMethod: CuttingMethod,
     val verificationStatus: VerificationStatus,
+    val rating: Rating?,
     val distanceMiles: Double,
 )
