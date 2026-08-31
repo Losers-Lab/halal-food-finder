@@ -16,7 +16,7 @@ Tahir (طاهر — "pure") is the mascot and personification of Tahir's List (t
 | Style | Flat vector, Duolingo-style: bold simple shapes, no outlines, big head, expressive oval eyes, dot eyebrows, simple smile |
 | Skin | Medium brown |
 | Hair | Black, swept swoosh at the front |
-| Headgear | **Plain white topi** (small button on top), sits tilted-forward |
+| Headgear | **Plain white topi (no button)**, sits tilted-forward |
 | Glasses | Round, black frames — signature feature, always present |
 | **Beard** | **None** (v2 — no beard) |
 | Top | **Green band-collar kurta** (no emblem, no badge, no logo) |
