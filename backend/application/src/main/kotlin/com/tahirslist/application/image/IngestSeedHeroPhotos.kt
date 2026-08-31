@@ -69,7 +69,7 @@ class IngestSeedHeroPhotos(
                 listingId = listingId,
                 photoName = photo.name,
                 status = SeedPhotoIngestResult.Status.INGESTED,
-                message = "stored FULL + THUMBNAIL for ${photo.heroUrl}",
+                message = "stored FULL + 4 thumbnail widths for ${photo.heroUrl}",
             )
         } catch (e: IllegalArgumentException) {
             SeedPhotoIngestResult(

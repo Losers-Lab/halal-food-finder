@@ -11,6 +11,9 @@ import java.util.UUID
  * §"Contract (swap) test"). An "adapter swap test" passes when any ImagePort
  * implementation satisfies this spec unmodified.
  *
+ * sc-183 adds distinct thumbnail widths; the spec pins that each [ImageVariant]
+ * (including each thumbnail width) is an independent storage key.
+ *
  * Each scenario is exercised on an isolated listing id so parallel adapters
  * cannot cross-contaminate.
  */
@@ -22,9 +25,9 @@ abstract class ImagePortContractSpec(private val port: ImagePort) : FunSpec() {
 
         test("save then load round-trips bytes and contentType exactly") {
             val bytes = "hero-image-data".toByteArray()
-            port.save(listingA, ImageVariant.THUMBNAIL, "image/jpeg", bytes)
+            port.save(listingA, ImageVariant.THUMBNAIL_400, "image/jpeg", bytes)
 
-            port.load(listingA, ImageVariant.THUMBNAIL).shouldNotBeNull().let { stored ->
+            port.load(listingA, ImageVariant.THUMBNAIL_400).shouldNotBeNull().let { stored ->
                 stored.contentType shouldBe "image/jpeg"
                 stored.bytes.contentEquals(bytes) shouldBe true
             }
@@ -32,16 +35,28 @@ abstract class ImagePortContractSpec(private val port: ImagePort) : FunSpec() {
 
         test("load of an unsaved (listing, variant) returns null") {
             port.load(listingB, ImageVariant.FULL) shouldBe null
-            port.load(listingB, ImageVariant.THUMBNAIL) shouldBe null
+            port.load(listingB, ImageVariant.THUMBNAIL_400) shouldBe null
+            port.load(listingB, ImageVariant.THUMBNAIL_768) shouldBe null
         }
 
         test("variants are independent for the same listing") {
             port.save(listingA, ImageVariant.FULL, "image/png", "full".toByteArray())
-            port.save(listingA, ImageVariant.THUMBNAIL, "image/jpeg", "thumb".toByteArray())
+            port.save(listingA, ImageVariant.THUMBNAIL_400, "image/jpeg", "thumb".toByteArray())
 
             port.load(listingA, ImageVariant.FULL)!!.bytes.contentEquals("full".toByteArray()) shouldBe true
-            // THUMBNAIL write must not have clobbered FULL, and vice versa.
-            port.load(listingA, ImageVariant.THUMBNAIL)!!.bytes.contentEquals("thumb".toByteArray()) shouldBe true
+            // THUMBNAIL_400 write must not have clobbered FULL, and vice versa.
+            port.load(listingA, ImageVariant.THUMBNAIL_400)!!.bytes.contentEquals("thumb".toByteArray()) shouldBe true
+        }
+
+        test("distinct thumbnail widths are independent storage keys for the same listing") {
+            port.save(listingA, ImageVariant.THUMBNAIL_400, "image/jpeg", "w400".toByteArray())
+
+            // Writing the small width must not have created the wider one.
+            port.load(listingA, ImageVariant.THUMBNAIL_768) shouldBe null
+
+            port.save(listingA, ImageVariant.THUMBNAIL_768, "image/jpeg", "w768".toByteArray())
+            port.load(listingA, ImageVariant.THUMBNAIL_400)!!.bytes.contentEquals("w400".toByteArray()) shouldBe true
+            port.load(listingA, ImageVariant.THUMBNAIL_768)!!.bytes.contentEquals("w768".toByteArray()) shouldBe true
         }
 
         test("listings are isolated: writing to one never affects another") {
@@ -51,10 +66,10 @@ abstract class ImagePortContractSpec(private val port: ImagePort) : FunSpec() {
         }
 
         test("overwrite is last-write-wins (same listing + variant)") {
-            port.save(listingA, ImageVariant.THUMBNAIL, "image/jpeg", "v1".toByteArray())
-            port.save(listingA, ImageVariant.THUMBNAIL, "image/png", "v2".toByteArray())
+            port.save(listingA, ImageVariant.THUMBNAIL_400, "image/jpeg", "v1".toByteArray())
+            port.save(listingA, ImageVariant.THUMBNAIL_400, "image/png", "v2".toByteArray())
 
-            val stored = port.load(listingA, ImageVariant.THUMBNAIL).shouldNotBeNull()
+            val stored = port.load(listingA, ImageVariant.THUMBNAIL_400).shouldNotBeNull()
             stored.contentType shouldBe "image/png"
             stored.bytes.contentEquals("v2".toByteArray()) shouldBe true
         }

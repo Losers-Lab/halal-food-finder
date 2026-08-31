@@ -130,7 +130,7 @@ class ListingReadController(
     }
 
     @GetMapping("/{id}/image")
-    @Operation(summary = "Serve an image variant", description = "Same-origin proxy returning only the requested variant's bytes (thumbnail ≤400px, or full original).")
+    @Operation(summary = "Serve an image variant", description = "Same-origin proxy returning only the requested variant's bytes (thumbnail_400/768/1280/1920 or full original).")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Image bytes"),
@@ -155,9 +155,27 @@ class ListingReadController(
     }
 
     private fun parseVariant(raw: String): ImageVariant? = when (raw.lowercase()) {
-        "thumbnail" -> ImageVariant.THUMBNAIL
+        "thumbnail", "thumbnail_400" -> ImageVariant.THUMBNAIL_400
+        "thumbnail_768" -> ImageVariant.THUMBNAIL_768
+        "thumbnail_1280" -> ImageVariant.THUMBNAIL_1280
+        "thumbnail_1920" -> ImageVariant.THUMBNAIL_1920
         "full" -> ImageVariant.FULL
         else -> null
+    }
+
+    /**
+     * The query-value slug for a variant. sc-183 keeps `thumbnail` as an alias of
+     * the 400px width (the legacy sc-157 URL semantics the currently-merged
+     * frontend + next.config allowlist still use), and exposes the wider widths
+     * as `thumbnail_<width>` so a srcset can tag each candidate with an exact
+     * width.
+     */
+    private fun variantSlug(variant: ImageVariant): String = when (variant) {
+        ImageVariant.THUMBNAIL_400 -> "thumbnail"
+        ImageVariant.THUMBNAIL_768 -> "thumbnail_768"
+        ImageVariant.THUMBNAIL_1280 -> "thumbnail_1280"
+        ImageVariant.THUMBNAIL_1920 -> "thumbnail_1920"
+        ImageVariant.FULL -> "full"
     }
 
     /** Parses `center=<lat>,<lng>`. Missing / malformed → IllegalArgumentException (→ 400). */
@@ -246,7 +264,8 @@ class ListingReadController(
         cuisine = listing.cuisine?.value,
         cuttingMethod = listing.cuttingMethod.name,
         verificationStatus = listing.verificationStatus.name,
-        imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL),
+        imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
+        imageSrcset = imageSrcset(listing.id),
     )
 
     private fun toSearchCard(result: ListingSearchResult): SearchCard = SearchCard(
@@ -258,7 +277,8 @@ class ListingReadController(
         cuisine = result.cuisine?.value,
         cuttingMethod = result.cuttingMethod.name,
         verificationStatus = result.verificationStatus.name,
-        imageThumbnailUrl = imageUrl(result.id, ImageVariant.THUMBNAIL),
+        imageThumbnailUrl = imageUrl(result.id, ImageVariant.THUMBNAIL_400),
+        imageSrcset = imageSrcset(result.id),
         rating = result.rating?.value?.toDouble(),
         distanceMiles = result.distanceMiles,
     )
@@ -272,16 +292,23 @@ class ListingReadController(
         cuisine = listing.cuisine?.value,
         cuttingMethod = listing.cuttingMethod.name,
         verificationStatus = listing.verificationStatus.name,
-        imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL),
+        imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
+        imageSrcset = imageSrcset(listing.id),
         imageUrl = imageUrl(listing.id, ImageVariant.FULL),
     )
 
     private fun imageUrl(id: UUID, variant: ImageVariant): String =
         ServletUriComponentsBuilder.fromCurrentContextPath()
             .path("/v1/listings/{id}/image")
-            .queryParam("variant", variant.name.lowercase())
+            .queryParam("variant", variantSlug(variant))
             .buildAndExpand(id)
             .toUriString()
+
+    /** The sc-183 responsive width set a frontend may turn into a `srcset`. */
+    private fun imageSrcset(id: UUID): List<SrcsetEntry> =
+        ImageVariant.thumbnailVariants.map { variant ->
+            SrcsetEntry(width = variant.widthPx!!, url = imageUrl(id, variant))
+        }
 
     data class BrowseCard(
         val id: UUID,
@@ -293,6 +320,7 @@ class ListingReadController(
         val cuttingMethod: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
+        val imageSrcset: List<SrcsetEntry>,
     )
 
     data class SearchCard(
@@ -305,6 +333,7 @@ class ListingReadController(
         val cuttingMethod: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
+        val imageSrcset: List<SrcsetEntry>,
         val rating: Double?,
         val distanceMiles: Double,
     )
@@ -319,6 +348,13 @@ class ListingReadController(
         val cuttingMethod: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
+        val imageSrcset: List<SrcsetEntry>,
         val imageUrl: String,
+    )
+
+    /** One responsive candidate: `url` serves an image [width] pixels wide. */
+    data class SrcsetEntry(
+        val width: Int,
+        val url: String,
     )
 }
