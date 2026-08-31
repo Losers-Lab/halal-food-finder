@@ -288,6 +288,80 @@ class JdbcListingSearchQueryTest : FunSpec() {
             )
             combined.map { it.name } shouldBe listOf("Taco Mixto")
         }
+
+        test("minRating filter narrows results to listings whose rating meets the threshold") {
+            // sc-45: controlled rated rows far from the seeds keep these
+            // assertions isolated from the 30 NULL-rating V7 seed rows.
+            insertRatedTestRows()
+            val center = LatLng(lat = 47.0, lng = -77.0)
+
+            // minRating 3.0 -> Star Grill (4.8) and Clover Cafe (3.5) qualify.
+            val high = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(minRating = BigDecimal("3.0")),
+                offset = 0, limit = 50,
+            )
+            high.map { it.name }.toSet() shouldBe setOf("Star Grill", "Clover Cafe")
+
+            // A threshold above the highest stored rating matches nothing.
+            val ceiling = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(minRating = BigDecimal("4.9")),
+                offset = 0, limit = 50,
+            )
+            ceiling shouldBe emptyList()
+        }
+
+        test("minRating filter excludes NULL-rating listings (null semantics)") {
+            insertRatedTestRows()
+            val center = LatLng(lat = 47.0, lng = -77.0)
+
+            // minRating 0.0 matches every rated listing but never a NULL-rating
+            // one (the same null semantics V6/V9 already document for price).
+            val anyRated = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(minRating = BigDecimal.ZERO),
+                offset = 0, limit = 50,
+            )
+            anyRated.map { it.name }.toSet() shouldBe setOf("Star Grill", "Clover Cafe", "Rustic Table")
+        }
+
+        test("minRating filter combines with the location radius and excludes NULL-rating listings") {
+            // sc-45 + sc-72: the rating predicate must not bypass the radius. The
+            // V7 seeds around Osmow's are all NULL-rating, so a rating filter
+            // there returns nothing even though the radius alone returns hits.
+            val center = LatLng(lat = 43.682921, lng = -79.418493)
+
+            val unfiltered = query.searchNearby(center = center, radiusMiles = 5.0, offset = 0, limit = 50)
+            (unfiltered.size > 0) shouldBe true
+
+            val rated = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(minRating = BigDecimal("1.0")),
+                offset = 0, limit = 50,
+            )
+            rated shouldBe emptyList()
+        }
+
+        test("minRating combines with cutting, price, cuisine and the location radius") {
+            insertRatedTestRows()
+            val center = LatLng(lat = 47.0, lng = -77.0)
+
+            // Only Star Grill satisfies every predicate: hand-cut AND mexican AND
+            // price 12..16 AND rating >= 2.0, all inside the 5-mile radius.
+            val combined = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(
+                    minRating = BigDecimal("2.0"),
+                    cuttingMethod = CuttingMethodFilter.HAND_CUT,
+                    cuisines = listOf("mexican"),
+                    minPrice = BigDecimal("12"),
+                    maxPrice = BigDecimal("16"),
+                ),
+                offset = 0, limit = 50,
+            )
+            combined.map { it.name } shouldBe listOf("Star Grill")
+        }
     }
 
     /**
@@ -381,5 +455,62 @@ class JdbcListingSearchQueryTest : FunSpec() {
             """.trimIndent(),
             handId, machineId,
         )
+    }
+
+    /**
+     * Inserts four controlled rating rows at 47N/77W and mirrors them into
+     * listing_search exactly as save() does, isolating the rating assertions
+     * from the NULL-rating seeds and the filter (46N/78W) / cutting (45N/79W)
+     * rows. Idempotent via ON CONFLICT.
+     */
+    private fun insertRatedTestRows() {
+        // (id, name, cuisine, cutting, price, rating)
+        val rows = listOf(
+            listOf("40000000-0000-0000-0000-000000000001", "Star Grill", "mexican", "HAND_CUT", "15.00", "4.8"),
+            listOf("40000000-0000-0000-0000-000000000002", "Clover Cafe", "mexican", "UNSPECIFIED", "10.00", "3.5"),
+            listOf("40000000-0000-0000-0000-000000000003", "Rustic Table", "mediterranean", "MACHINE_CUT", "20.00", "2.5"),
+            listOf("40000000-0000-0000-0000-000000000004", "No Rating Bistro", null, "UNSPECIFIED", "5.00", null),
+        )
+        val ids = rows.map { UUID.fromString(it[0] as String) }
+
+        rows.forEach { row ->
+            jdbc.update(
+                """
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
+                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-77.0, 47.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?, ?)
+                ON CONFLICT (id) DO NOTHING
+                """.trimIndent(),
+                UUID.fromString(row[0] as String),
+                row[1] as String,
+                "47.00, -77.00",
+                row[2] as String?,
+                row[3] as String,
+                (row[4] as String?)?.let { BigDecimal(it) },
+                (row[5] as String?)?.let { BigDecimal(it) },
+            )
+        }
+
+        // Mirror into the denormalised projection, exactly the sc-10 save() contract.
+        jdbc.update(
+            """
+            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
+            SELECT id, name, address, location, cuisine, cutting_method, verification_status, price, rating
+            FROM restaurant_listings WHERE id IN (?, ?, ?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            ids[0], ids[1], ids[2], ids[3],
+        )
+
+        // Multi-cuisine rows for the combined-filter assertion.
+        rows.filter { (it[2] as String?) != null }.forEach { row ->
+            jdbc.update(
+                """
+                INSERT INTO restaurant_listing_cuisines (listing_id, cuisine)
+                VALUES (?, ?)
+                ON CONFLICT (listing_id, cuisine) DO NOTHING
+                """.trimIndent(),
+                UUID.fromString(row[0] as String), row[2] as String,
+            )
+        }
     }
 }
