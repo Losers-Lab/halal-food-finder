@@ -10,7 +10,6 @@ const day = 86_400_000;
 function restaurant(over: Partial<Restaurant>): Restaurant {
   return {
     id: "l-1",
-    slug: "al-amir-grill",
     name: "Al-Amir Grill",
     address: "112 Atlantic Ave, Brooklyn, NY",
     lat: 40.6916,
@@ -25,7 +24,7 @@ function restaurant(over: Partial<Restaurant>): Restaurant {
 }
 
 vi.mock("next/navigation", () => ({
-  useParams: () => ({ slug: "al-amir-grill" }),
+  useParams: () => ({ id: "l-1" }),
   useRouter: () => ({ push: vi.fn(), back: vi.fn() }),
 }));
 
@@ -47,20 +46,20 @@ vi.mock("@/components/layout/MobileTabBar", () => ({
 }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => ({ session: null, restoring: false }) }));
 
-vi.mock("@/lib/listings/seed", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/lib/listings/seed")>();
-  return { ...original, fetchRestaurantBySlug: vi.fn() };
+vi.mock("@/lib/listings/data", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/listings/data")>();
+  return { ...original, getRestaurant: vi.fn() };
 });
-import { fetchRestaurantBySlug } from "@/lib/listings/seed";
-const fetchMock = vi.mocked(fetchRestaurantBySlug);
+import { getRestaurant } from "@/lib/listings/data";
+const getRestaurantMock = vi.mocked(getRestaurant);
 
 describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", () => {
   beforeEach(() => {
-    fetchMock.mockReset();
+    getRestaurantMock.mockReset();
   });
 
   it("renders the verified certificate panel with certifier, review, expiry + view link", async () => {
-    fetchMock.mockResolvedValueOnce(
+    getRestaurantMock.mockResolvedValueOnce(
       restaurant({
         certificate: {
           certifier: "HFSAA",
@@ -83,7 +82,7 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
   });
 
   it("shows an expiring-soon warning (icon+text) when ≤ 60 days to expiry", async () => {
-    fetchMock.mockResolvedValueOnce(
+    getRestaurantMock.mockResolvedValueOnce(
       restaurant({
         certificate: {
           certifier: "HFSAA",
@@ -100,7 +99,7 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
   });
 
   it("renders the quiet unverified panel (never red) for a listing with no certificate", async () => {
-    fetchMock.mockResolvedValueOnce(restaurant({}));
+    getRestaurantMock.mockResolvedValueOnce(restaurant({}));
     render(<RestaurantDetailPage />);
 
     expect(
@@ -110,8 +109,8 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     expect(screen.queryByText("Verified")).not.toBeInTheDocument();
   });
 
-  it("renders the not-found panel when the slug is unknown (header/footer intact)", async () => {
-    fetchMock.mockResolvedValueOnce(undefined);
+  it("renders the not-found panel when the id is unknown (header/footer intact)", async () => {
+    getRestaurantMock.mockResolvedValueOnce(undefined);
     render(<RestaurantDetailPage />);
 
     expect(
@@ -126,8 +125,8 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
   });
 
   it("renders the error panel and retries on fetch failure", async () => {
-    fetchMock.mockRejectedValueOnce(new Error("boom"));
-    fetchMock.mockResolvedValueOnce(
+    getRestaurantMock.mockRejectedValueOnce(new Error("boom"));
+    getRestaurantMock.mockResolvedValueOnce(
       restaurant({
         certificate: {
           certifier: "HFSAA",
@@ -150,7 +149,7 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
   });
 
   it("detail hero requests the FULL-res variant (imageUrl), eager (sc-157)", async () => {
-    fetchMock.mockResolvedValueOnce(
+    getRestaurantMock.mockResolvedValueOnce(
       restaurant({
         id: "l-1",
         name: "Al-Amir Grill",
@@ -170,7 +169,7 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
   });
 
   it("renders the quiet image placeholder (no <img>) when a listing has no photo (sc-157)", async () => {
-    fetchMock.mockResolvedValueOnce(restaurant({ id: "l-9", name: "New Spot" }));
+    getRestaurantMock.mockResolvedValueOnce(restaurant({ id: "l-9", name: "New Spot" }));
     render(<RestaurantDetailPage />);
 
     expect(await screen.findByText("New Spot")).toBeInTheDocument();

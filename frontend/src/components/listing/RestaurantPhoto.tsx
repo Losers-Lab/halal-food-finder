@@ -1,8 +1,8 @@
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 /**
- * Restaurant hero/card photo — sc-157 (responsible renderer).
+ * Restaurant hero/card photo — sc-157 (responsible renderer) + sc-171.
  *
  * Renders the image variant the current surface needs and nothing else:
  * - Cards pass the SMALL `imageThumbnailUrl` (≤400px, low bandwidth).
@@ -17,8 +17,11 @@ import type { CSSProperties } from "react";
  *
  * `fill` + the parent's aspect-ratio box reserve space so there is no layout
  * shift; `object-fit: cover` crops to the box. When `src` is absent (listing
- * has no ingested photo yet / loading state) the quiet kraft-stamp placeholder
- * keeps the slot from collapsing.
+ * has no ingested photo yet / loading state) OR the image FAILS to load
+ * (network / 500 / broken bytes), the same quiet kraft-stamp placeholder is
+ * rendered — never the browser's broken-image icon (design spec detail-page.md
+ * §1.1: "broken image -> same placeholder"). Applies to both the card thumbnail
+ * and the detail hero.
  */
 export function RestaurantPhoto({
   src,
@@ -32,25 +35,10 @@ export function RestaurantPhoto({
   /** Detail hero (LCP) loads eager; cards stay lazy. */
   eager?: boolean;
 }) {
-  if (!src) {
-    return (
-      <div className="absolute inset-0 flex items-center justify-center opacity-40">
-        {/* decorative stamp-line illustration placeholder */}
-        <svg
-          aria-hidden="true"
-          width="48"
-          height="48"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          className="text-ink-400"
-        >
-          <rect x="3" y="3" width="18" height="18" rx="3" />
-          <path d="M8 12h8M8 15.5h5" />
-        </svg>
-      </div>
-    );
+  const [errored, setErrored] = useState(false);
+
+  if (!src || errored) {
+    return <Placeholder />;
   }
 
   const style: CSSProperties = { objectFit: "cover" };
@@ -63,6 +51,29 @@ export function RestaurantPhoto({
       sizes={sizes}
       loading={eager ? "eager" : "lazy"}
       style={style}
+      onError={() => setErrored(true)}
     />
+  );
+}
+
+/** Decorative kraft stamp-line placeholder (reused for absent AND failed images). */
+function Placeholder() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center opacity-40">
+      {/* decorative stamp-line illustration placeholder */}
+      <svg
+        aria-hidden="true"
+        width="48"
+        height="48"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        className="text-ink-400"
+      >
+        <rect x="3" y="3" width="18" height="18" rx="3" />
+        <path d="M8 12h8M8 15.5h5" />
+      </svg>
+    </div>
   );
 }

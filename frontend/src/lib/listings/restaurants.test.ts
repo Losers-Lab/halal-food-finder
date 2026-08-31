@@ -17,7 +17,6 @@ const cert = (expiresOn: string, reviewedOn = "2026-01-01T00:00:00Z"): Certifica
 function restaurant(over: Partial<Restaurant>): Restaurant {
   return {
     id: "l-x",
-    slug: "test",
     name: "Test Place",
     address: "1 Main St",
     lat: 1,

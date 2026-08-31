@@ -54,7 +54,7 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
         <div className="flex items-start justify-between gap-2">
           <h3 className="text-heading text-ink-900">
             <Link
-              href={`/restaurants/${restaurant.slug}`}
+              href={`/restaurants/${restaurant.id}`}
               className="after:absolute after:inset-0 after:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-500"
             >
               {restaurant.name}
