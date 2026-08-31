@@ -38,7 +38,23 @@ const securityHeaders = [
   { key: "X-Frame-Options", value: "DENY" },
 ];
 
+// Same-origin image proxy (see rewrites below): restaurant photos are served
+// from /v1/listings/{id}/image?variant=thumbnail|full through the same-origin
+// /v1 proxy. next/image's optimizer runs these through /_next/image and, since
+// Next 16, requires an explicit `images.localPatterns` allowlist for local
+// URLs (especially ones with a query string) or it returns 400. Path is
+// scoped to the /v1 listing photo proxy; `search` is pinned to the two exact
+// variants the backend emits (no wildcard = no enumeration of arbitrary query
+// strings).
+const imageLocalPatterns = [
+  { pathname: "/v1/**", search: "?variant=thumbnail" },
+  { pathname: "/v1/**", search: "?variant=full" },
+];
+
 const nextConfig: NextConfig = {
+  images: {
+    localPatterns: imageLocalPatterns,
+  },
   async headers() {
     return [
       {
