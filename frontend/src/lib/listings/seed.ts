@@ -33,6 +33,11 @@ const seedHelpers: Shares = {
  * Seed listings mirroring approved sketches (006-stamps-search, 007-detail-stamps).
  * Deliberately covers every card/detail state: verified vs unverified, hand vs
  * machine cut, and — on the detail tier — valid / expiring-soon / expired certs.
+ *
+ * sc-157: each listing carries the two bundled image variants served by the
+ * backend ImagePort (`GET /v1/listings/{id}/image?variant=thumbnail|full`,
+ * docs/design/sc-157-image-variants.md). Cards use `imageThumbnailUrl` (≤400px)
+ * ONLY; the detail hero uses `imageUrl` (full-res).
  */
 export const SEED: Restaurant[] = [
   {
@@ -49,6 +54,8 @@ export const SEED: Restaurant[] = [
     distanceMi: 1.2,
     phone: "+17185551234",
     website: "https://example.com/al-amir",
+    imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-1/image?variant=full",
     hours: [
       { day: "Mon", value: "11 AM – 10 PM" },
       { day: "Tue", value: "11 AM – 10 PM" },
@@ -78,6 +85,8 @@ export const SEED: Restaurant[] = [
     reviewCount: 612,
     distanceMi: 0.4,
     phone: "+17185559876",
+    imageThumbnailUrl: "/v1/listings/l-2/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-2/image?variant=full",
     hours: [
       { day: "Mon", value: "11 AM – 10 PM" },
       { day: "Tue", value: "11 AM – 10 PM" },
@@ -106,6 +115,8 @@ export const SEED: Restaurant[] = [
     rating: 4.6,
     reviewCount: 1204,
     distanceMi: 1.1,
+    imageThumbnailUrl: "/v1/listings/l-3/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-3/image?variant=full",
     certificate: {
       certifier: "IFANCA",
       reviewedOn: seedHelpers.reviewedOnAgoDays(400),
@@ -125,6 +136,8 @@ export const SEED: Restaurant[] = [
     rating: 4.4,
     reviewCount: 2377,
     distanceMi: 2.3,
+    imageThumbnailUrl: "/v1/listings/l-4/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-4/image?variant=full",
   },
   {
     id: "l-5",
@@ -138,6 +151,8 @@ export const SEED: Restaurant[] = [
     rating: 4.7,
     reviewCount: 540,
     distanceMi: 1.8,
+    imageThumbnailUrl: "/v1/listings/l-5/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-5/image?variant=full",
     certificate: {
       certifier: "IFANCA",
       reviewedOn: seedHelpers.reviewedOnAgoDays(150),
@@ -157,6 +172,8 @@ export const SEED: Restaurant[] = [
     rating: 4.5,
     reviewCount: 8912,
     distanceMi: 2.6,
+    imageThumbnailUrl: "/v1/listings/l-6/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-6/image?variant=full",
   },
   {
     id: "l-7",
@@ -170,6 +187,8 @@ export const SEED: Restaurant[] = [
     rating: 4.9,
     reviewCount: 321,
     distanceMi: 3.2,
+    imageThumbnailUrl: "/v1/listings/l-7/image?variant=thumbnail",
+    imageUrl: "/v1/listings/l-7/image?variant=full",
   },
 ];
 

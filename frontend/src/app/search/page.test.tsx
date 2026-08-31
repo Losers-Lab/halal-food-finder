@@ -78,6 +78,28 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
     ).toHaveAttribute("href", "/restaurants/karachi-kitchen");
   });
 
+  it("cards request the SMALL thumbnail variant only — never the full-res original (sc-157)", async () => {
+    searchMock.mockReturnValue([
+      restaurant({
+        id: "l-1",
+        name: "Al-Amir Grill",
+        imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
+        imageUrl: "/v1/listings/l-1/image?variant=full",
+      }),
+    ]);
+    render(<SearchPage />);
+
+    const img = await screen.findByRole("img", { name: "Al-Amir Grill" });
+    expect(img).toHaveAttribute(
+      "src",
+      "/v1/listings/l-1/image?variant=thumbnail",
+    );
+    // The full-res URL exists on the read-model but a card must not request it.
+    expect(img).not.toHaveAttribute("src", "/v1/listings/l-1/image?variant=full");
+    // Lazy: off-screen cards defer the transfer.
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
+
   it("shows a verified badge on verified cards and an unverified tag otherwise", async () => {
     const future = new Date(Date.now() + 300 * 86_400_000).toISOString();
     searchMock.mockReturnValue([
