@@ -110,5 +110,40 @@ class ListingSearchEndpointTest : PostgresBootTest() {
 
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
         }
+
+        test("cuttingMethod=HAND_CUT narrows the search and excludes the UNSPECIFIED seed") {
+            // sc-42: the entire seed set is UNSPECIFIED, so a HAND_CUT filter
+            // around St. Clair must return nothing, while the same query without
+            // the filter returns hits — proving the filter actually narrows.
+            val unfiltered = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0")
+            (bodyOf(unfiltered).size() > 0) shouldBe true
+
+            val handCut = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=HAND_CUT")
+            handCut.statusCode shouldBe HttpStatus.OK
+            bodyOf(handCut).size() shouldBe 0
+        }
+
+        test("cuttingMethod=MACHINE_CUT narrows the search and excludes the UNSPECIFIED seed") {
+            val machineCut = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=MACHINE_CUT")
+
+            machineCut.statusCode shouldBe HttpStatus.OK
+            bodyOf(machineCut).size() shouldBe 0
+        }
+
+        test("cuttingMethod=BOTH matches the no-filter result set (any method)") {
+            val both = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=BOTH")
+
+            both.statusCode shouldBe HttpStatus.OK
+            val results = bodyOf(both)
+            (results.size() > 0) shouldBe true
+            results[0].get("name").asText() shouldBe "Osmow's"
+        }
+
+        test("an invalid cuttingMethod returns 400 invalid_input, not a crash") {
+            val resp = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=STUNK")
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
+            bodyOf(resp).get("code").asText() shouldBe "invalid_input"
+        }
     }
 }

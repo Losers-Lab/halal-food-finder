@@ -1,5 +1,6 @@
 package com.tahirslist.persistence.listing
 
+import com.tahirslist.application.listing.CuttingMethodFilter
 import com.tahirslist.application.listing.ListingSearchQuery
 import com.tahirslist.application.listing.ListingSearchResult
 import com.tahirslist.domain.restaurant.Cuisine
@@ -33,6 +34,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
     override fun searchNearby(
         center: LatLng,
         radiusMiles: Double,
+        cuttingMethod: CuttingMethodFilter,
         offset: Int,
         limit: Int,
     ): List<ListingSearchResult> {
@@ -41,8 +43,15 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         // a 0 radius yields an empty result rather than an error.
         if (radiusMeters <= 0.0) return emptyList()
 
-        return jdbc.query(
-            """
+        // sc-42: BOTH ("any") adds no predicate so every stored method matches;
+        // HAND_CUT / MACHINE_CUT add an equality predicate on the stored column.
+        val cuttingClause = if (cuttingMethod == CuttingMethodFilter.BOTH) {
+            ""
+        } else {
+            "AND cutting_method = ?"
+        }
+
+        val sql = """
             SELECT
                 id,
                 name,
@@ -62,13 +71,15 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
                 ?
             )
+            $cuttingClause
             ORDER BY ST_DistanceSphere(
                 location::geometry,
                 ST_SetSRID(ST_MakePoint(?, ?), 4326)
             )
             LIMIT ? OFFSET ?
-            """.trimIndent(),
-            { rs, _ -> rs.toSearchResult() },
+        """.trimIndent()
+
+        val args = mutableListOf<Any>(
             // distance/order centre (x=lng, y=lat)
             center.lng,
             center.lat,
@@ -76,12 +87,11 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
             center.lng,
             center.lat,
             radiusMeters,
-            // order centre again
-            center.lng,
-            center.lat,
-            limit,
-            offset,
         )
+        if (cuttingMethod != CuttingMethodFilter.BOTH) args.add(cuttingMethod.name)
+        args.addAll(listOf(center.lng, center.lat, limit, offset))
+
+        return jdbc.query(sql, { rs, _ -> rs.toSearchResult() }, *args.toTypedArray())
     }
 
     private fun ResultSet.toSearchResult(): ListingSearchResult = ListingSearchResult(

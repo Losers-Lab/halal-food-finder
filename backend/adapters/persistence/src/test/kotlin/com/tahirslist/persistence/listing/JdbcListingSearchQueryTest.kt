@@ -1,6 +1,7 @@
 package com.tahirslist.persistence.listing
 
 import com.tahirslist.domain.restaurant.LatLng
+import com.tahirslist.application.listing.CuttingMethodFilter
 import com.tahirslist.application.listing.ListingSearchQuery
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.collections.shouldContain
@@ -13,6 +14,7 @@ import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.jdbc.datasource.DriverManagerDataSource
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import java.util.UUID
 
 /**
  * sc-10 location search (docs: Shortcut sc-10; contract ratified in task
@@ -150,5 +152,74 @@ class JdbcListingSearchQueryTest : FunSpec() {
             osmow.verificationStatus.name shouldBe "UNVERIFIED"
             osmow.cuttingMethod.name shouldBe "UNSPECIFIED"
         }
+
+        test("cuttingMethod filter narrows results to the matching stored method") {
+            // sc-42: insert controlled HAND_CUT / MACHINE_CUT rows at a location
+            // far from every seed, so these assertions are isolated from the 30
+            // UNSPECIFIED seed rows and from the other tests in this spec. The
+            // mirror into listing_search reproduces exactly what save() does.
+            insertCuttingTestRows()
+            val center = LatLng(lat = 45.0, lng = -79.0)
+
+            // BOTH ("any") matches every method — both inserted rows.
+            val both = query.searchNearby(center = center, radiusMiles = 5.0, cuttingMethod = CuttingMethodFilter.BOTH, offset = 0, limit = 50)
+            both.map { it.name }.toSet() shouldBe setOf("Hand Cut Test", "Machine Cut Test")
+
+            // HAND_CUT matches only the hand-cut row.
+            val handCut = query.searchNearby(center = center, radiusMiles = 5.0, cuttingMethod = CuttingMethodFilter.HAND_CUT, offset = 0, limit = 50)
+            handCut.map { it.name } shouldBe listOf("Hand Cut Test")
+            handCut.single().cuttingMethod.name shouldBe "HAND_CUT"
+
+            // MACHINE_CUT matches only the machine-cut row.
+            val machineCut = query.searchNearby(center = center, radiusMiles = 5.0, cuttingMethod = CuttingMethodFilter.MACHINE_CUT, offset = 0, limit = 50)
+            machineCut.map { it.name } shouldBe listOf("Machine Cut Test")
+            machineCut.single().cuttingMethod.name shouldBe "MACHINE_CUT"
+        }
+
+        test("cuttingMethod filter combines with the location radius") {
+            // sc-42: the filter must not bypass the radius. Nesting the filter
+            // around Osmow's (UNSPECIFIED) co-located seed with a tiny radius:
+            // HAND_CUT finds nothing there, while BOTH still finds Osmow's.
+            val center = LatLng(lat = 43.682921, lng = -79.418493)
+
+            val handCut = query.searchNearby(center = center, radiusMiles = 0.1, cuttingMethod = CuttingMethodFilter.HAND_CUT, offset = 0, limit = 50)
+            handCut shouldBe emptyList()
+
+            val both = query.searchNearby(center = center, radiusMiles = 0.1, cuttingMethod = CuttingMethodFilter.BOTH, offset = 0, limit = 50)
+            both.single().name shouldBe "Osmow's"
+        }
+    }
+
+    /** Inserts two controlled cutting-test rows far from the seeds and mirrors them into listing_search. Idempotent. */
+    private fun insertCuttingTestRows() {
+        val handId = UUID.fromString("10000000-0000-0000-0000-000000000001")
+        val machineId = UUID.fromString("10000000-0000-0000-0000-000000000002")
+
+        jdbc.update(
+            """
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, 'UNVERIFIED')
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            handId, "Hand Cut Test", "45.00, -79.00", -79.0, 45.0, "Grill", "HAND_CUT",
+        )
+        jdbc.update(
+            """
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, 'UNVERIFIED')
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            machineId, "Machine Cut Test", "45.00, -79.00", -79.0, 45.0, "Grill", "MACHINE_CUT",
+        )
+        // Mirror into the denormalised projection, exactly the sc-10 save() contract.
+        jdbc.update(
+            """
+            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status)
+            SELECT id, name, address, location, cuisine, cutting_method, verification_status
+            FROM restaurant_listings WHERE id IN (?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            handId, machineId,
+        )
     }
 }
