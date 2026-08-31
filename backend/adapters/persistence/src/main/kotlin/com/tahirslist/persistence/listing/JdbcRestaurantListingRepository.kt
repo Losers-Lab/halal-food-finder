@@ -39,11 +39,11 @@ class JdbcRestaurantListingRepository(
         val saved: RestaurantListing = tx.execute {
             val id = jdbc.queryForObject(
                 """
-                INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status, price, rating)
+                INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served)
                 VALUES (
                     ?, ?,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-                    ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 RETURNING id
                 """.trimIndent(),
@@ -60,6 +60,7 @@ class JdbcRestaurantListingRepository(
                 listing.verificationStatus.name,
                 listing.price?.value,
                 listing.rating?.value,
+                listing.alcoholServed,
             ) ?: error("INSERT RETURNING id returned no row")
 
             val withId = listing.copy(id = id)
@@ -91,8 +92,8 @@ class JdbcRestaurantListingRepository(
     private fun mirrorIntoListingSearch(listing: RestaurantListing) {
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
-            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?)
+            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating, alcohol_served)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             listing.id,
             listing.name,
@@ -104,6 +105,7 @@ class JdbcRestaurantListingRepository(
             listing.verificationStatus.name,
             listing.price?.value,
             listing.rating?.value,
+            listing.alcoholServed,
         )
     }
 
@@ -120,6 +122,7 @@ class JdbcRestaurantListingRepository(
                 cutting_method,
                 price,
                 rating,
+                alcohol_served,
                 owner_id,
                 brand_id,
                 provenance,
@@ -147,6 +150,7 @@ class JdbcRestaurantListingRepository(
                 cutting_method,
                 price,
                 rating,
+                alcohol_served,
                 owner_id,
                 brand_id,
                 provenance,
@@ -166,6 +170,7 @@ class JdbcRestaurantListingRepository(
         cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
         price = getBigDecimal("price")?.let { Price(it) },
         rating = getBigDecimal("rating")?.let { Rating(it) },
+        alcoholServed = getBoolean("alcohol_served"),
         ownerId = getObject("owner_id", UUID::class.java),
         brandId = getObject("brand_id", UUID::class.java),
         provenance = getString("provenance")?.let { Provenance(it) },

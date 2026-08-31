@@ -16,7 +16,9 @@ import java.util.UUID
  * (see V6 — Omar adjudication). [RestaurantListing.new] still requires both for
  * the authenticated Add Listing flow; seed rows are reconstituted via
  * [fromStorage] with nulls. [brandId] links a location to its brand (brand /
- * location split) and [provenance] stamps the row's origin.
+ * location split) and [provenance] stamps the row's origin. [alcoholServed] is
+ * part of the partial-halal/alcohol MVP additions (sc-118): a display attribute
+ * (no search filter), defaulting to false.
  *
  * NOTE: ODbL share-alike on OSM/Photon-derived listing fields is an open founder
  * decision (docs/reviews/sc-138-external-services.md §5). Flagged here, not
@@ -36,6 +38,7 @@ data class RestaurantListing(
     val provenance: Provenance?,
     val verificationStatus: VerificationStatus,
     val createdAt: Instant,
+    val alcoholServed: Boolean = false,
 ) {
     companion object {
 
@@ -57,6 +60,7 @@ data class RestaurantListing(
             ownerId: UUID,
             price: Price? = null,
             rating: Rating? = null,
+            alcoholServed: Boolean = false,
         ): RestaurantListing {
             val trimmedName = name.trim()
             val trimmedAddress = address.trim()
@@ -76,6 +80,7 @@ data class RestaurantListing(
                 provenance = null,
                 verificationStatus = VerificationStatus.DEFAULT,
                 createdAt = Instant.now(),
+                alcoholServed = alcoholServed,
             )
         }
 
@@ -98,6 +103,7 @@ data class RestaurantListing(
             provenance: Provenance?,
             verificationStatus: VerificationStatus,
             createdAt: Instant,
+            alcoholServed: Boolean = false,
         ): RestaurantListing = RestaurantListing(
             id = id,
             name = name,
@@ -112,6 +118,7 @@ data class RestaurantListing(
             provenance = provenance,
             verificationStatus = verificationStatus,
             createdAt = createdAt,
+            alcoholServed = alcoholServed,
         )
     }
 }

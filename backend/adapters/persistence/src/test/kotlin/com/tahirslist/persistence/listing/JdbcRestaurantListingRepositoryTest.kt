@@ -230,6 +230,73 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             mirroredRating shouldBe BigDecimal("4.80")
         }
 
+        test("save persists alcoholServed and mirrors it into the search projection (sc-118)") {
+            val owner = accounts.save(Account.new(email = Email("alc-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Wine Pairing Grill",
+                address = "8 Cork Ave",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                cuttingMethod = CuttingMethod.HAND_CUT,
+                ownerId = owner.id,
+                alcoholServed = true,
+            )
+
+            val saved = listings.save(listing)
+            saved.alcoholServed shouldBe true
+
+            // alcoholServed round-trips through the source read path.
+            val found = listings.findById(saved.id)!!
+            found.alcoholServed shouldBe true
+
+            // The search projection mirrors the flag (sc-118 display attribute).
+            val mirrored = jdbc.queryForObject(
+                "SELECT alcohol_served FROM listing_search WHERE id = ?",
+                Boolean::class.java,
+                saved.id,
+            )
+            mirrored shouldBe true
+        }
+
+        test("save defaults alcoholServed to false (sc-118)") {
+            val owner = accounts.save(Account.new(email = Email("alc-none-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Dry Grill",
+                address = "9 Dry Blvd",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                cuttingMethod = CuttingMethod.HAND_CUT,
+                ownerId = owner.id,
+            )
+
+            val saved = listings.save(listing)
+            saved.alcoholServed shouldBe false
+
+            val found = listings.findById(saved.id)!!
+            found.alcoholServed shouldBe false
+        }
+
+        test("V11 adds an alcohol_served column defaulting to false (source + search projection)") {
+            val sourceDefault = jdbc.queryForObject(
+                "SELECT column_default FROM information_schema.columns " +
+                    "WHERE table_name = 'restaurant_listings' AND column_name = 'alcohol_served'",
+                String::class.java,
+            )
+            sourceDefault shouldBe "false"
+
+            val sourceCol = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'restaurant_listings' AND column_name = 'alcohol_served'",
+                Int::class.java,
+            )
+            sourceCol shouldBe 1
+
+            val searchCol = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'listing_search' AND column_name = 'alcohol_served'",
+                Int::class.java,
+            )
+            searchCol shouldBe 1
+        }
+
         test("V10 adds a rating column to the source listing and the search projection") {
             val sourceRating = jdbc.queryForObject(
                 "SELECT count(*) FROM information_schema.columns WHERE table_name = 'restaurant_listings' AND column_name = 'rating'",
