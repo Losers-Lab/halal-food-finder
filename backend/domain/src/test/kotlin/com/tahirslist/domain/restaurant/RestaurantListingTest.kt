@@ -77,6 +77,27 @@ class RestaurantListingTest : FunSpec({
         ).rating shouldBe null
     }
 
+    test("new() defaults alcoholServed to false") {
+        val listing = RestaurantListing.new(
+            name = "Y", address = "2 St", location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"), cuttingMethod = CuttingMethod.MACHINE_CUT, ownerId = UUID.randomUUID(),
+        )
+        listing.alcoholServed shouldBe false
+    }
+
+    test("new() carries an explicit alcoholServed flag") {
+        val listing = RestaurantListing.new(
+            name = "X",
+            address = "1 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            cuttingMethod = CuttingMethod.HAND_CUT,
+            ownerId = UUID.randomUUID(),
+            alcoholServed = true,
+        )
+        listing.alcoholServed shouldBe true
+    }
+
     test("new() rejects a blank name") {
         shouldThrow<IllegalArgumentException> {
             RestaurantListing.new(
@@ -154,5 +175,24 @@ class RestaurantListingTest : FunSpec({
         listing.ownerId shouldBe null
         listing.brandId shouldBe brandId
         listing.provenance shouldBe Provenance.RESEARCH_SEED_PHOTON_GEOCODE
+    }
+
+    test("fromStorage reconstitutes the alcoholServed flag") {
+        val listing = RestaurantListing.fromStorage(
+            id = UUID.randomUUID(),
+            name = "Steak House",
+            address = "1 Grill Ave",
+            location = LatLng(40.0, -74.0),
+            cuisine = null,
+            cuttingMethod = CuttingMethod.HAND_CUT,
+            ownerId = null,
+            brandId = null,
+            provenance = null,
+            verificationStatus = VerificationStatus.UNVERIFIED,
+            createdAt = java.time.Instant.now(),
+            alcoholServed = true,
+        )
+
+        listing.alcoholServed shouldBe true
     }
 })
