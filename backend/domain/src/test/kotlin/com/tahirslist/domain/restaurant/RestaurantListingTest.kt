@@ -58,6 +58,25 @@ class RestaurantListingTest : FunSpec({
         listing.price?.value shouldBe BigDecimal("9.99")
     }
 
+    test("new() carries an optional rating") {
+        val listing = RestaurantListing.new(
+            name = "X",
+            address = "1 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            cuttingMethod = CuttingMethod.HAND_CUT,
+            ownerId = UUID.randomUUID(),
+            rating = Rating(BigDecimal("4.5")),
+        )
+
+        listing.rating?.value shouldBe BigDecimal("4.5")
+        // Default is no rating (null).
+        RestaurantListing.new(
+            name = "Y", address = "2 St", location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"), cuttingMethod = CuttingMethod.MACHINE_CUT, ownerId = UUID.randomUUID(),
+        ).rating shouldBe null
+    }
+
     test("new() rejects a blank name") {
         shouldThrow<IllegalArgumentException> {
             RestaurantListing.new(

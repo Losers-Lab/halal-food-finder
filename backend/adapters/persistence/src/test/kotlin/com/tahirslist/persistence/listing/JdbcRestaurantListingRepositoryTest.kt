@@ -6,6 +6,7 @@ import com.tahirslist.domain.restaurant.Cuisine
 import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
+import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
 import com.tahirslist.persistence.account.JdbcAccountRepository
@@ -198,6 +199,49 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 saved.id,
             )
             mirroredPrice shouldBe BigDecimal("15.50")
+        }
+
+        test("save persists rating and mirrors it into the search projection (sc-45)") {
+            val owner = accounts.save(Account.new(email = Email("rated-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Rated Grill",
+                address = "5 Stars Ave",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                cuttingMethod = CuttingMethod.HAND_CUT,
+                ownerId = owner.id,
+                rating = Rating(BigDecimal("4.8")),
+            )
+
+            val saved = listings.save(listing)
+            saved.rating?.value shouldBe BigDecimal("4.8")
+
+            // Rating round-trips through the source read path (NUMERIC(3,2) -> scale-2 BigDecimal).
+            val found = listings.findById(saved.id)!!
+            found.rating?.value shouldBe BigDecimal("4.80")
+
+            // The search projection mirrors the rating (the search reads
+            // listing_search rating for the minRating filter).
+            val mirroredRating = jdbc.queryForObject(
+                "SELECT rating FROM listing_search WHERE id = ?",
+                BigDecimal::class.java,
+                saved.id,
+            )
+            mirroredRating shouldBe BigDecimal("4.80")
+        }
+
+        test("V10 adds a rating column to the source listing and the search projection") {
+            val sourceRating = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'restaurant_listings' AND column_name = 'rating'",
+                Int::class.java,
+            )
+            sourceRating shouldBe 1
+
+            val searchRating = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'listing_search' AND column_name = 'rating'",
+                Int::class.java,
+            )
+            searchRating shouldBe 1
         }
 
         test("V9 adds the multi-cuisine join table and a price column to the search projection") {
