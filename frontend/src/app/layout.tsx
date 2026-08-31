@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Archivo, Space_Grotesk } from "next/font/google";
+import { Archivo, Archivo_Black, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 
@@ -23,10 +23,20 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-sans",
 });
 
+const archivoBlack = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+  display: "swap",
+  variable: "--font-wordmark",
+});
+
 export const metadata: Metadata = {
-  title: "Halal Market", // placeholder brand — founder undecided (do not invent)
+  title: {
+    default: "Tahir's List",
+    template: "%s · Tahir's List",
+  },
   description:
-    "Find halal food with granular hand-cut vs machine-cut filters and formally verified certifications.",
+    "find halal food — search restaurant listings with granular hand-cut vs machine-cut filters and formally verified certifications.",
 };
 
 export default function RootLayout({
@@ -35,7 +45,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${archivo.variable} ${spaceGrotesk.variable}`}>
+    <html lang="en" className={`${archivo.variable} ${spaceGrotesk.variable} ${archivoBlack.variable}`}>
       <body className="antialiased">
         <AuthProvider>{children}</AuthProvider>
       </body>
