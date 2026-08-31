@@ -30,6 +30,7 @@ class CreateListing(
         cuisine: Cuisine,
         cuttingMethod: CuttingMethod,
         ownerId: UUID,
+        alcoholServed: Boolean = false,
     ): RestaurantListing {
         // Validate/trim local input first (no I/O) via the domain factory, so bad
         // input fails fast before any repository lookup.
@@ -40,6 +41,7 @@ class CreateListing(
             cuisine = cuisine,
             cuttingMethod = cuttingMethod,
             ownerId = ownerId,
+            alcoholServed = alcoholServed,
         )
 
         // Fail fast on an unknown owner before persisting anything.

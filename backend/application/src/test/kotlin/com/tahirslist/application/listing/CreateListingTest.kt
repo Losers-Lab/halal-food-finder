@@ -72,6 +72,41 @@ class CreateListingTest : FunSpec({
         verify { listings.save(match { it.name == "Halal Grill" && it.address == "123 Main St" }) }
     }
 
+    test("passes an explicit alcoholServed flag to the saved listing") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            cuttingMethod = CuttingMethod.HAND_CUT,
+            ownerId = ownerId,
+            alcoholServed = true,
+        )
+
+        listing.alcoholServed shouldBe true
+        verify { listings.save(match { it.alcoholServed }) }
+    }
+
+    test("defaults alcoholServed to false when not supplied") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            cuttingMethod = CuttingMethod.HAND_CUT,
+            ownerId = ownerId,
+        )
+
+        listing.alcoholServed shouldBe false
+        verify { listings.save(match { !it.alcoholServed }) }
+    }
+
     test("rejects a blank name before touching the owner or repository") {
         every { accounts.findById(any()) } returns null
         every { listings.save(any()) } answers { firstArg() }
