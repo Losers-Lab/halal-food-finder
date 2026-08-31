@@ -24,9 +24,12 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Halal Market", // placeholder brand — founder undecided (do not invent)
+  title: {
+    default: "Tahir's List",
+    template: "%s · Tahir's List",
+  },
   description:
-    "Find halal food with granular hand-cut vs machine-cut filters and formally verified certifications.",
+    "find halal food — search restaurant listings with granular hand-cut vs machine-cut filters and formally verified certifications.",
 };
 
 export default function RootLayout({

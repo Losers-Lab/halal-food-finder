@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AuthHeader } from "@/components/auth/AuthHeader";
-import { SealMark } from "@/components/trust";
+import { Wordmark, TahirHeadIcon } from "@/components/brand/BrandLockup";
 
 const secondaryLinks = [
   { href: "/search", label: "Search" },
@@ -11,19 +11,24 @@ const secondaryLinks = [
 ];
 
 /**
- * Site header (all screens) — docs/design/search-browse.md §"Header (all screens)".
- * 64px tall, cream-50, kraft-200 bottom border. Wordmark left (placeholder
- * "HalalMarket" — founder undecided, do not replace) over a brand seal. Right:
- * Log in = ghost, Sign up = primary (AuthHeader). Mobile collapses to wordmark +
- * hamburger → slide-down panel.
+ * Site header (all screens) — docs/design/search-browse.md §"Header (all screens)"
+ * + C2 lockup (tahir-brand.md §3 / tokens.md): Tahir head app-icon (56px
+ * desktop / 40px mobile) + wordmark "Tahir's List" (red apostrophe) + tagline
+ * "find halal food". Right: Log in = ghost, Sign up = primary (AuthHeader).
+ * Mobile collapses to the lockup + hamburger → slide-down panel.
  */
 export function SiteHeader() {
   return (
     <header className="sticky top-0 z-30 border-b-[1.5px] border-kraft-200 bg-cream-50">
       <div className="mx-auto flex h-16 max-w-[1200px] items-center justify-between gap-4 px-5">
-        <Link href="/" className="inline-flex items-center gap-2 text-title font-extrabold text-brand-500 hover:text-brand-600">
-          <SealMark className="h-7 w-7 text-brand-500" />
-          HalalMarket
+        <Link href="/" className="inline-flex items-center gap-2.5 hover:opacity-90">
+          <TahirHeadIcon className="h-10 w-10 md:h-14 md:w-14" />
+          <span className="flex flex-col justify-center leading-none">
+            <Wordmark className="text-title" />
+            <span className="mt-1 hidden text-small text-ink-500 md:block">
+              find halal food
+            </span>
+          </span>
         </Link>
         <div className="hidden items-center gap-3 md:flex">
           {secondaryLinks.map((l) => (

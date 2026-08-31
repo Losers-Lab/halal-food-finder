@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { SealMark } from "@/components/trust";
+import { Wordmark, TahirHeadIcon } from "@/components/brand/BrandLockup";
 
 type AuthCardProps = {
   heading: string;
@@ -35,10 +35,10 @@ export function AuthCard({
           <div className="mb-6">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-heading font-bold text-brand-500 hover:text-brand-600"
+              className="inline-flex items-center gap-2 hover:opacity-90"
             >
-              <SealMark className="h-8 w-8 text-brand-500" />
-              HalalMarket
+              <TahirHeadIcon className="h-8 w-8" />
+              <Wordmark className="text-heading" />
             </Link>
           </div>
 

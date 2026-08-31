@@ -128,7 +128,7 @@ export default function AddListingPage() {
             <span className="font-medium text-ink-900">
               {created.name}
             </span>{" "}
-            is now on Halal Market. This listing is currently{" "}
+            is now on Tahir&#39;s List. This listing is currently{" "}
             <span className="font-medium text-ink-700">unverified</span> —
             the owner can claim it and submit their halal certification for
             review.

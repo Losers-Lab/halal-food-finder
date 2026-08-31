@@ -29,7 +29,7 @@ export default function Home() {
         <section className="text-center">
           <SealMark
             className="mx-auto h-10 w-10 text-brand-500"
-            srLabel="HalalMarket seal"
+            srLabel="Tahir's List seal"
           />
           <h1 className="mx-auto mt-4 max-w-[640px] text-display text-ink-900">
             Find halal food near you. Stamped &amp; trusted.
