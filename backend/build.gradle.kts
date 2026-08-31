@@ -18,7 +18,7 @@ val testKotestAssertions = libs.kotest.assertions.core
 val testMockk = libs.mockk
 
 allprojects {
-    group = "app.halal"
+    group = "com.tahirslist"
     version = "0.1.0-SNAPSHOT"
 
     repositories {

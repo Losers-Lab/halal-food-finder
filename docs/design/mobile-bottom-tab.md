@@ -1,4 +1,4 @@
-# Mobile Bottom Tab Bar Spec — Halal Food Finder ("Stamps & Search")
+# Mobile Bottom Tab Bar Spec — Tahir's List ("Stamps & Search")
 
 Status: implementation-ready · Matches approved sketch `sketches/008-stamps-mobile` · Owner: Fatima
 Tokens: `tokens.md` (v2). Applies to all screens at ≤768px. Desktop is unaffected (header nav only).

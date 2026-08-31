@@ -1,4 +1,4 @@
-# Halal Food Finder — Frontend
+# Tahir's List — Frontend
 
 Next.js 16 (App Router, TypeScript strict, Tailwind v4) frontend. Design tokens
 live in the Tailwind `@theme` block in `src/app/globals.css` (spec:
