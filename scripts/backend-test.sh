@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Containerized build/test for the Halal Food Finder backend.
+# Containerized build/test for the Tahir's List backend.
 # Host requirements: Docker only. No JDK/Gradle needed on the machine.
 #
 # Usage:
