@@ -6,14 +6,14 @@ Supersedes: placeholder "HalalMarket" wordmark usage in `docs/design/tokens.md` 
 
 ## 1. The character (locked)
 
-Tahir (طاهر — "pure") is the personification of the product. Canonical art and the full character bible live at `brand/tahir/CHARACTER.md`; **all future Tahir imagery is generated image-to-image from `brand/tahir/tahir-canonical.jpg`** — the face never changes.
+Tahir (طاهر — "pure") is the personification of the product. Canonical art and the full character bible live at `brand/tahir/CHARACTER.md` (v2 "kurta Tahir"); **all future Tahir imagery is generated image-to-image from `brand/tahir/tahir-canonical.jpg`** — the face never changes.
 
 Non-negotiables (apply in every direction):
 
 - Flat-vector Duolingo-style: bold simple shapes, no outlines, big head, oval eyes, dot eyebrows.
-- Medium-brown skin, black swoosh hair, white tilted kufi, round black glasses, simple smile.
-- Plain mustard sweater — **no badge, no emblem, no logo on clothing** (explicit founder correction; trust badges live in product UI, never on the character).
-- Dark teal pants. Never depicted with haram items; unverified places are treated kindly.
+- Medium-brown skin, black swoosh hair, plain white topi, round black glasses, simple smile, **no beard**.
+- Plain green band-collar kurta — **no badge, no emblem, no logo on clothing** (explicit founder correction; trust badges live in product UI, never on the character).
+- Dark teal pants. Never depicted with haram items; unverified places are treated kindly. (v1 mustard-sweater art is archived under `brand/tahir/` and not for reuse.)
 
 ## 2. Three directions
 
@@ -23,14 +23,14 @@ The face is locked; directions differ in **role, costume, and logo behavior** �
 
 - **Personality:** your food-obsessed peer; fork raised in a toast, hand on hip. Not a chef, not an inspector — the friend who already knows the spot.
 - **Visual style:** no costume, no props beyond the fork. Purest read of the character.
-- **Logo mark:** head-only crop (kufi + glasses) in a rounded square → favicon/app icon; "peekaboo over the apostrophe" for hero scale.
+- **Logo mark:** head-only crop (topi + glasses) in a rounded square → favicon/app icon; "peekaboo over the apostrophe" for hero scale.
 - **Extensibility:** highest. Any future context (searching, checking, celebrating) is a pose change on the same clean base. "Tahir's Favorites" needs no wardrobe system.
 - **Trade-off:** carries no verification story on his own — the VerifiedSeal in UI completes it.
 
 ### Direction B — The Host
 
 - **Personality:** Tahir as host of the product, presenting the list like a waiter with the day's specials.
-- **Visual style:** small butcher-red (#C6381F) neckerchief over the mustard sweater + wooden serving board with a simple plate. Neckerchief is a one-color, infinitely scalable brand cue tying outfit to brand red.
+- **Visual style:** small butcher-red (#C6381F) neckerchief over the green band-collar kurta + wooden serving board with a simple plate. Neckerchief is a one-color, infinitely scalable brand cue tying outfit to brand red.
 - **Logo mark:** same head crop works for icons; full-body "presenting" pose is the hero/announcement asset.
 - **Extensibility:** strong for sponsor/featured slots ("Tahir presents…"), email art, empty states with food illustration.
 - **Trade-off:** busiest at tiny sizes (mitigate: head-only crop below 48px); props must stay simple in all future poses.
@@ -58,13 +58,13 @@ Wordmark: **Archivo Black (900), tight tracking (-0.03em), ink on paper; the apo
 | Inversion | Cream wordmark on ink, apostrophe in soft red #E8937D (AA) | Dark bands, future dark mode |
 | ~~Peekaboo / hang-off~~ | ~~Tahir interacting with the wordmark~~ | **REJECTED by founder 2026-08-30** — shelve |
 
-Favicon/app icon: head-only crop, tested to 16px (kufi + glasses remain legible).
+Favicon/app icon: head-only crop (topi + glasses), tested to 16px (topi + glasses remain legible).
 
 ## 4. Adaptation of the "Stamps & Search" tokens
 
-- **No token changes.** The mascot palette is drawn entirely from the existing ramp: mustard sweater ≈ --color-brand-300 family warmth, teal pants ≈ desaturated stamp-adjacent neutral (character art only, never used as a UI status color), kraft/cream backgrounds from --color-cream-*.
+- **No token changes.** The mascot palette is drawn entirely from the existing ramp: green kurta ≈ the verified/stamp-adjacent green family (character art only, never used as a UI status color — the UI green remains exclusive to the VerifiedBadge), teal pants ≈ desaturated stamp-adjacent neutral, kraft/cream backgrounds from --color-cream-*.
 - Character backgrounds in-product are transparent or --color-cream-50/100; the canonical sky-blue is for brand illustration only.
-- **Colorblind-safe rules unchanged:** red = brand/action, green = verified (glyph + word always), ink = neutral. The mascot never wears or holds anything that muddies this (hence no green badge on the sweater — founder-ratified).
+- **Colorblind-safe rules unchanged:** red = brand/action, green = verified (glyph + word always), ink = neutral. The mascot's green kurta is character art, not a UI status signal — the verified green remains exclusive to the VerifiedBadge in the interface (founder-ratified).
 - Voice examples already in `brand/tahir/CHARACTER.md` ("Tahir is checking the certificate… 🔍") apply to all mascot-fronted UI copy.
 
 ## 5. Resolved (founder decisions 2026-08-30) & remaining open items
