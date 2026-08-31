@@ -7,15 +7,15 @@ import com.tahirslist.domain.restaurant.LatLng
  * listings within [radiusMiles] of [center], ordered by straight-line distance
  * ascending. Offset paging. Implemented by the persistence adapter (PostGIS).
  *
- * [cuttingMethod] (sc-42) narrows the results to listings whose stored method is
- * HAND_CUT or MACHINE_CUT; [CuttingMethodFilter.BOTH] (the default) is the
- * "any" filter and matches every listing regardless of its stored method.
+ * [filters] (sc-42 cutting method, sc-43 price range, sc-44 cuisine AND/OR)
+ * narrow the result set; absent filter values match everything. The default
+ * empty [ListingSearchFilters] is exactly the location-only search.
  */
 interface ListingSearchQuery {
     fun searchNearby(
         center: LatLng,
         radiusMiles: Double,
-        cuttingMethod: CuttingMethodFilter = CuttingMethodFilter.BOTH,
+        filters: ListingSearchFilters = ListingSearchFilters(),
         offset: Int,
         limit: Int,
     ): List<ListingSearchResult>

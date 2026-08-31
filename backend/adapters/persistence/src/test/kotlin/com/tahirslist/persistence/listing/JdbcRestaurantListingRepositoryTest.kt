@@ -5,6 +5,7 @@ import com.tahirslist.domain.account.Email
 import com.tahirslist.domain.restaurant.Cuisine
 import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
+import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
 import com.tahirslist.persistence.account.JdbcAccountRepository
@@ -21,6 +22,7 @@ import org.springframework.jdbc.datasource.DataSourceTransactionManager
 import org.springframework.transaction.support.TransactionTemplate
 import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.utility.DockerImageName
+import java.math.BigDecimal
 import java.util.UUID
 
 /**
@@ -160,6 +162,67 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             mirrored["name"] shouldBe "Mirror Test Grill"
             mirrored["address"] shouldBe "9 Search Rd"
             mirrored["verification_status"] shouldBe "UNVERIFIED"
+        }
+
+        test("save persists price and mirrors it plus the cuisine into the search/store (sc-43/44)") {
+            val owner = accounts.save(Account.new(email = Email("price-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Price Grill",
+                address = "7 Dine Dr",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                cuttingMethod = CuttingMethod.HAND_CUT,
+                ownerId = owner.id,
+                price = Price(BigDecimal("15.50")),
+            )
+
+            val saved = listings.save(listing)
+            saved.price?.value shouldBe BigDecimal("15.50")
+
+            // Price round-trips through the source read path.
+            val found = listings.findById(saved.id)!!
+            found.price?.value shouldBe BigDecimal("15.50")
+
+            // The multi-cuisine store gets the primary cuisine (sc-44) so a
+            // user-added listing is immediately cuisine-filterable.
+            val cuisineRows = jdbc.queryForList(
+                "SELECT cuisine FROM restaurant_listing_cuisines WHERE listing_id = ?",
+                saved.id,
+            )
+            cuisineRows.map { it["cuisine"] } shouldBe listOf("halal")
+
+            // The search projection mirrors the price (sc-43 reads listing_search only).
+            val mirroredPrice = jdbc.queryForObject(
+                "SELECT price FROM listing_search WHERE id = ?",
+                BigDecimal::class.java,
+                saved.id,
+            )
+            mirroredPrice shouldBe BigDecimal("15.50")
+        }
+
+        test("V9 adds the multi-cuisine join table and a price column to the search projection") {
+            val tables = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.tables WHERE table_name = 'restaurant_listing_cuisines'",
+                Int::class.java,
+            )
+            tables shouldBe 1
+
+            val priceCol = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'listing_search' AND column_name = 'price'",
+                Int::class.java,
+            )
+            priceCol shouldBe 1
+        }
+
+        test("V9 enforces a positive price (CHECK) at the DB layer") {
+            shouldThrow<DataIntegrityViolationException> {
+                jdbc.update(
+                    """
+                    INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, verification_status, price)
+                    VALUES ('Neg Grill', '1 St', ST_SetSRID(ST_MakePoint(-74.0, 40.0), 4326)::geography, 'grill', 'UNSPECIFIED', 'UNVERIFIED', -1.0)
+                    """.trimIndent(),
+                )
+            }
         }
 
         test("migration enforces the verification_status contract (only UNVERIFIED)") {

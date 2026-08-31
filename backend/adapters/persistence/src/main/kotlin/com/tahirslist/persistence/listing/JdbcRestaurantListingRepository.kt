@@ -4,6 +4,7 @@ import com.tahirslist.application.listing.RestaurantListingRepository
 import com.tahirslist.domain.restaurant.Cuisine
 import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
+import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Provenance
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -37,11 +38,11 @@ class JdbcRestaurantListingRepository(
         val saved: RestaurantListing = tx.execute {
             val id = jdbc.queryForObject(
                 """
-                INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
+                INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status, price)
                 VALUES (
                     ?, ?,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-                    ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?
                 )
                 RETURNING id
                 """.trimIndent(),
@@ -56,9 +57,22 @@ class JdbcRestaurantListingRepository(
                 listing.brandId,
                 listing.provenance?.value,
                 listing.verificationStatus.name,
+                listing.price?.value,
             ) ?: error("INSERT RETURNING id returned no row")
 
             val withId = listing.copy(id = id)
+            // Multi-cuisine store (sc-44): the single Add-Listing cuisine becomes
+            // one row, so user-added listings are immediately cuisine-filterable.
+            withId.cuisine?.let {
+                jdbc.update(
+                    """
+                    INSERT INTO restaurant_listing_cuisines (listing_id, cuisine)
+                    VALUES (?, ?)
+                    ON CONFLICT (listing_id, cuisine) DO NOTHING
+                    """.trimIndent(),
+                    id, it.value,
+                )
+            }
             mirrorIntoListingSearch(withId)
             withId
         } ?: error("transaction returned no listing")
@@ -75,8 +89,8 @@ class JdbcRestaurantListingRepository(
     private fun mirrorIntoListingSearch(listing: RestaurantListing) {
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status)
-            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?)
+            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?)
             """.trimIndent(),
             listing.id,
             listing.name,
@@ -86,6 +100,7 @@ class JdbcRestaurantListingRepository(
             listing.cuisine?.value,
             listing.cuttingMethod.name,
             listing.verificationStatus.name,
+            listing.price?.value,
         )
     }
 
@@ -100,6 +115,7 @@ class JdbcRestaurantListingRepository(
                 ST_X(location::geometry) AS lng,
                 cuisine,
                 cutting_method,
+                price,
                 owner_id,
                 brand_id,
                 provenance,
@@ -125,6 +141,7 @@ class JdbcRestaurantListingRepository(
                 ST_X(location::geometry) AS lng,
                 cuisine,
                 cutting_method,
+                price,
                 owner_id,
                 brand_id,
                 provenance,
@@ -142,6 +159,7 @@ class JdbcRestaurantListingRepository(
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
         cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
+        price = getBigDecimal("price")?.let { Price(it) },
         ownerId = getObject("owner_id", UUID::class.java),
         brandId = getObject("brand_id", UUID::class.java),
         provenance = getString("provenance")?.let { Provenance(it) },
