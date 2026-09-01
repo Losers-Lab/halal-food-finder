@@ -36,6 +36,27 @@ export type BrowseListing = {
 /** GET /v1/listings/{id} detail payload — BrowseListing + the full-res hero. */
 export type ListingDetail = BrowseListing & { imageUrl: string };
 
+/**
+ * sc-73 Verification Committee pending review (GET /v1/verification-committee/
+ * reviews). Locally typed against the backend's ReviewResponse DTO — the stored
+ * openapi.json/schema.d.ts predate the sc-73 controller, exactly as BrowseListing
+ * does for the listing reads. `suggestedVerdict`/`suggestionConfidence`/
+ * `suggestionReasoning` describe the hosted-AI's conservative suggestion
+ * (APPROVE / DENY / NEEDS_REVIEW); a human decision overrides it.
+ */
+export type VerificationReview = {
+  reviewId: string;
+  listingId: string;
+  submittedBy: string;
+  state: string;
+  suggestedVerdict: string | null;
+  suggestionConfidence: number | null;
+  suggestionReasoning: string | null;
+  decisionOutcome: string | null;
+  decisionReason: string | null;
+  decidedBy: string | null;
+};
+
 // Same-origin by default: Next.js rewrites proxy /v1/* to the backend (see
 // next.config.ts), so no CORS config is needed on the API. Override with
 // NEXT_PUBLIC_API_BASE to point the client at an explicit backend origin.
@@ -72,7 +93,11 @@ export type ApiErrorCode =
   | "invalid_credentials"
   | "owner_not_found"
   | "not_found"
-  | "internal_error";
+  | "internal_error"
+  // sc-73 verification-committee surface.
+  | "forbidden"
+  | "review_not_found"
+  | "review_not_pending";
 
 /**
  * Typed error thrown for any non-2xx API response. `code` is the backend's
@@ -242,4 +267,51 @@ export const api = {
       method: "DELETE",
       signal,
     }),
+
+  /**
+   * GET /v1/verification-committee/reviews — the VC's pending workqueue
+   * (sc-73). Every review in AI_SUGGESTED. Bearer-authenticated; the JWT role
+   * must be VERIFICATION_COMMITTEE (403 `forbidden` for other authenticated
+   * roles, 401 for anonymous).
+   */
+  getVerificationReviews: (signal?: AbortSignal): Promise<VerificationReview[]> =>
+    request("/v1/verification-committee/reviews", undefined, {
+      method: "GET",
+      signal,
+    }),
+
+  /**
+   * POST /v1/verification-committee/reviews/{id}/approve — approve a review,
+   * promoting the listing to VERIFIED (the only path to a verified listing).
+   * `reason` is optional. Returns the updated review. 404 review_not_found,
+   * 409 review_not_pending, 403 non-VC.
+   */
+  approveVerificationReview: (
+    id: string,
+    reason?: string,
+    signal?: AbortSignal,
+  ): Promise<VerificationReview> =>
+    request(
+      `/v1/verification-committee/reviews/${encodeURIComponent(id)}/approve`,
+      // Optional reason — a blank/whitespace-only reason is omitted entirely
+      // so the backend never records an empty decision note.
+      { reason: reason?.trim() || undefined },
+      { signal },
+    ),
+
+  /**
+   * POST /v1/verification-committee/reviews/{id}/deny — deny a review; the
+   * listing stays UNVERIFIED. `reason` is required (the backend rejects a
+   * blank one with 400). Returns the updated review.
+   */
+  denyVerificationReview: (
+    id: string,
+    reason: string,
+    signal?: AbortSignal,
+  ): Promise<VerificationReview> =>
+    request(
+      `/v1/verification-committee/reviews/${encodeURIComponent(id)}/deny`,
+      { reason },
+      { signal },
+    ),
 };

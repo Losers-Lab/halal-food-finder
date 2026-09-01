@@ -499,3 +499,80 @@ describe("api client", () => {
     });
   });
 });
+
+describe("verification-committee review APIs (sc-73)", () => {
+  const reviewBody = {
+    reviewId: "r-1",
+    listingId: "l-1",
+    submittedBy: "u-1",
+    state: "AI_SUGGESTED",
+    suggestedVerdict: "APPROVE",
+    suggestionConfidence: 0.97,
+    suggestionReasoning: null,
+    decisionOutcome: null,
+    decisionReason: null,
+    decidedBy: null,
+  };
+
+  it("GET /v1/verification-committee/reviews returns the pending queue", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse([reviewBody], 200));
+    const result = await api.getVerificationReviews();
+    expect(result).toHaveLength(1);
+    expect(result[0].reviewId).toBe("r-1");
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/verification-committee/reviews",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
+
+  it("maps a non-VC 403 to a forbidden ApiError (frontend gate handles it)", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse({ code: "forbidden" }, 403));
+    await expect(api.getVerificationReviews()).rejects.toMatchObject({
+      status: 403,
+      code: "forbidden",
+    });
+  });
+
+  it("approve POSTs /approve with an optional reason", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse(reviewBody, 200));
+    const result = await api.approveVerificationReview("r-1");
+    expect(result.reviewId).toBe("r-1");
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/verification-committee/reviews/r-1/approve",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ reason: undefined }),
+      }),
+    );
+  });
+
+  it("omit a blank approve reason (sends no reason key)", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse(reviewBody, 200));
+    await api.approveVerificationReview("r-1", " ");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({ body: JSON.stringify({ reason: undefined }) }),
+    );
+  });
+
+  it("deny POSTs /deny and includes the required reason", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse(reviewBody, 200));
+    const result = await api.denyVerificationReview("r-1", "Cert expired.");
+    expect(result.reviewId).toBe("r-1");
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/verification-committee/reviews/r-1/deny",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ reason: "Cert expired." }),
+      }),
+    );
+  });
+
+  it("maps a 409 re-decision to review_not_pending", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse({ code: "review_not_pending" }, 409));
+    await expect(api.denyVerificationReview("r-1", "nope")).rejects.toMatchObject({
+      status: 409,
+      code: "review_not_pending",
+    });
+  });
+});
