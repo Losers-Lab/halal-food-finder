@@ -14,6 +14,10 @@ dependencies {
     // Object storage adapter (sc-157): provides the S3ImagePort bean when
     // `app.storage.s3.endpoint` is configured; bootstrap falls back to in-memory.
     implementation(project(":storage-s3"))
+    // Hosted vision verification provider (sc-117 seam): active when
+    // `app.verification.hosted.endpoint` is configured; bootstrap falls back to
+    // the safe DeferToHumanProvider otherwise (sc-46).
+    implementation(project(":verification-ai"))
 
     implementation(libs.spring.boot.starter.web)
     implementation(libs.spring.boot.starter.actuator)
