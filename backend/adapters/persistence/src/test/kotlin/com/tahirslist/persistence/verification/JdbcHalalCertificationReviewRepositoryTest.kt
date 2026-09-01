@@ -8,13 +8,17 @@ import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.verification.HalalCertificationReview
 import com.tahirslist.domain.verification.SuggestionVerdict
+import com.tahirslist.domain.verification.VerificationOutcome
 import com.tahirslist.domain.verification.VerificationSuggestion
+import com.tahirslist.domain.verification.VerificationState
 import com.tahirslist.persistence.account.JdbcAccountRepository
 import com.tahirslist.persistence.listing.JdbcRestaurantListingRepository
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
+import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.flywaydb.core.Flyway
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.jdbc.core.JdbcTemplate
@@ -167,6 +171,79 @@ class JdbcHalalCertificationReviewRepositoryTest : FunSpec() {
             shouldThrow<DataIntegrityViolationException> {
                 reviews.save(HalalCertificationReview.create(phantom, owner, now))
             }
+        }
+
+        test("findById returns the persisted review with its full aggregate") {
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val vc = newAccount()
+            val approved = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.APPROVE, 0.95, "clear cert"), now)
+                .beginHumanReview(now)
+                .approve(decidedBy = vc, reason = "cert matches", now = now)
+            reviews.save(approved)
+
+            val found = reviews.findById(approved.id)
+
+            // ReviewDecision is a plain class (identity equality), so compare fields.
+            found!!.state shouldBe VerificationState.APPROVED
+            found.listingId shouldBe listing
+            found.submittedBy shouldBe owner
+            found.suggestion!!.verdict shouldBe SuggestionVerdict.APPROVE
+            found.suggestion!!.reasoning shouldBe "clear cert"
+            found.decision!!.outcome shouldBe VerificationOutcome.APPROVED
+            found.decision!!.decidedBy shouldBe vc
+            found.decision!!.reason shouldBe "cert matches"
+        }
+
+        test("findById returns null for an unknown review") {
+            reviews.findById(UUID.randomUUID()) shouldBe null
+        }
+
+        test("findByState returns only reviews in that state") {
+            jdbc.update("DELETE FROM halal_certification_reviews")
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val pending = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.4), now)
+            val deniedReview = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.4), now)
+                .beginHumanReview(now)
+                .deny(decidedBy = newAccount(), reason = "unreadable", now = now)
+            // distinct review ids (a fresh create, not a transition of `pending`)
+            deniedReview.id shouldNotBe pending.id
+            reviews.save(pending)
+            reviews.save(deniedReview)
+
+            val pendingIds = reviews.findByState(VerificationState.AI_SUGGESTED).map { it.id }
+            val deniedIds = reviews.findByState(VerificationState.DENIED).map { it.id }
+
+            pendingIds shouldBe listOf(pending.id)
+            deniedIds shouldBe listOf(deniedReview.id)
+            reviews.findByState(VerificationState.APPROVED).shouldBeEmpty()
+        }
+
+        test("save is an upsert: re-saving a review across a state transition updates the same row") {
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val vc = newAccount()
+            val pending = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.APPROVE, 0.95), now)
+            reviews.save(pending)
+
+            val approved = pending.beginHumanReview(now).approve(decidedBy = vc, reason = "ok", now = now)
+            reviews.save(approved)
+
+            // still exactly one row, now in the decided state
+            val rows = jdbc.queryForList("SELECT count(*) FROM halal_certification_reviews WHERE id = ?", pending.id)
+            rows.first().values.first() shouldBe 1L
+            val found = reviews.findById(pending.id)
+            found!!.state shouldBe VerificationState.APPROVED
+            found.decision!!.decidedBy shouldBe vc
         }
 
         test("an out-of-machine state is rejected by the CHECK constraint") {

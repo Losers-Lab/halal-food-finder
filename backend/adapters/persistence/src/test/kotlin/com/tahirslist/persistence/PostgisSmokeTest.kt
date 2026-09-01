@@ -58,10 +58,11 @@ class PostgisSmokeTest : FunSpec() {
             // price + multi-cuisine columns (V9), the sc-45/72 rating
             // column (V10), the sc-118 alcohol_served column (V11), the
             // sc-50/51/52 favorites table (V12), the sc-46
-            // halal_certification_reviews table (V13), and the sc-120
-            // ai_consent_at column on reviews (V14) all
+            // halal_certification_reviews table (V13), the sc-120
+            // ai_consent_at column on reviews (V14), and the sc-73
+            // VERIFIED-status opening on restaurant_listings (V15) all
             // run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 14
+            result.migrationsExecuted shouldBe 15
         }
     }
 }
