@@ -19,8 +19,8 @@ import java.util.UUID
  *    for the same (listing, variant) (last-write-wins).
  *  - [load] returns the stored variant, or `null` if none was ever saved.
  *  - Save/load must round-trip bytes + contentType exactly.
- *  - Variants are independent: writing THUMBNAIL never affects FULL and vice
- *    versa.
+ *  - Variants are independent: writing one thumbnail width (or FULL) never
+ *    affects any other variant.
  */
 interface ImagePort {
     fun save(listingId: UUID, variant: ImageVariant, contentType: String, bytes: ByteArray)

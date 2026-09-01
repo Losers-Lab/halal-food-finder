@@ -47,7 +47,7 @@ class IngestSeedHeroPhotosTest : FunSpec() {
 
             results.single().status shouldBe SeedPhotoIngestResult.Status.INGESTED
             port.load(id, ImageVariant.FULL).shouldNotBeNull()
-            port.load(id, ImageVariant.THUMBNAIL).shouldNotBeNull()
+            ImageVariant.thumbnailVariants.forEach { port.load(id, it).shouldNotBeNull() }
         }
 
         test("unresolved photo is reported WITHOUT touching the store") {

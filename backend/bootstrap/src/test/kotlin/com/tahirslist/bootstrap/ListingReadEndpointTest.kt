@@ -116,6 +116,10 @@ class ListingReadEndpointTest : PostgresBootTest() {
             detail.get("imageUrl").asText().contains("variant=full") shouldBe true
             detail.get("imageThumbnailUrl").asText().contains("variant=thumbnail") shouldBe true
             detail.get("imageThumbnailUrl").asText().contains("variant=full") shouldBe false
+
+            // Detail hero also gets the responsive sc-183 width set.
+            detail.has("imageSrcset") shouldBe true
+            detail.get("imageSrcset").size() shouldBe ImageVariant.thumbnailVariants.size
         }
 
         test("detail for an unknown listing returns 404") {
@@ -128,7 +132,7 @@ class ListingReadEndpointTest : PostgresBootTest() {
             val id = UUID.randomUUID()
             val thumbBytes = "thumb-bytes-0001".toByteArray()
             val fullBytes = "full-bytes-9001".toByteArray()
-            images.save(id, ImageVariant.THUMBNAIL, "image/jpeg", thumbBytes)
+            images.save(id, ImageVariant.THUMBNAIL_400, "image/jpeg", thumbBytes)
             images.save(id, ImageVariant.FULL, "image/png", fullBytes)
 
             val thumb = getBytes("/v1/listings/$id/image?variant=thumbnail")
@@ -144,9 +148,49 @@ class ListingReadEndpointTest : PostgresBootTest() {
             full.body!!.contentEquals(fullBytes) shouldBe true
         }
 
+        test("the image proxy serves each sc-183 thumbnail width as a distinct variant") {
+            val id = UUID.randomUUID()
+            val slugByVariant = mapOf(
+                ImageVariant.THUMBNAIL_400 to "thumbnail",
+                ImageVariant.THUMBNAIL_768 to "thumbnail_768",
+                ImageVariant.THUMBNAIL_1280 to "thumbnail_1280",
+                ImageVariant.THUMBNAIL_1920 to "thumbnail_1920",
+            )
+            slugByVariant.forEach { (variant, _) ->
+                images.save(id, variant, "image/jpeg", "${variant.name}-bytes".toByteArray())
+            }
+
+            slugByVariant.forEach { (variant, slug) ->
+                val resp = getBytes("/v1/listings/$id/image?variant=$slug")
+                resp.statusCode shouldBe HttpStatus.OK
+                resp.headers.contentType shouldBe MediaType.parseMediaType("image/jpeg")
+                resp.body!!.contentEquals("${variant.name}-bytes".toByteArray()) shouldBe true
+            }
+        }
+
+        test("browse cards carry an imageSrcset covering every sc-183 width, never the full-res variant") {
+            val body = restTemplate.getForEntity("/v1/listings", String::class.java).body!!
+
+            val cards: JsonNode = objectMapper.readTree(body)
+            cards.forEach { card ->
+                card.has("imageSrcset") shouldBe true
+                val srcset = card.get("imageSrcset")
+                srcset.isArray shouldBe true
+                srcset.size() shouldBe ImageVariant.thumbnailVariants.size
+                val widths = srcset.map { it.get("width").asInt() }
+                widths shouldBe listOf(400, 768, 1280, 1920)
+                srcset.forEach { entry ->
+                    val url = entry.get("url").asText()
+                    url.contains("/v1/listings/") shouldBe true
+                    // srcset is a thumbnail *set* — full-res never leaks into it.
+                    url.contains("variant=full") shouldBe false
+                }
+            }
+        }
+
         test("the image proxy returns 400 for an unknown variant") {
             val id = UUID.randomUUID()
-            images.save(id, ImageVariant.THUMBNAIL, "image/jpeg", "x".toByteArray())
+            images.save(id, ImageVariant.THUMBNAIL_400, "image/jpeg", "x".toByteArray())
 
             val resp = getBytes("/v1/listings/$id/image?variant=blur")
 

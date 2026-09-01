@@ -11,32 +11,35 @@ import javax.imageio.ImageIO
  * Pure JDK image resize for thumbnail pre-generation (docs/design/sc-157-image-variants.md).
  *
  * Uses `ImageIO` + a high-quality `Graphics2D` downscale — no third-party
- * imaging dependency, so the thumbnail step stays in the framework-free
+ * imaging dependency, so the resize step stays in the framework-free
  * application layer (and in the classpath of every adapter).
  *
  * Policy:
  *  - Output is re-encoded to `image/jpeg` (quality 0.85) for photographic
  *    source; PNG with alpha is kept as PNG so transparency is preserved.
- *  - **Never upscales**: the thumbnail width is `min(targetWidth, originalWidth)`.
+ *  - **Never upscales**: the resized width is `min(targetWidth, originalWidth)`.
  *  - Aspect ratio is preserved; only width is the target.
  *  - [IllegalArgumentException] on unreadable / unsupported input (empty bytes,
  *    not a decodable image) — a symptom of bad data, surfaced loudly not silently.
+ *
+ * sc-183: multiple widths are produced at ingest via [resizeToWidth], covering
+ * the monitor's max resolution (~1920) rather than any live viewport.
  */
 object ImageResizer {
 
     private const val JPEG_QUALITY = 0.85f
 
     /**
-     * Produce a thumbnail no wider than [targetWidth] (default: the
-     * [ImageVariant.THUMBNAIL] width), preserving aspect ratio.
+     * Produce an image no wider than [targetWidth], preserving aspect ratio.
      *
      * @return the resized image as [StoredImage] with a concrete contentType
-     *         (`image/jpeg` or `image/png`).
+     *         (`image/jpeg` or `image/png`). An original already narrower than
+     *         [targetWidth] is returned unchanged (never upscaled).
      * @throws IllegalArgumentException if [original.bytes] is not a decodable image.
      */
-    fun resizeToThumb(
+    fun resizeToWidth(
         original: StoredImage,
-        targetWidth: Int = ImageVariant.THUMBNAIL.widthPx ?: 400,
+        targetWidth: Int,
     ): StoredImage {
         if (targetWidth <= 0) throw IllegalArgumentException("targetWidth must be positive")
 
