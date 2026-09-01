@@ -9,8 +9,10 @@ import { RestaurantPhoto } from "./RestaurantPhoto";
 import { FavoriteButton } from "./FavoriteButton";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
+  cardThumbFallback,
+  cardThumbSource,
   verificationStatus,
-} from "@/lib/listings/seed";
+} from "@/lib/listings/restaurants";
 
 /**
  * Listing card — docs/design/search-browse.md §"Listing cards (grid)" and
@@ -20,8 +22,18 @@ import {
  *
  * Whole-card click is enhancement; the name link is the accessible primary path.
  *
- * Image (sc-157): the card requests the SMALL thumbnail variant ONLY, lazy —
- * never the full-res original ("no oversized fetch on cards").
+ * Image (sc-183): the card sources from the WIDEST backend `imageSrcset` title
+ * variant (via `cardThumbSource`), so next/image's responsive srcset —
+ * generated from `sizes` — is downscaled from a high-res source and serves
+ * sharp at every width (mobile 100vw @ DPR3 → desktop). `sizes="100vw"` follows
+ * the FOUNDER directive (sc-183): the srcset sizing baseline is the monitor's
+ * MAX resolution, not the live window/panel width — so on a 1920-wide display
+ * the browser picks the max-monitor-context source at initial load, with NO
+ * re-render / re-fetch on any resize (pure srcset behavior, no resize listeners).
+ * Never requests the full-res original on cards. If the widest source 404s
+ * (legacy listing ingested before the multi-width backend), RestaurantPhoto
+ * steps down to `fallbackSrc` (the guaranteed ≤400px thumbnail) — a valid photo
+ * always renders, per sc-157. See RestaurantPhoto.
  */
 export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
   const verified = verificationStatus(restaurant) === "VERIFIED";
@@ -37,12 +49,13 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
 
   return (
     <article className="group relative overflow-hidden rounded-lg border-[1.5px] border-kraft-200 bg-ink-0 shadow-card transition-transform duration-200 ease-out hover:-translate-y-0.5 hover:shadow-pop motion-reduce:transition-none motion-reduce:hover:translate-y-0">
-      {/* Photo block — thumbnail variant only (sc-157) */}
+      {/* Photo block — widest title variant sourced for a sharp srcset (sc-183) */}
       <div className="relative aspect-video bg-kraft-100">
         <RestaurantPhoto
-          src={restaurant.imageThumbnailUrl}
+          src={cardThumbSource(restaurant)}
+          fallbackSrc={cardThumbFallback(restaurant)}
           alt={restaurant.name}
-          sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+          sizes="100vw"
         />
         {/* Save heart (top-left) + verified mark (top-right) never overlap. */}
         <div className="absolute left-3 top-3">

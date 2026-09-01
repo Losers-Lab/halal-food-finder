@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  cardThumbFallback,
+  cardThumbSource,
   expiryState,
   formatDate,
   verificationStatus,
@@ -71,6 +73,64 @@ describe("expiryState", () => {
 describe("formatDate", () => {
   it("renders a human date, never raw ISO", () => {
     expect(formatDate("2026-08-12T00:00:00Z")).toMatch(/Aug 12, 2026/);
+  });
+});
+
+describe("cardThumbSource (sc-183)", () => {
+  it("returns the WIDEST imageSrcset variant so the card srcset downscales sharply", () => {
+    const r = restaurant({
+      imageThumbnailUrl: "/v1/listings/l-x/image?variant=thumbnail",
+      imageSrcset: [
+        { width: 400, url: "/v1/listings/l-x/image?variant=thumbnail" },
+        { width: 768, url: "/v1/listings/l-x/image?variant=thumbnail_768" },
+        { width: 1280, url: "/v1/listings/l-x/image?variant=thumbnail_1280" },
+        { width: 1920, url: "/v1/listings/l-x/image?variant=thumbnail_1920" },
+      ],
+    });
+    expect(cardThumbSource(r)).toBe("/v1/listings/l-x/image?variant=thumbnail_1920");
+  });
+
+  it("falls back to the small thumbnail URL when no srcset is published (pre-ingest/legacy)", () => {
+    const r = restaurant({
+      imageThumbnailUrl: "/v1/listings/l-x/image?variant=thumbnail",
+    });
+    expect(cardThumbSource(r)).toBe("/v1/listings/l-x/image?variant=thumbnail");
+  });
+
+  it("returns undefined when there is no image at all (render the placeholder)", () => {
+    expect(cardThumbSource(restaurant({}))).toBeUndefined();
+  });
+});
+
+describe("cardThumbFallback (sc-183 legacy retry)", () => {
+  it("returns the guaranteed ≤400px thumbnail so a widest-variant 404 still renders", () => {
+    const r = restaurant({
+      imageThumbnailUrl: "/v1/listings/l-x/image?variant=thumbnail",
+      imageSrcset: [
+        { width: 400, url: "/v1/listings/l-x/image?variant=thumbnail" },
+        { width: 768, url: "/v1/listings/l-x/image?variant=thumbnail_768" },
+        { width: 1280, url: "/v1/listings/l-x/image?variant=thumbnail_1280" },
+        { width: 1920, url: "/v1/listings/l-x/image?variant=thumbnail_1920" },
+      ],
+    });
+    // Legacy row: only thumbnail(400)+full stored; imageThumbnailUrl is the one
+    // source guaranteed to serve 200 real bytes.
+    expect(cardThumbFallback(r)).toBe("/v1/listings/l-x/image?variant=thumbnail");
+  });
+
+  it("defensively falls to the narrowest srcset entry when no thumbnail URL exists", () => {
+    const r = restaurant({
+      imageSrcset: [
+        { width: 1920, url: "/v1/listings/l-x/image?variant=thumbnail_1920" },
+        { width: 400, url: "/v1/listings/l-x/image?variant=thumbnail" },
+        { width: 1280, url: "/v1/listings/l-x/image?variant=thumbnail_1280" },
+      ],
+    });
+    expect(cardThumbFallback(r)).toBe("/v1/listings/l-x/image?variant=thumbnail");
+  });
+
+  it("returns undefined when there is no image at all", () => {
+    expect(cardThumbFallback(restaurant({}))).toBeUndefined();
   });
 });
 

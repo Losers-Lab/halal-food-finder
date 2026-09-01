@@ -72,6 +72,15 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
     cuisine: b.cuisine ?? "",
     cuttingMethod: b.cuttingMethod as CuttingMethod,
     imageThumbnailUrl: sameOriginPath(b.imageThumbnailUrl),
+    // sc-183: normalize every srcset entry URL to the same-origin proxy path.
+    ...(b.imageSrcset?.length
+      ? {
+          imageSrcset: b.imageSrcset.map((entry) => ({
+            width: entry.width,
+            url: sameOriginPath(entry.url),
+          })),
+        }
+      : {}),
     ...("imageUrl" in b ? { imageUrl: sameOriginPath(b.imageUrl) } : {}),
   };
 }

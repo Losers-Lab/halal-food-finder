@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -93,13 +93,44 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
     ).toHaveAttribute("href", "/restaurants/l-2");
   });
 
-  it("cards request the SMALL thumbnail variant only — never the full-res original (sc-157)", async () => {
+  it("cards source the WIDEST imageSrcset title variant — never the full-res original (sc-183)", async () => {
     searchMock.mockResolvedValue([
       restaurant({
         id: "l-1",
         name: "Al-Amir Grill",
         imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
+        imageSrcset: [
+          { width: 400, url: "/v1/listings/l-1/image?variant=thumbnail" },
+          { width: 768, url: "/v1/listings/l-1/image?variant=thumbnail_768" },
+          { width: 1280, url: "/v1/listings/l-1/image?variant=thumbnail_1280" },
+          { width: 1920, url: "/v1/listings/l-1/image?variant=thumbnail_1920" },
+        ],
         imageUrl: "/v1/listings/l-1/image?variant=full",
+      }),
+    ]);
+    render(<SearchPage />);
+
+    const img = await screen.findByRole("img", { name: "Al-Amir Grill" });
+    // next/image's srcset is downscaled from the widest title variant so every
+    // srcset width is sharp (mobile 100vw @ DPR3 → desktop).
+    expect(img).toHaveAttribute(
+      "src",
+      "/v1/listings/l-1/image?variant=thumbnail_1920",
+    );
+    // sizes="100vw" = founder's max-monitor-context baseline (sc-183).
+    expect(img).toHaveAttribute("sizes", "100vw");
+    // The full-res URL exists on the read-model but a card must not request it.
+    expect(img).not.toHaveAttribute("src", "/v1/listings/l-1/image?variant=full");
+    // Lazy: off-screen cards defer the transfer.
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  it("cards fall back to the small thumbnail src when the backend sends no srcset", async () => {
+    searchMock.mockResolvedValue([
+      restaurant({
+        id: "l-1",
+        name: "Al-Amir Grill",
+        imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
       }),
     ]);
     render(<SearchPage />);
@@ -109,10 +140,6 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
       "src",
       "/v1/listings/l-1/image?variant=thumbnail",
     );
-    // The full-res URL exists on the read-model but a card must not request it.
-    expect(img).not.toHaveAttribute("src", "/v1/listings/l-1/image?variant=full");
-    // Lazy: off-screen cards defer the transfer.
-    expect(img).toHaveAttribute("loading", "lazy");
   });
 
   it("shows a verified badge on verified cards and an unverified tag otherwise", async () => {
@@ -154,5 +181,42 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
     await userEvent.click(handCut);
     expect(searchMock).toHaveBeenCalledWith("", "HAND_CUT");
     await waitFor(() => expect(handCut).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  it("a legacy card still renders its stored thumbnail when the widest srcset variant 404s (sc-183 fallback)", async () => {
+    searchMock.mockResolvedValue([
+      restaurant({
+        id: "l-1",
+        name: "Al-Amir Grill",
+        // Backend advertises the full width set for every listing, but a row
+        // ingested before multi-width thumbnails stored only thumbnail(400)+full.
+        imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
+        imageSrcset: [
+          { width: 400, url: "/v1/listings/l-1/image?variant=thumbnail" },
+          { width: 768, url: "/v1/listings/l-1/image?variant=thumbnail_768" },
+          { width: 1280, url: "/v1/listings/l-1/image?variant=thumbnail_1280" },
+          { width: 1920, url: "/v1/listings/l-1/image?variant=thumbnail_1920" },
+        ],
+      }),
+    ]);
+    render(<SearchPage />);
+
+    const img = await screen.findByRole("img", { name: "Al-Amir Grill" });
+    // Card sources the widest variant first (sharp srcset for fully-ingested rows).
+    expect(img).toHaveAttribute(
+      "src",
+      "/v1/listings/l-1/image?variant=thumbnail_1920",
+    );
+
+    // Legacy row: the widest variant was never stored → 404.
+    act(() => fireEvent.error(img));
+
+    // The card steps down to the guaranteed thumbnail — a valid photo always
+    // renders (sc-157) instead of dropping to the blank placeholder.
+    const fallbackImg = screen.getByRole("img", { name: "Al-Amir Grill" });
+    expect(fallbackImg).toHaveAttribute(
+      "src",
+      "/v1/listings/l-1/image?variant=thumbnail",
+    );
   });
 });
