@@ -1,7 +1,10 @@
 package com.tahirslist.persistence.listing
 
 import com.tahirslist.application.listing.RestaurantListingRepository
+import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalItem
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Provenance
@@ -16,8 +19,9 @@ import java.util.UUID
 
 /**
  * JDBC implementation of the [RestaurantListingRepository] port against the
- * `restaurant_listings` table (see V4__create_restaurant_listings.sql). Spring
- * JDBC only — deliberately boring and explicit. The database owns id generation.
+ * `restaurant_listings` table (see V4__create_restaurant_listings.sql and
+ * V18__sc_119_partial_halal.sql). Spring JDBC only — deliberately boring and
+ * explicit. The database owns id generation.
  *
  * A location point is written with `ST_SetSRID(ST_MakePoint(lng, lat), 4326)`
  * (ST_MakePoint takes x=longitude first) and cast to the `geography(Point,4326)`
@@ -27,6 +31,12 @@ import java.util.UUID
  * [save] writes the denormalised `listing_search` projection in the SAME
  * transaction, so a newly-added listing is immediately searchable (sc-10) and
  * the two tables can never diverge on this write path.
+ *
+ * sc-119: the per-item halal scope is stored in the `restaurant_halal_items`
+ * child table, and [mirrorIntoListingSearch] is the cross-contamination INDEX
+ * GATE — only [CrossContamination.isIndexQualified] listings are present in
+ * `listing_search`; non-qualified rows are removed from the mirror so the index
+ * never holds PRESENT/UNCERTAIN listings.
  */
 @Repository
 class JdbcRestaurantListingRepository(
@@ -38,11 +48,11 @@ class JdbcRestaurantListingRepository(
         val saved: RestaurantListing = tx.execute {
             val id = jdbc.queryForObject(
                 """
-                INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served)
+                INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
                 VALUES (
                     ?, ?,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 RETURNING id
                 """.trimIndent(),
@@ -60,6 +70,8 @@ class JdbcRestaurantListingRepository(
                 listing.price?.value,
                 listing.rating?.value,
                 listing.alcoholServed,
+                listing.halalScope.name,
+                listing.crossContamination.name,
             ) ?: error("INSERT RETURNING id returned no row")
 
             val withId = listing.copy(id = id)
@@ -75,6 +87,8 @@ class JdbcRestaurantListingRepository(
                     id, it.value,
                 )
             }
+            // Per-item halal scope (sc-119), mirroring the multi-cuisine shape.
+            replaceHalalItems(id, withId.halalItems)
             mirrorIntoListingSearch(withId)
             withId
         } ?: error("transaction returned no listing")
@@ -87,25 +101,58 @@ class JdbcRestaurantListingRepository(
      * `listing_search`. Keeping it in the same transaction as the source write
      * guarantees a listing is either in both tables or neither — never only the
      * source. Partial-failure of either INSERT rolls the whole save back.
+     *
+     * sc-119 cross-contamination INDEX GATE: a listing is present in the mirror
+     * ONLY when [CrossContamination.NO_CROSS_CONTAMINATION]. PRESENT/UNCERTAIN
+     * listings are deleted from the index (removed if previously present).
      */
     private fun mirrorIntoListingSearch(listing: RestaurantListing) {
-        jdbc.update(
-            """
-            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, alcohol_served)
-            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?)
-            """.trimIndent(),
-            listing.id,
-            listing.name,
-            listing.address,
-            listing.location.lng,
-            listing.location.lat,
-            listing.cuisine?.value,
-            listing.isHandCut,
-            listing.verificationStatus.name,
-            listing.price?.value,
-            listing.rating?.value,
-            listing.alcoholServed,
-        )
+        if (listing.crossContamination.isIndexQualified()) {
+            jdbc.update(
+                """
+                INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
+                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT (id) DO UPDATE SET
+                    name = EXCLUDED.name,
+                    address = EXCLUDED.address,
+                    location = EXCLUDED.location,
+                    cuisine = EXCLUDED.cuisine,
+                    is_hand_cut = EXCLUDED.is_hand_cut,
+                    verification_status = EXCLUDED.verification_status,
+                    price = EXCLUDED.price,
+                    rating = EXCLUDED.rating,
+                    alcohol_served = EXCLUDED.alcohol_served,
+                    halal_scope = EXCLUDED.halal_scope,
+                    cross_contamination = EXCLUDED.cross_contamination
+                """.trimIndent(),
+                listing.id,
+                listing.name,
+                listing.address,
+                listing.location.lng,
+                listing.location.lat,
+                listing.cuisine?.value,
+                listing.isHandCut,
+                listing.verificationStatus.name,
+                listing.price?.value,
+                listing.rating?.value,
+                listing.alcoholServed,
+                listing.halalScope.name,
+                listing.crossContamination.name,
+            )
+        } else {
+            // Index gate: remove non-qualified listings from the search index.
+            jdbc.update("DELETE FROM listing_search WHERE id = ?", listing.id)
+        }
+    }
+
+    private fun replaceHalalItems(listingId: UUID, items: Set<HalalItem>) {
+        jdbc.update("DELETE FROM restaurant_halal_items WHERE listing_id = ?", listingId)
+        items.forEach {
+            jdbc.update(
+                "INSERT INTO restaurant_halal_items (listing_id, name, is_halal) VALUES (?, ?, ?)",
+                listingId, it.name, it.isHalal,
+            )
+        }
     }
 
     override fun findById(id: UUID): RestaurantListing? {
@@ -122,6 +169,8 @@ class JdbcRestaurantListingRepository(
                 price,
                 rating,
                 alcohol_served,
+                halal_scope,
+                cross_contamination,
                 owner_id,
                 brand_id,
                 provenance,
@@ -172,6 +221,8 @@ class JdbcRestaurantListingRepository(
                 price,
                 rating,
                 alcohol_served,
+                halal_scope,
+                cross_contamination,
                 owner_id,
                 brand_id,
                 provenance,
@@ -192,10 +243,27 @@ class JdbcRestaurantListingRepository(
         price = getBigDecimal("price")?.let { Price(it) },
         rating = getBigDecimal("rating")?.let { Rating(it) },
         alcoholServed = getBoolean("alcohol_served"),
+        halalScope = HalalScope.valueOf(getString("halal_scope")),
+        crossContamination = CrossContamination.valueOf(getString("cross_contamination")),
         ownerId = getObject("owner_id", UUID::class.java),
         brandId = getObject("brand_id", UUID::class.java),
         provenance = getString("provenance")?.let { Provenance(it) },
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
         createdAt = getTimestamp("created_at").toInstant(),
-    )
+    ).withHalalItems()
+
+    /** Load the per-item halal scope child rows (sc-119). */
+    private fun RestaurantListing.withHalalItems(): RestaurantListing {
+        val items = jdbc.query(
+            """
+            SELECT name, is_halal
+            FROM restaurant_halal_items
+            WHERE listing_id = ?
+            ORDER BY name
+            """.trimIndent(),
+            { rs, _ -> HalalItem(name = rs.getString("name"), isHalal = rs.getBoolean("is_halal")) },
+            id,
+        )
+        return if (items.isEmpty()) this else copy(halalItems = items.toSet())
+    }
 }

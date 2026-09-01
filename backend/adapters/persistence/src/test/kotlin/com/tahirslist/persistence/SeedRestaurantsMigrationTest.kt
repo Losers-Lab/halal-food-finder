@@ -1,5 +1,6 @@
 package com.tahirslist.persistence
 
+import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Provenance
 import com.tahirslist.domain.restaurant.VerificationStatus
 import com.tahirslist.persistence.listing.JdbcRestaurantListingRepository
@@ -196,7 +197,7 @@ class SeedRestaurantsMigrationTest : FunSpec() {
                         (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)
                     VALUES (
                         'Ghost', '1 St', ST_SetSRID(ST_MakePoint(1.0, 1.0), 4326)::geography,
-                        NULL, 'UNSPECIFIED', NULL, '${UUID.randomUUID()}', 'research-seed / photon-geocode', 'UNVERIFIED'
+                        NULL, NULL, NULL, '${UUID.randomUUID()}', 'research-seed / photon-geocode', 'UNVERIFIED'
                     )
                     """.trimIndent(),
                 )
@@ -216,6 +217,9 @@ class SeedRestaurantsMigrationTest : FunSpec() {
             found.provenance shouldBe Provenance.RESEARCH_SEED_PHOTON_GEOCODE
             found.verificationStatus shouldBe VerificationStatus.UNVERIFIED
             found.isHandCut shouldBe null
+            // Seed rows are backfilled as index-qualified (no cross-contamination)
+            // so the curated index stays searchable (sc-119 backfill decision).
+            found.crossContamination shouldBe CrossContamination.NO_CROSS_CONTAMINATION
             found.brandId.shouldNotBeNull()
             // OSM node coordinate round-trips.
             found.location.lat shouldBe (43.682921 plusOrMinus 0.0001)
