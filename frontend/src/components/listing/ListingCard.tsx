@@ -8,6 +8,7 @@ import {
 import { RestaurantPhoto } from "./RestaurantPhoto";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
+  cardThumbFallback,
   cardThumbSource,
   verificationStatus,
 } from "@/lib/listings/restaurants";
@@ -28,7 +29,10 @@ import {
  * MAX resolution, not the live window/panel width — so on a 1920-wide display
  * the browser picks the max-monitor-context source at initial load, with NO
  * re-render / re-fetch on any resize (pure srcset behavior, no resize listeners).
- * Never requests the full-res original on cards.
+ * Never requests the full-res original on cards. If the widest source 404s
+ * (legacy listing ingested before the multi-width backend), RestaurantPhoto
+ * steps down to `fallbackSrc` (the guaranteed ≤400px thumbnail) — a valid photo
+ * always renders, per sc-157. See RestaurantPhoto.
  */
 export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
   const verified = verificationStatus(restaurant) === "VERIFIED";
@@ -48,6 +52,7 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
       <div className="relative aspect-video bg-kraft-100">
         <RestaurantPhoto
           src={cardThumbSource(restaurant)}
+          fallbackSrc={cardThumbFallback(restaurant)}
           alt={restaurant.name}
           sizes="100vw"
         />

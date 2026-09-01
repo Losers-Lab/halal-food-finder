@@ -67,4 +67,62 @@ describe("RestaurantPhoto", () => {
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(container.querySelector("svg")).toBeInTheDocument();
   });
+
+  it("falls back to fallbackSrc when the primary (widest) variant 404s, instead of a blank placeholder (sc-183 legacy listing)", () => {
+    const { container } = render(
+      <RestaurantPhoto
+        src="/v1/listings/l-1/image?variant=thumbnail_1920"
+        fallbackSrc="/v1/listings/l-1/image?variant=thumbnail"
+        alt="Al-Amir Grill"
+        sizes="100vw"
+      />,
+    );
+
+    // The widest variant renders first...
+    let img = screen.getByRole("img", { name: "Al-Amir Grill" });
+    expect(img).toHaveAttribute("src", "/v1/listings/l-1/image?variant=thumbnail_1920");
+
+    // ...fails (404: variant not stored for a pre-multi-width listing)...
+    act(() => fireEvent.error(img));
+
+    // ...and the card steps down to the guaranteed ≤400px thumbnail — no blank.
+    img = screen.getByRole("img", { name: "Al-Amir Grill" });
+    expect(img).toHaveAttribute("src", "/v1/listings/l-1/image?variant=thumbnail");
+    expect(container.querySelector("svg")).not.toBeInTheDocument();
+  });
+
+  it("shows the placeholder when the primary AND the fallback both fail", () => {
+    const { container } = render(
+      <RestaurantPhoto
+        src="/v1/listings/l-1/image?variant=thumbnail_1920"
+        fallbackSrc="/v1/listings/l-1/image?variant=thumbnail"
+        alt="Al-Amir Grill"
+        sizes="100vw"
+      />,
+    );
+
+    let img = screen.getByRole("img", { name: "Al-Amir Grill" });
+    act(() => fireEvent.error(img)); // primary fails -> step to thumbnail
+    img = screen.getByRole("img", { name: "Al-Amir Grill" });
+    act(() => fireEvent.error(img)); // thumbnail also fails -> placeholder
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
+  });
+
+  it("does not retry the same URL twice when primary and fallback are identical", () => {
+    const { container } = render(
+      <RestaurantPhoto
+        src="/v1/listings/l-1/image?variant=thumbnail"
+        fallbackSrc="/v1/listings/l-1/image?variant=thumbnail"
+        alt="Al-Amir Grill"
+        sizes="100vw"
+      />,
+    );
+
+    act(() => fireEvent.error(screen.getByRole("img", { name: "Al-Amir Grill" })));
+    // Deduped → one failure exhausts the chain → placeholder immediately.
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
+  });
 });

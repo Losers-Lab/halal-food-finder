@@ -20,33 +20,65 @@ import { useState, type CSSProperties } from "react";
  * existing `/_next/image` route.
  *
  * `fill` + the parent's aspect-ratio box reserve space so there is no layout
- * shift; `object-fit: cover` crops to the box. When `src` is absent (listing
- * has no ingested photo yet / loading state) OR the image FAILS to load
- * (network / 500 / broken bytes), the same quiet kraft-stamp placeholder is
- * rendered — never the browser's broken-image icon (design spec detail-page.md
- * §1.1: "broken image -> same placeholder"). Applies to both the card thumbnail
- * and the detail hero.
+ * shift; `object-fit: cover` crops to the box. A quiet kraft-stamp placeholder
+ * is shown only when there is NO source at all (listing has no photo yet /
+ * loading) OR every source has failed — never the browser's broken-image icon
+ * (design spec detail-page.md §1.1: "broken image -> same placeholder").
  *
- * Note: this renderer is deliberately ONE static `sizes` + `src` — the browser
- * resolves the srcset ONCE at initial load from viewport + devicePixelRatio.
- * No re-render / re-fetch happens on viewport resize (correct srcset behavior;
- * founder sc-183 non-goal).
+ * Graceful retry (sc-183, review round 2): a listing ingested BEFORE the
+ * multi-width variants existed stores only the ≤400px thumbnail + full, yet
+ * the backend advertises `imageSrcset` [400..1920] — so the card's WIDEST
+ * source can 404. `fallbackSrc` (cards pass `cardThumbFallback`) lets a failed
+ * primary swap to the guaranteed stored thumbnail instead of dropping straight
+ * to the placeholder, preserving sc-157's "a listing with a valid photo always
+ * renders its thumbnail". Fully-ingested rows serve their widest source 200 and
+ * never hit the retry. The detail hero omits `fallbackSrc` (its full source is
+ * always stored; failure → placeholder, as before).
+ *
+ * Note: this renderer is deliberately ONE static `sizes` + `src` per attempt —
+ * the browser resolves the srcset ONCE at initial load from viewport +
+ * devicePixelRatio. No re-render / re-fetch happens on viewport resize (correct
+ * srcset behavior; founder sc-183 non-goal). The retry chain only advances on
+ * an explicit load ERROR, never on resize.
  */
 export function RestaurantPhoto({
   src,
+  fallbackSrc,
   alt,
   sizes,
   eager = false,
 }: {
   src?: string;
+  /**
+   * sc-183 retry: when `src` fails (e.g. a widest srcset variant that a legacy
+   * pre-multi-width row never stored → 404), fall back to this guaranteed
+   * source before the placeholder. Cards pass `cardThumbFallback`
+   * (imageThumbnailUrl / narrowest srcset entry); the detail hero omits it.
+   */
+  fallbackSrc?: string;
   alt: string;
   sizes: string;
   /** Detail hero (LCP) loads eager; cards stay lazy. */
   eager?: boolean;
 }) {
-  const [errored, setErrored] = useState(false);
+  // Source chain: primary, then fallback, deduped. Advancing on each `onError`
+  // lets a 404 swap to the guaranteed thumbnail instead of a blank card; the
+  // placeholder appears only when every candidate has failed (or none exist).
+  const candidates = [src, fallbackSrc]
+    .filter((s): s is string => !!s)
+    .filter((s, i, all) => all.indexOf(s) === i);
+  const [attempt, setAttempt] = useState(0);
 
-  if (!src || errored) {
+  // The retry chain is per-image: when a different listing's `src` arrives
+  // (client-side nav), reset it so a prior image's failure isn't carried over.
+  const [prevSrc, setPrevSrc] = useState(src);
+  if (src !== prevSrc) {
+    setPrevSrc(src);
+    setAttempt(0);
+  }
+
+  const current = candidates[attempt];
+  if (!current) {
     return <Placeholder />;
   }
 
@@ -54,13 +86,16 @@ export function RestaurantPhoto({
 
   return (
     <Image
-      src={src}
+      // Remount per candidate so next/image issues a fresh request + srcset for
+      // the fallback (and hooks onError to the newly rendered element).
+      key={current}
+      src={current}
       alt={alt}
       fill
       sizes={sizes}
       loading={eager ? "eager" : "lazy"}
       style={style}
-      onError={() => setErrored(true)}
+      onError={() => setAttempt((a) => a + 1)}
     />
   );
 }

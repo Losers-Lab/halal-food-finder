@@ -103,6 +103,31 @@ export function cardThumbSource(r: Restaurant): string | undefined {
   return r.imageThumbnailUrl;
 }
 
+/**
+ * sc-183 — the `fallbackSrc` a card hands `RestaurantPhoto` when the primary
+ * (WIDEST) srcset source fails to load.
+ *
+ * A listing ingested before the sc-183 multi-width variants existed has only
+ * the ≤400px thumbnail (`imageThumbnailUrl`) + full stored — IngestHeroImage
+ * writes the full width set only at ingest time — yet the backend advertises
+ * `imageSrcset` [400..1920] for it. The widest source therefore 404s, and
+ * without a fallback the card would drop to the onError placeholder, regressing
+ * sc-157 ("a listing with a valid photo always renders its thumbnail"). This
+ * returns a source that is GUARANTEED to be stored and serve 200 real bytes:
+ * the ≤400px `imageThumbnailUrl`, else the narrowest srcset entry. Fully
+ * ingested rows never reach the fallback (their widest source serves 200), so
+ * sharp srcset downscaling is preserved.
+ */
+export function cardThumbFallback(r: Restaurant): string | undefined {
+  if (r.imageThumbnailUrl) return r.imageThumbnailUrl;
+  if (r.imageSrcset?.length) {
+    return r.imageSrcset.reduce((narrowest, entry) =>
+      entry.width < narrowest.width ? entry : narrowest,
+    ).url;
+  }
+  return undefined;
+}
+
 /** Compute the detail page's cert expiry state (detail-page.md §1.2). */
 export type ExpiryState = "valid" | "expiring" | "expired" | "none";
 
