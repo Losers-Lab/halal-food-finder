@@ -137,6 +137,28 @@ class JdbcRestaurantListingRepository(
         return rows.firstOrNull()
     }
 
+    override fun updateVerificationStatus(id: UUID, status: VerificationStatus): RestaurantListing? {
+        val updated: Int? = tx.execute {
+            // Update the source row; no-op path returns 0 rows. The search mirror
+            // is kept in sync in the SAME transaction so a promotion is atomically
+            // visible to the public read surface (sc-73 → sc-49 verified display).
+            val rows = jdbc.update(
+                "UPDATE restaurant_listings SET verification_status = ? WHERE id = ?",
+                status.name,
+                id,
+            )
+            if (rows > 0) {
+                jdbc.update(
+                    "UPDATE listing_search SET verification_status = ? WHERE id = ?",
+                    status.name,
+                    id,
+                )
+            }
+            rows
+        }
+        return if (updated != null && updated > 0) findById(id) else null
+    }
+
     override fun findAll(): List<RestaurantListing> =
         jdbc.query(
             """

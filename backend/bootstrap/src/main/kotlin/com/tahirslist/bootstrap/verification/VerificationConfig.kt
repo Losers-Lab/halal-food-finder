@@ -7,6 +7,7 @@ import com.tahirslist.application.verification.ClaimListing
 import com.tahirslist.application.verification.DeferToHumanProvider
 import com.tahirslist.application.verification.HalalCertificationReviewRepository
 import com.tahirslist.application.verification.RequestVerification
+import com.tahirslist.application.verification.VerificationCommittee
 import com.tahirslist.application.verification.VerificationProvider
 import com.tahirslist.domain.verification.ConservativeVerdictPolicy
 import com.tahirslist.verification.ai.HostedVisionAdapter
@@ -68,6 +69,12 @@ class VerificationConfig {
         certificates: CertificationImageStorage,
         requestVerification: RequestVerification,
     ): ClaimListing = ClaimListing(listings, reviews, certificates, requestVerification)
+
+    @Bean
+    fun verificationCommittee(
+        reviews: HalalCertificationReviewRepository,
+        listings: RestaurantListingRepository,
+    ): VerificationCommittee = VerificationCommittee(reviews, listings)
 
     @Bean
     @Conditional(NoS3EndpointCondition::class)

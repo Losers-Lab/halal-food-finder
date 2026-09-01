@@ -37,6 +37,11 @@ import java.util.UUID
  *     claim (non-owner -> 403, missing listing -> 404). The acting account is
  *     always the JWT `sub`, never a client-supplied owner.
  *
+ * Also requires an explicit `aiConsent` part (sc-120): the certification image
+ * may be analysed by hosted AI, so the owner must affirm consent BEFORE upload —
+ * a missing/false value -> 400 `invalid_input`, and the image is never stored.
+ * Consent is recorded with the verification request.
+ *
  * The AI can only ever *suggest*; a review here never reaches APPROVED on its
  * own — the Verification Committee decides that in sc-73.
  */
@@ -59,14 +64,17 @@ class VerificationClaimController(private val claimListing: ClaimListing) {
     fun claim(
         @PathVariable listingId: UUID,
         @RequestPart("proof") proof: String,
+        @RequestPart("aiConsent") aiConsent: String,
         @RequestPart("certImage") certImage: MultipartFile,
         authentication: JwtAuthenticationToken,
     ): ResponseEntity<ClaimResponse> {
         val claimerId = UUID.fromString(authentication.token.subject)
+        val consentGiven = aiConsent.trim().equals("true", ignoreCase = true)
         val review = claimListing.execute(
             listingId = listingId,
             claimerId = claimerId,
             proof = proof,
+            aiConsentGiven = consentGiven,
             contentType = certImage.contentType ?: "application/octet-stream",
             imageBytes = certImage.bytes,
         )

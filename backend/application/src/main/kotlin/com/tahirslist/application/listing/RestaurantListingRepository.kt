@@ -1,6 +1,7 @@
 package com.tahirslist.application.listing
 
 import com.tahirslist.domain.restaurant.RestaurantListing
+import com.tahirslist.domain.restaurant.VerificationStatus
 import java.util.UUID
 
 /**
@@ -10,6 +11,16 @@ import java.util.UUID
 interface RestaurantListingRepository {
     fun save(listing: RestaurantListing): RestaurantListing
     fun findById(id: UUID): RestaurantListing?
+
+    /**
+     * Promote/change a listing's [VerificationStatus]. sc-73 uses this to promote
+     * a listing to VERIFIED once the Verification Committee approves its review
+     * (the listing itself was never auto-promoted by the claim). The source table
+     * and the `listing_search` read mirror are kept in sync by the adapter.
+     *
+     * @return the updated listing, or null if no listing has that id.
+     */
+    fun updateVerificationStatus(id: UUID, status: VerificationStatus): RestaurantListing?
 
     /**
      * All listings, for the minimal sc-157 browse/search read path. Full

@@ -142,6 +142,36 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             listings.findById(UUID.randomUUID()) shouldBe null
         }
 
+        test("updateVerificationStatus promotes the listing AND the search mirror atomically (sc-73)") {
+            val owner = accounts.save(Account.new(email = Email("vpromote@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Promotable Grill",
+                address = "1 Verify Ave",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("mediterranean"),
+                cuttingMethod = CuttingMethod.HAND_CUT,
+                ownerId = owner.id,
+            )
+            val saved = listings.save(listing)
+            saved.verificationStatus shouldBe VerificationStatus.UNVERIFIED
+
+            val updated = listings.updateVerificationStatus(saved.id, VerificationStatus.VERIFIED)
+
+            updated!!.verificationStatus shouldBe VerificationStatus.VERIFIED
+            listings.findById(saved.id)!!.verificationStatus shouldBe VerificationStatus.VERIFIED
+            // the public read mirror must reflect the promotion too (sc-73 → sc-49)
+            val mirrorStatus = jdbc.queryForObject(
+                "SELECT verification_status FROM listing_search WHERE id = ?",
+                String::class.java,
+                saved.id,
+            )
+            mirrorStatus shouldBe "VERIFIED"
+        }
+
+        test("updateVerificationStatus returns null for an unknown id and writes nothing") {
+            listings.updateVerificationStatus(UUID.randomUUID(), VerificationStatus.VERIFIED) shouldBe null
+        }
+
         test("save mirrors the listing into the listing_search read model atomically (sc-10)") {
             val owner = accounts.save(Account.new(email = Email("mirror@example.com"), passwordHash = "argon2id\$h"))
             val listing = RestaurantListing.new(
@@ -336,12 +366,14 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             }
         }
 
-        test("migration enforces the verification_status contract (only UNVERIFIED)") {
-            // Default insert is allowed (listing-first model).
+        test("migration enforces the verification_status contract (UNVERIFIED and VERIFIED only)") {
+            // Default insert is allowed (listing-first model: starts UNVERIFIED).
             tryInsert(owner = newOwner())
-            // A 'VERIFIED' status is not legal yet — the CHECK must reject it.
+            // V15 (sc-73) admits VERIFIED -- the ONLY legal promotion, reached via
+            // the Verification Committee approve path. Still-rejected:
+            tryInsert(owner = newOwner(), verificationStatus = "VERIFIED")
             shouldThrow<DataIntegrityViolationException> {
-                tryInsert(owner = newOwner(), verificationStatus = "VERIFIED")
+                tryInsert(owner = newOwner(), verificationStatus = "NOT_A_STATUS")
             }
         }
 

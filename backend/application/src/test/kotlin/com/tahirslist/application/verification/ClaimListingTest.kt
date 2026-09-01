@@ -48,6 +48,7 @@ class ClaimListingTest : FunSpec({
     val proof = " I own this restaurant; business license TAH-2024-118. "
     val contentType = "image/jpeg"
     val imageBytes = byteArrayOf(1, 2, 3, 4)
+    val consentGivenAt = Instant.parse("2026-09-01T12:30:00Z")
 
     beforeTest { clearMocks(listings, reviews, certificates, requestVerification) }
 
@@ -57,16 +58,29 @@ class ClaimListingTest : FunSpec({
         val suggested = HalalCertificationReview.create(listingId, claimerId, now)
             .beginAiReview(now)
             .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.4), now)
-        every { requestVerification.execute(listingId, claimerId, any(), now) } returns suggested
+        every { requestVerification.execute(listingId, claimerId, any(), now, aiConsentGivenAt = now) } returns suggested
         every { reviews.save(suggested) } returns suggested
 
-        val result = claimListing.execute(listingId, claimerId, proof, contentType, imageBytes, now)
+        val result = claimListing.execute(listingId, claimerId, proof, true, contentType, imageBytes, now)
 
         result shouldBe suggested
         result.state shouldBe VerificationState.AI_SUGGESTED
         verify { certificates.save(listingId, contentType, imageBytes) }
-        verify { requestVerification.execute(listingId, claimerId, any(), now) }
+        verify { requestVerification.execute(listingId, claimerId, any(), now, aiConsentGivenAt = now) }
         verify { reviews.save(suggested) }
+    }
+
+    test("a claim without explicit AI-analysis consent is rejected before any storage or persistence") {
+        every { listings.findById(listingId) } returns aListing(listingId, ownerId = claimerId)
+
+        shouldThrow<IllegalArgumentException> {
+            claimListing.execute(listingId, claimerId, proof, false, contentType, imageBytes, now)
+        }
+
+        // the image must never be archived or uploaded without consent
+        verify(exactly = 0) { certificates.save(any(), any(), any()) }
+        verify(exactly = 0) { requestVerification.execute(any(), any(), any(), now) }
+        verify(exactly = 0) { reviews.save(any()) }
     }
 
     test("an AI APPROVE suggestion is carried but never elevates the review past AI_SUGGESTED") {
@@ -75,10 +89,10 @@ class ClaimListingTest : FunSpec({
         val approve = HalalCertificationReview.create(listingId, claimerId, now)
             .beginAiReview(now)
             .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.APPROVE, 0.95), now)
-        every { requestVerification.execute(any(), any(), any(), now) } returns approve
+        every { requestVerification.execute(any(), any(), any(), now, aiConsentGivenAt = now) } returns approve
         every { reviews.save(approve) } returns approve
 
-        val result = claimListing.execute(listingId, claimerId, proof, contentType, imageBytes, now)
+        val result = claimListing.execute(listingId, claimerId, proof, true, contentType, imageBytes, now)
 
         result.state shouldBe VerificationState.AI_SUGGESTED
         result.suggestion!!.verdict shouldBe SuggestionVerdict.APPROVE
@@ -92,7 +106,7 @@ class ClaimListingTest : FunSpec({
         every { listings.findById(listingId) } returns aListing(listingId, ownerId = owner)
 
         shouldThrow<NotListingOwnerException> {
-            claimListing.execute(listingId, intruder, proof, contentType, imageBytes, now)
+            claimListing.execute(listingId, intruder, proof, true, contentType, imageBytes, now)
         }
 
         verify(exactly = 0) { certificates.save(any(), any(), any()) }
@@ -105,7 +119,7 @@ class ClaimListingTest : FunSpec({
         val stranger = UUID.randomUUID()
 
         shouldThrow<ListingNotFoundException> {
-            claimListing.execute(listingId, stranger, proof, contentType, imageBytes, now)
+            claimListing.execute(listingId, stranger, proof, true, contentType, imageBytes, now)
         }
 
         verify(exactly = 0) { certificates.save(any(), any(), any()) }
@@ -116,7 +130,7 @@ class ClaimListingTest : FunSpec({
         every { listings.findById(listingId) } returns aListing(listingId, ownerId = claimerId)
 
         shouldThrow<IllegalArgumentException> {
-            claimListing.execute(listingId, claimerId, "   ", contentType, imageBytes, now)
+            claimListing.execute(listingId, claimerId, "   ", true, contentType, imageBytes, now)
         }
 
         verify(exactly = 0) { certificates.save(any(), any(), any()) }
@@ -126,11 +140,11 @@ class ClaimListingTest : FunSpec({
     test("a provider outage holds the review in AI_REVIEW and raises verification_unavailable") {
         every { listings.findById(listingId) } returns aListing(listingId, ownerId = claimerId)
         every { certificates.save(any(), any(), any()) } returns Unit
-        every { requestVerification.execute(any(), any(), any(), now) } throws VerificationProviderException("provider unreachable")
+        every { requestVerification.execute(any(), any(), any(), now, aiConsentGivenAt = now) } throws VerificationProviderException("provider unreachable")
         every { reviews.save(match { it.state == VerificationState.AI_REVIEW }) } returnsArgument 0
 
         val ex = shouldThrow<VerificationUnavailableException> {
-            claimListing.execute(listingId, claimerId, proof, contentType, imageBytes, now)
+            claimListing.execute(listingId, claimerId, proof, true, contentType, imageBytes, now)
         }
 
         ex.cause!!.message shouldBe "provider unreachable"
