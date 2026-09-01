@@ -6,14 +6,15 @@ vi.mock("@/lib/api/client", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api/client")>();
   return {
     ...original,
-    api: { getListings: vi.fn(), getListing: vi.fn() },
+    api: { getListings: vi.fn(), getListing: vi.fn(), getFavorites: vi.fn() },
   };
 });
 import { api } from "@/lib/api/client";
-import { filterListings, getRestaurant, searchListings } from "./data";
+import { filterListings, getFavorites, getRestaurant, searchListings } from "./data";
 
 const getListingsMock = vi.mocked(api.getListings);
 const getListingMock = vi.mocked(api.getListing);
+const getFavoritesMock = vi.mocked(api.getFavorites);
 
 const UUID = "12ca4fe9-2884-4cac-9528-cc38fc0efa2f";
 
@@ -43,6 +44,7 @@ describe("data seam — live listing reads (sc-171)", () => {
   beforeEach(() => {
     getListingsMock.mockReset();
     getListingMock.mockReset();
+    getFavoritesMock.mockReset();
   });
 
   it("maps browse cards and normalizes absolute backend image URLs to the same-origin /v1 path", async () => {
@@ -89,6 +91,17 @@ describe("data seam — live listing reads (sc-171)", () => {
     getListingMock.mockRejectedValue(new ApiError(503, "internal_error"));
 
     await expect(getRestaurant(UUID)).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("getFavorites maps browse-card objects to the read-model and normalizes image URLs (sc-50)", async () => {
+    getFavoritesMock.mockResolvedValue([card()]);
+
+    const r = await getFavorites();
+
+    expect(r).toHaveLength(1);
+    expect(r[0].id).toBe(UUID);
+    expect(r[0].imageThumbnailUrl).toBe(`/v1/listings/${UUID}/image?variant=thumbnail`);
+    expect(r[0].imageUrl).toBeUndefined(); // favorites cards carry only the thumbnail
   });
 });
 

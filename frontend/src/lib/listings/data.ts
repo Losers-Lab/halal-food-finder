@@ -99,3 +99,13 @@ export async function getRestaurant(id: string): Promise<Restaurant | undefined>
   }
   return toRestaurant(detail);
 }
+
+/**
+ * GET /v1/favorites — the authenticated user's favourited listings, mapped to
+ * the same browse-card read-model as the search grid (sc-50). Requires a
+ * session (401 otherwise); the caller gates on auth.
+ */
+export async function getFavorites(): Promise<Restaurant[]> {
+  const cards = await api.getFavorites();
+  return cards.map(toRestaurant);
+}

@@ -212,4 +212,31 @@ export const api = {
       method: "GET",
       signal,
     }),
+
+  /**
+   * GET /v1/favorites — the authenticated user's favourited listings as
+   * browse-card objects (same shape as GET /v1/listings). 401 when anonymous.
+   */
+  getFavorites: (signal?: AbortSignal): Promise<BrowseListing[]> =>
+    request("/v1/favorites", undefined, { method: "GET", signal }),
+
+  /**
+   * POST /v1/favorites/{listingId} — favourite a listing (sc-50). Idempotent;
+   * resolves on 204 (no body). 401 anonymous, 404 if the listing is missing.
+   */
+  favoriteListing: (id: string, signal?: AbortSignal): Promise<undefined> =>
+    request(`/v1/favorites/${encodeURIComponent(id)}`, undefined, {
+      method: "POST",
+      signal,
+    }),
+
+  /**
+   * DELETE /v1/favorites/{listingId} — unfavourite (sc-51). Idempotent;
+   * resolves on 204 (no body). 401 anonymous, 404 if the listing is missing.
+   */
+  unfavoriteListing: (id: string, signal?: AbortSignal): Promise<undefined> =>
+    request(`/v1/favorites/${encodeURIComponent(id)}`, undefined, {
+      method: "DELETE",
+      signal,
+    }),
 };
