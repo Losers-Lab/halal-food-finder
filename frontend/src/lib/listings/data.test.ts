@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
 import { ApiError } from "@/lib/api/client";
 import type { BrowseListing, ListingDetail } from "@/lib/api/client";
+import type { Restaurant } from "./restaurants";
 
 vi.mock("@/lib/api/client", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api/client")>();
@@ -28,6 +29,13 @@ function card(over: Partial<BrowseListing> = {}): BrowseListing {
     cuttingMethod: "HAND_CUT",
     verificationStatus: "UNVERIFIED",
     imageThumbnailUrl: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail`,
+    // sc-183: the backend's pre-rendered multi-width thumbnail set.
+    imageSrcset: [
+      { width: 400, url: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail` },
+      { width: 768, url: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail_768` },
+      { width: 1280, url: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail_1280` },
+      { width: 1920, url: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail_1920` },
+    ],
     ...over,
   };
 }
@@ -53,8 +61,25 @@ describe("data seam — live listing reads (sc-171)", () => {
     expect(r).toHaveLength(1);
     expect(r[0].id).toBe(UUID);
     expect(r[0].imageThumbnailUrl).toBe(`/v1/listings/${UUID}/image?variant=thumbnail`);
+    // sc-183: every srcset entry URL is normalized to the same-origin proxy
+    // path, widths preserved (the card sources the widest for a sharp srcset).
+    expect(r[0].imageSrcset).toEqual([
+      { width: 400, url: `/v1/listings/${UUID}/image?variant=thumbnail` },
+      { width: 768, url: `/v1/listings/${UUID}/image?variant=thumbnail_768` },
+      { width: 1280, url: `/v1/listings/${UUID}/image?variant=thumbnail_1280` },
+      { width: 1920, url: `/v1/listings/${UUID}/image?variant=thumbnail_1920` },
+    ]);
     expect(r[0].imageUrl).toBeUndefined(); // browse cards never carry the full-res
     expect(r[0].cuisine).toBe(""); // null cuisine → empty, not "N/A"
+  });
+
+  it("leaves imageSrcset undefined when the backend sends no srcset (pre-ingest/legacy)", async () => {
+    getListingsMock.mockResolvedValue([card({ imageSrcset: null })]);
+
+    const r = await searchListings("");
+    expect(r[0].imageSrcset).toBeUndefined();
+    // The small-thumbnail fallback still resolves for the card in that case.
+    expect(r[0].imageThumbnailUrl).toBe(`/v1/listings/${UUID}/image?variant=thumbnail`);
   });
 
   it("filters browse results by query and cutting method through the pure helper", async () => {
@@ -77,6 +102,8 @@ describe("data seam — live listing reads (sc-171)", () => {
 
     expect(r?.imageThumbnailUrl).toBe(`/v1/listings/${UUID}/image?variant=thumbnail`);
     expect(r?.imageUrl).toBe(`/v1/listings/${UUID}/image?variant=full`);
+    expect(r?.imageSrcset?.[3].width).toBe(1920);
+    expect(r?.imageSrcset?.[3].url).toBe(`/v1/listings/${UUID}/image?variant=thumbnail_1920`);
   });
 
   it("getRestaurant returns undefined on a 404 (drives the not-found state)", async () => {
@@ -93,10 +120,10 @@ describe("data seam — live listing reads (sc-171)", () => {
 });
 
 describe("filterListings (pure browse filter)", () => {
-  const list = [
-    { ...card({ id: "a" }), name: "Al-Amir Grill", cuisine: "Middle Eastern", cuttingMethod: "HAND_CUT" as const, distanceMi: 2.0 },
-    { ...card(), id: "b", name: "Karachi Kitchen", cuisine: "Pakistani", cuttingMethod: "HAND_CUT" as const, distanceMi: 0.4 },
-    { ...card(), id: "c", name: "Burger Joint", cuisine: "American", cuttingMethod: "MACHINE_CUT" as const, distanceMi: 1.2 },
+  const list: Restaurant[] = [
+    { id: "a", name: "Al-Amir Grill", address: "1 St", lat: 1, lng: 1, cuisine: "Middle Eastern", cuttingMethod: "HAND_CUT", distanceMi: 2.0 },
+    { id: "b", name: "Karachi Kitchen", address: "2 St", lat: 1, lng: 1, cuisine: "Pakistani", cuttingMethod: "HAND_CUT", distanceMi: 0.4 },
+    { id: "c", name: "Burger Joint", address: "3 St", lat: 1, lng: 1, cuisine: "American", cuttingMethod: "MACHINE_CUT", distanceMi: 1.2 },
   ];
 
   it("matches query against name/cuisine/address and sorts by distance", () => {

@@ -77,13 +77,44 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
     ).toHaveAttribute("href", "/restaurants/l-2");
   });
 
-  it("cards request the SMALL thumbnail variant only — never the full-res original (sc-157)", async () => {
+  it("cards source the WIDEST imageSrcset title variant — never the full-res original (sc-183)", async () => {
     searchMock.mockResolvedValue([
       restaurant({
         id: "l-1",
         name: "Al-Amir Grill",
         imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
+        imageSrcset: [
+          { width: 400, url: "/v1/listings/l-1/image?variant=thumbnail" },
+          { width: 768, url: "/v1/listings/l-1/image?variant=thumbnail_768" },
+          { width: 1280, url: "/v1/listings/l-1/image?variant=thumbnail_1280" },
+          { width: 1920, url: "/v1/listings/l-1/image?variant=thumbnail_1920" },
+        ],
         imageUrl: "/v1/listings/l-1/image?variant=full",
+      }),
+    ]);
+    render(<SearchPage />);
+
+    const img = await screen.findByRole("img", { name: "Al-Amir Grill" });
+    // next/image's srcset is downscaled from the widest title variant so every
+    // srcset width is sharp (mobile 100vw @ DPR3 → desktop).
+    expect(img).toHaveAttribute(
+      "src",
+      "/v1/listings/l-1/image?variant=thumbnail_1920",
+    );
+    // sizes="100vw" = founder's max-monitor-context baseline (sc-183).
+    expect(img).toHaveAttribute("sizes", "100vw");
+    // The full-res URL exists on the read-model but a card must not request it.
+    expect(img).not.toHaveAttribute("src", "/v1/listings/l-1/image?variant=full");
+    // Lazy: off-screen cards defer the transfer.
+    expect(img).toHaveAttribute("loading", "lazy");
+  });
+
+  it("cards fall back to the small thumbnail src when the backend sends no srcset", async () => {
+    searchMock.mockResolvedValue([
+      restaurant({
+        id: "l-1",
+        name: "Al-Amir Grill",
+        imageThumbnailUrl: "/v1/listings/l-1/image?variant=thumbnail",
       }),
     ]);
     render(<SearchPage />);
@@ -93,10 +124,6 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
       "src",
       "/v1/listings/l-1/image?variant=thumbnail",
     );
-    // The full-res URL exists on the read-model but a card must not request it.
-    expect(img).not.toHaveAttribute("src", "/v1/listings/l-1/image?variant=full");
-    // Lazy: off-screen cards defer the transfer.
-    expect(img).toHaveAttribute("loading", "lazy");
   });
 
   it("shows a verified badge on verified cards and an unverified tag otherwise", async () => {

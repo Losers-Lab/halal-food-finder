@@ -39,15 +39,22 @@ const securityHeaders = [
 ];
 
 // Same-origin image proxy (see rewrites below): restaurant photos are served
-// from /v1/listings/{id}/image?variant=thumbnail|full through the same-origin
-// /v1 proxy. next/image's optimizer runs these through /_next/image and, since
-// Next 16, requires an explicit `images.localPatterns` allowlist for local
-// URLs (especially ones with a query string) or it returns 400. Path is
-// scoped to the /v1 listing photo proxy; `search` is pinned to the two exact
-// variants the backend emits (no wildcard = no enumeration of arbitrary query
-// strings).
+// from /v1/listings/{id}/image?variant=... through the same-origin /v1 proxy.
+// next/image's optimizer runs these through /_next/image and, since Next 16,
+// requires an explicit `images.localPatterns` allowlist for local URLs
+// (especially ones with a query string) or it returns 400. `localPatterns`
+// matches the search string by EXACT equality (match-local-pattern: it compares
+// `pattern.search === url.search`), so each query variant the app uses as a
+// next/image `src` needs its own entry. sc-183: cards source the WIDEST title
+// variant from `imageSrcset` (thumbnail_768/1280/1920, with `thumbnail` as the
+// ≤400px backward-compatible fallback); the detail hero uses `full`. Path is
+// scoped to the /v1 listing photo proxy; every search is pinned to one exact
+// variant (no wildcard = no enumeration of arbitrary query strings).
 const imageLocalPatterns = [
   { pathname: "/v1/**", search: "?variant=thumbnail" },
+  { pathname: "/v1/**", search: "?variant=thumbnail_768" },
+  { pathname: "/v1/**", search: "?variant=thumbnail_1280" },
+  { pathname: "/v1/**", search: "?variant=thumbnail_1920" },
   { pathname: "/v1/**", search: "?variant=full" },
 ];
 

@@ -2,18 +2,22 @@ import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 
 /**
- * Restaurant hero/card photo — sc-157 (responsible renderer) + sc-171.
+ * Restaurant hero/card photo — sc-157 (responsible renderer) + sc-183.
  *
  * Renders the image variant the current surface needs and nothing else:
- * - Cards pass the SMALL `imageThumbnailUrl` (≤400px, low bandwidth).
+ * - Cards (sc-183) pass the WIDEST `imageSrcset` title variant with
+ *   `sizes="100vw"` (founder: monitor-max-resolution srcset baseline), so
+ *   next/image emits a responsive multi-width srcset downscaled from a
+ *   high-res source — sharp from mobile 100vw @ DPR3 to desktop. Lazy.
  * - The detail hero passes the FULL `imageUrl` (full-res original) with `eager`.
  *
  * The URL is consumed straight from the payload — the frontend never builds it.
  * Contract (docs/design/sc-157-image-variants.md): same-origin
- * `GET /v1/listings/{listingId}/image?variant=thumbnail|full`. Because the
- * variant is selected at the source and the source is same-origin, no
- * `images.remotePatterns` or CSP change is needed — next/image's built-in
- * optimizer serves it through the existing `/_next/image` route.
+ * `GET /v1/listings/{listingId}/image?variant=thumbnail|thumbnail_768|
+ * thumbnail_1280|thumbnail_1920|full`. Because the variant is selected at the
+ * source and the source is same-origin, no `images.remotePatterns` or CSP
+ * change is needed — next/image's built-in optimizer serves it through the
+ * existing `/_next/image` route.
  *
  * `fill` + the parent's aspect-ratio box reserve space so there is no layout
  * shift; `object-fit: cover` crops to the box. When `src` is absent (listing
@@ -22,6 +26,11 @@ import { useState, type CSSProperties } from "react";
  * rendered — never the browser's broken-image icon (design spec detail-page.md
  * §1.1: "broken image -> same placeholder"). Applies to both the card thumbnail
  * and the detail hero.
+ *
+ * Note: this renderer is deliberately ONE static `sizes` + `src` — the browser
+ * resolves the srcset ONCE at initial load from viewport + devicePixelRatio.
+ * No re-render / re-fetch happens on viewport resize (correct srcset behavior;
+ * founder sc-183 non-goal).
  */
 export function RestaurantPhoto({
   src,

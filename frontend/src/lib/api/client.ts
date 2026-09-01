@@ -12,11 +12,13 @@ export type AuthResponse = components["schemas"]["AuthResponse"];
 export type ListingResponse = components["schemas"]["ListingResponse"];
 
 /**
- * GET /v1/listings browse card (sc-171). The generated schema (`schema.d.ts`)
- * predates the backend's ListingReadController, so these live read DTOs are
- * typed locally against the real backend payload rather than stalling on a
- * schema regeneration. `imageThumbnailUrl` is the only image a browse card
- * carries — never the full-res object ("no oversized fetch on cards").
+ * GET /v1/listings browse card (sc-171, extended sc-183). The generated schema
+ * (`schema.d.ts`) predates the backend's ListingReadController, so these live
+ * read DTOs are typed locally against the real backend payload rather than
+ * stalling on a schema regeneration. `imageSrcset` (sc-183) carries the
+ * backend's pre-rendered multi-width thumbnail set so cards can source a
+ * wide-enough variant for a sharp srcset; `imageThumbnailUrl` remains the ≤400px
+ * backward-compatible variant. Cards never request full-res on browse.
  */
 export type BrowseListing = {
   id: string;
@@ -28,6 +30,7 @@ export type BrowseListing = {
   cuttingMethod: string;
   verificationStatus: string;
   imageThumbnailUrl: string;
+  imageSrcset?: { width: number; url: string }[] | null;
 };
 
 /** GET /v1/listings/{id} detail payload — BrowseListing + the full-res hero. */
