@@ -58,4 +58,8 @@ class S3ImagePortConfig {
     @Bean
     fun imagePort(s3: S3Client, props: S3StorageProperties): com.tahirslist.application.image.ImagePort =
         S3ImagePort(s3 = s3, bucket = props.bucket)
+
+    @Bean
+    fun certificationImageStorage(s3: S3Client, props: S3StorageProperties): com.tahirslist.application.verification.CertificationImageStorage =
+        S3CertificationImageStorage(s3 = s3, bucket = props.bucket)
 }
