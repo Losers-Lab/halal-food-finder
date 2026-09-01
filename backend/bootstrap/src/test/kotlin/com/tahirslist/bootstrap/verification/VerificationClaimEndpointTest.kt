@@ -2,6 +2,7 @@ package com.tahirslist.bootstrap.verification
 
 import com.tahirslist.bootstrap.PostgresBootTest
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.TestConfiguration
@@ -65,6 +66,11 @@ class VerificationClaimEndpointTest : PostgresBootTest() {
 
     private val certBytes = byteArrayOf(1, 2, 3, 4)
 
+    private fun reviewCount(): Int = jdbc.queryForObject(
+        "SELECT count(*) FROM halal_certification_reviews",
+        Int::class.java,
+    )!!
+
     private fun url(path: String) = "http://localhost:$port$path"
 
     init {
@@ -83,16 +89,30 @@ class VerificationClaimEndpointTest : PostgresBootTest() {
 
             val row = jdbc.query(
                 """
-                SELECT state, suggestion_verdict, submitted_by, listing_id
+                SELECT state, suggestion_verdict, submitted_by, listing_id, ai_consent_at
                 FROM halal_certification_reviews WHERE id = ?
                 """.trimIndent(),
-                { rs, _ -> arrayOf(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4)) },
+                { rs, _ -> arrayOf(rs.getString(1), rs.getString(2), rs.getString(3), rs.getString(4), rs.getTimestamp(5)?.toInstant()?.toString()) },
                 reviewId,
             ).first()
             row[0] shouldBe "AI_SUGGESTED"
             row[1] shouldBe "NEEDS_REVIEW"
             row[2] shouldBe ownerId.toString()
             row[3] shouldBe listingId.toString()
+            // sc-120: consent is recorded with the verification request
+            row[4] shouldNotBe null
+        }
+
+        test("a claim without explicit AI-analysis consent returns 400 and stores nothing") {
+            val (ownerId, bearer) = signupAndLogin("claim-noconsent@example.com")
+            val listingId = createListing(bearer, ownerId)
+            val before = reviewCount()
+
+            val resp = claim(listingId, "license", certBytes, bearer, aiConsent = "false")
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
+            codeOf(resp) shouldBe "invalid_input"
+            reviewCount() shouldBe before
         }
 
         test("a claim never auto-verifies the listing") {
@@ -149,12 +169,22 @@ class VerificationClaimEndpointTest : PostgresBootTest() {
         }
     }
 
-    private fun claim(listingId: UUID, proof: String, imageBytes: ByteArray, bearer: String?): ResponseEntity<Map<*, *>> {
+    private fun claim(listingId: UUID, proof: String, imageBytes: ByteArray, bearer: String?): ResponseEntity<Map<*, *>> =
+        claim(listingId, proof, imageBytes, bearer, aiConsent = "true")
+
+    private fun claim(
+        listingId: UUID,
+        proof: String,
+        imageBytes: ByteArray,
+        bearer: String?,
+        aiConsent: String,
+    ): ResponseEntity<Map<*, *>> {
         val headers = HttpHeaders()
         headers.contentType = MediaType.MULTIPART_FORM_DATA
         if (bearer != null) headers.setBearerAuth(bearer)
         val body = LinkedMultiValueMap<String, Any>()
         body.add("proof", proof)
+        body.add("aiConsent", aiConsent)
         body.add("certImage", UploadResource(imageBytes, "cert.jpg"))
         return client.exchange(
             url("/v1/listings/$listingId/claim"),

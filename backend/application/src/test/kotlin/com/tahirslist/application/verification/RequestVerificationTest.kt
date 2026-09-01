@@ -56,6 +56,17 @@ class RequestVerificationTest : FunSpec({
         result.suggestion!!.verdict shouldBe SuggestionVerdict.APPROVE
     }
 
+    test("records the AI-analysis consent timestamp on the created review") {
+        val provider = mockk<VerificationProvider>()
+        every { provider.suggest(image) } returns VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.4)
+        val consentGivenAt = Instant.parse("2026-09-01T12:30:00Z")
+
+        val result = RequestVerification(provider).execute(listingId, submittedBy, image, now, consentGivenAt)
+
+        result.aiConsentGivenAt shouldBe consentGivenAt
+        result.state shouldBe VerificationState.AI_SUGGESTED
+    }
+
     test("a provider failure aborts without producing an AI_SUGGESTED review") {
         val provider = mockk<VerificationProvider>()
         every { provider.suggest(image) } throws VerificationProviderException("provider unreachable")

@@ -16,14 +16,18 @@ import java.util.UUID
  * Flow and its failure semantics ("what happens when it fails"):
  *
  *  1. Validate the ownership proof (trimmed, non-blank) — fails fast, before I/O.
- *  2. The listing must exist ([ListingNotFoundException] → 404) and be claimed by
+ *  2. Require explicit AI-analysis consent (sc-120) — the certification image may
+ *     be sent to the hosted AI, so the owner must affirm consent BEFORE upload;
+ *     a missing/false consent is a 400 and the image is never archived.
+ *  3. The listing must exist ([ListingNotFoundException] → 404) and be claimed by
  *     exactly the recorded `owner_id` ([NotListingOwnerException] → 403). RBAC is
  *     enforced at the edge (deny-by-default resource server, JWT `sub`); this is
  *     the second, owner-scoped guard. Never act on a client-supplied owner.
- *  3. Store the certification image via [CertificationImageStorage] (MinIO/S3).
- *  4. Drive [RequestVerification] (SUBMITTED → AI_REVIEW → AI_SUGGESTED). The AI
+ *  4. Store the certification image via [CertificationImageStorage] (MinIO/S3).
+ *  5. Drive [RequestVerification] (SUBMITTED → AI_REVIEW → AI_SUGGESTED). The AI
  *     only ever *suggests* — the review is never auto-APPROVED here.
- *  5. Persist the resulting review ([HalalCertificationReviewRepository]).
+ *  6. Persist the resulting review ([HalalCertificationReviewRepository]).
+ *     Consent is recorded on the review (repository) with the request.
  *
  * On a [VerificationProviderException]: the claim is NOT dropped. A review held in
  * [VerificationState.AI_REVIEW] is persisted so it can be retried later, and the
@@ -41,11 +45,16 @@ class ClaimListing(
         listingId: UUID,
         claimerId: UUID,
         proof: String,
+        aiConsentGiven: Boolean,
         contentType: String,
         imageBytes: ByteArray,
         now: Instant = Instant.now(),
     ): HalalCertificationReview {
         require(proof.trim().isNotBlank()) { "Ownership proof must not be blank." }
+        // sc-120 privacy guard: the certification image may be sent to the hosted
+        // AI for analysis, so the owner must explicitly consent BEFORE it is
+        // archived/uploaded. Fail fast here, before any I/O.
+        require(aiConsentGiven) { "Explicit consent to AI certification analysis is required before upload." }
 
         val listing = listings.findById(listingId) ?: throw ListingNotFoundException(listingId)
         if (listing.ownerId != claimerId) {
@@ -61,12 +70,13 @@ class ClaimListing(
                 submittedBy = claimerId,
                 image = CertificationImage(contentType, imageBytes),
                 now = now,
+                aiConsentGivenAt = now,
             )
             reviews.save(suggested)
         } catch (e: VerificationProviderException) {
             // Provider outage: hold a durable AI_REVIEW record for a retry. Never
             // drop the claim, never auto-grant.
-            val held = HalalCertificationReview.create(listingId, claimerId, now)
+            val held = HalalCertificationReview.create(listingId, claimerId, now, now)
                 .beginAiReview(now)
             reviews.save(held)
             throw VerificationUnavailableException(

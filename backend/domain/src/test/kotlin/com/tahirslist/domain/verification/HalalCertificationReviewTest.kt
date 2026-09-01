@@ -40,6 +40,29 @@ class HalalCertificationReviewTest : FunSpec({
         review().state shouldBe VerificationState.SUBMITTED
     }
 
+    test("consent is recorded on the review and survives every transition") {
+        val consentGivenAt = now
+        val started = HalalCertificationReview.create(
+            listingId = UUID.randomUUID(),
+            submittedBy = UUID.randomUUID(),
+            now = now,
+            aiConsentGivenAt = consentGivenAt,
+        )
+        started.aiConsentGivenAt shouldBe consentGivenAt
+
+        val suggested = started.beginAiReview(now)
+            .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.5), now)
+        suggested.aiConsentGivenAt shouldBe consentGivenAt
+
+        val human = suggested.beginHumanReview(now).approve(UUID.randomUUID(), "ok", now)
+        human.aiConsentGivenAt shouldBe consentGivenAt
+    }
+
+    test("a review can be created without consent (null when not given)") {
+        HalalCertificationReview.create(UUID.randomUUID(), UUID.randomUUID(), now)
+            .aiConsentGivenAt shouldBe null
+    }
+
     test("SUBMITTED -> AI_REVIEW -> AI_SUGGESTED drives the forward path") {
         val started = review(VerificationState.SUBMITTED).beginAiReview()
         started.state shouldBe VerificationState.AI_REVIEW

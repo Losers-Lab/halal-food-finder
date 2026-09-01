@@ -26,8 +26,14 @@ class RequestVerification(
         submittedBy: UUID,
         image: CertificationImage,
         now: Instant = Instant.now(),
+        aiConsentGivenAt: Instant? = null,
     ): HalalCertificationReview {
-        val aiReview = HalalCertificationReview.create(listingId, submittedBy, now).beginAiReview(now)
+        val aiReview = HalalCertificationReview.create(
+            listingId,
+            submittedBy,
+            now,
+            aiConsentGivenAt = aiConsentGivenAt,
+        ).beginAiReview(now)
         // May throw VerificationProviderException (provider outage) — state stays AI_REVIEW.
         val suggestion = provider.suggest(image)
         return aiReview.recordAiSuggestion(suggestion, now)
