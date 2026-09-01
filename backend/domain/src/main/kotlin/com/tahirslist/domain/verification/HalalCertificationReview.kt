@@ -16,7 +16,10 @@ import java.util.UUID
  *
  * Ownership: [submittedBy] is the account that submitted the certification.
  * [suggestion] is the AI's conservative suggestion (populated at AI_SUGGESTED);
- * [decision] is the human's final (or reversal) record.
+ * [decision] is the human's final (or reversal) record. [aiConsentGivenAt]
+ * records when the submitter explicitly consented to the certification image
+ * being analysed by the hosted AI (sc-120) — it may be null for reviews that
+ * predate consent (no consent was ever given).
  *
  * NOTE: sc-117 ships the forward path (SUBMITTED -> ... -> AI_SUGGESTED), the
  * human actions (HUMAN_REVIEW -> APPROVED/DENIED) and reversal (APPROVED/DENIED
@@ -32,6 +35,7 @@ data class HalalCertificationReview(
     val updatedAt: Instant,
     val suggestion: VerificationSuggestion? = null,
     val decision: ReviewDecision? = null,
+    val aiConsentGivenAt: Instant? = null,
 ) {
     companion object {
 
@@ -40,6 +44,7 @@ data class HalalCertificationReview(
             listingId: UUID,
             submittedBy: UUID,
             now: Instant = Instant.now(),
+            aiConsentGivenAt: Instant? = null,
         ): HalalCertificationReview = HalalCertificationReview(
             id = UUID.randomUUID(),
             listingId = listingId,
@@ -47,6 +52,7 @@ data class HalalCertificationReview(
             state = VerificationState.SUBMITTED,
             createdAt = now,
             updatedAt = now,
+            aiConsentGivenAt = aiConsentGivenAt,
         )
     }
 
