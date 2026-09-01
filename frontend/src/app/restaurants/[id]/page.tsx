@@ -15,6 +15,7 @@ import {
 } from "@/components/trust";
 import { CertificatePanel } from "@/components/detail/CertificatePanel";
 import { RestaurantPhoto } from "@/components/listing/RestaurantPhoto";
+import { FavoriteButton } from "@/components/listing/FavoriteButton";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
   expiryState,
@@ -174,7 +175,12 @@ function RestaurantDetail({ restaurant }: { restaurant: Restaurant }) {
           ) : null}
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row">
+        <div className="flex flex-col gap-2 sm:flex-row lg:flex-col xl:flex-row lg:items-stretch">
+          <FavoriteButton
+            listingId={restaurant.id}
+            restaurant={restaurant}
+            variant="detail"
+          />
           <ActionChip
             label="Directions"
             href={`https://www.google.com/maps/dir/?api=1&destination=${restaurant.lat},${restaurant.lng}`}

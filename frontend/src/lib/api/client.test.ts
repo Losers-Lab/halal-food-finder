@@ -431,4 +431,71 @@ describe("api client", () => {
       status: 404,
     });
   });
+
+  it("issues a GET to /v1/favorites and returns browse-card objects (sc-50)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      mockFetchResponse(
+        [
+          {
+            id: "12ca4fe9-2884-4cac-9528-cc38fc0efa2f",
+            name: "Afrah",
+            address: "E Main St",
+            lat: 32.94807,
+            lng: -96.728031,
+            cuisine: null,
+            cuttingMethod: "UNSPECIFIED",
+            verificationStatus: "UNVERIFIED",
+            imageThumbnailUrl:
+              "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
+          },
+        ],
+        200,
+      ),
+    );
+    const result = await api.getFavorites();
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe("12ca4fe9-2884-4cac-9528-cc38fc0efa2f");
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/favorites",
+      expect.objectContaining({ method: "GET", body: undefined }),
+    );
+  });
+
+  it("attaches the bearer and maps a 401 to an ApiError for an anonymous favorites read", async () => {
+    setAccessToken("at-1");
+    vi.stubGlobal("fetch", mockFetchResponse({ code: "invalid_credentials" }, 401));
+    await expect(api.getFavorites()).rejects.toMatchObject({
+      status: 401,
+      code: "invalid_credentials",
+    });
+    const [, options] = vi.mocked(fetch).mock.calls[0] as [string, RequestInit];
+    expect(options.headers).toMatchObject({ Authorization: "Bearer at-1" });
+  });
+
+  it("favoriteListing POSTs to /v1/favorites/{id} and resolves on 204 (no body) (sc-50)", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse(undefined, 204));
+    await expect(api.favoriteListing("l-1")).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/favorites/l-1",
+      expect.objectContaining({ method: "POST", body: undefined }),
+    );
+  });
+
+  it("unfavoriteListing DELETEs to /v1/favorites/{id} and resolves on 204 (no body) (sc-51)", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse(undefined, 204));
+    await expect(api.unfavoriteListing("l-1")).resolves.toBeUndefined();
+    expect(fetch).toHaveBeenCalledWith(
+      "/v1/favorites/l-1",
+      expect.objectContaining({ method: "DELETE", body: undefined }),
+    );
+  });
+
+  it("maps a 404 to an ApiError on an unfavorite of a missing listing (sc-51)", async () => {
+    vi.stubGlobal("fetch", mockFetchResponse({ code: "not_found" }, 404));
+    await expect(api.unfavoriteListing("missing")).rejects.toMatchObject({
+      status: 404,
+      code: "not_found",
+    });
+  });
 });

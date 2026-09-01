@@ -48,6 +48,22 @@ vi.mock("@/lib/auth/AuthProvider", () => ({
   useAuth: () => ({ session: null, restoring: false, signOut: vi.fn() }),
 }));
 
+// ListingCard renders a FavoriteButton, which consumes the FavoritesProvider.
+const toggleFavorites = vi.fn();
+vi.mock("@/lib/favorites/FavoritesProvider", () => ({
+  useFavorites: () => ({
+    favorites: [],
+    status: "ready",
+    pendingAuth: false,
+    isFavorited: () => false,
+    isPending: () => false,
+    toggleFavorites,
+    favoritesError: null,
+    clearFavoritesError: vi.fn(),
+    retryFavorites: vi.fn(),
+  }),
+}));
+
 vi.mock("@/lib/listings/data", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/listings/data")>();
   return { ...original, searchListings: vi.fn() };

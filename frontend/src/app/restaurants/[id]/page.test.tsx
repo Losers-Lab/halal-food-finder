@@ -46,6 +46,21 @@ vi.mock("@/components/layout/MobileTabBar", () => ({
 }));
 vi.mock("@/lib/auth/AuthProvider", () => ({ useAuth: () => ({ session: null, restoring: false }) }));
 
+// FavoriteButton consumes the FavoritesProvider.
+vi.mock("@/lib/favorites/FavoritesProvider", () => ({
+  useFavorites: () => ({
+    favorites: [],
+    status: "ready",
+    pendingAuth: false,
+    isFavorited: () => false,
+    isPending: () => false,
+    toggleFavorites: vi.fn(),
+    favoritesError: null,
+    clearFavoritesError: vi.fn(),
+    retryFavorites: vi.fn(),
+  }),
+}));
+
 vi.mock("@/lib/listings/data", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/listings/data")>();
   return { ...original, getRestaurant: vi.fn() };

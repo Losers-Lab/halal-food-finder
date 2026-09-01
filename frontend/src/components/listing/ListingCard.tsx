@@ -6,6 +6,7 @@ import {
   VerifiedBadge,
 } from "@/components/trust";
 import { RestaurantPhoto } from "./RestaurantPhoto";
+import { FavoriteButton } from "./FavoriteButton";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
   verificationStatus,
@@ -43,6 +44,14 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
           alt={restaurant.name}
           sizes="(min-width: 1280px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
         />
+        {/* Save heart (top-left) + verified mark (top-right) never overlap. */}
+        <div className="absolute left-3 top-3">
+          <FavoriteButton
+            listingId={restaurant.id}
+            restaurant={restaurant}
+            variant="card"
+          />
+        </div>
         {verified ? (
           <div className="absolute right-3 top-3">
             <VerifiedBadge variant="on-photo" />
