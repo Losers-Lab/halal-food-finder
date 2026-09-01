@@ -54,6 +54,9 @@ class VerificationCommitteeEndpointTest : PostgresBootTest() {
     @Autowired
     lateinit var jdbc: JdbcTemplate
 
+    @Autowired
+    lateinit var objectMapper: com.fasterxml.jackson.databind.ObjectMapper
+
     @LocalServerPort
     var port: Int = 0
 
@@ -152,6 +155,72 @@ class VerificationCommitteeEndpointTest : PostgresBootTest() {
                 listingId,
             )
             listingStatus shouldBe "UNVERIFIED"
+        }
+
+        test("approve records certifier + expiry and the public detail renders them from live data (sc-73 read surface)") {
+            val owner = signupAndLogin("vc-certattr-owner@example.com")
+            val listingId = createListing(owner.bearer, owner.id)
+            val reviewId = claimAndGetReviewId(listingId, owner.bearer)
+            val vc = signupPromoteLogin("vc-certattr-member@example.com")
+
+            val approve = client.exchange(
+                url("/v1/verification-committee/reviews/$reviewId/approve"),
+                HttpMethod.POST,
+                authed(vc.bearer, body = mapOf(
+                    "reason" to "cert matches listing",
+                    "certifier" to "HFSAA",
+                    "expiresOn" to "2027-01-12",
+                )),
+                Map::class.java,
+            )
+            approve.statusCode shouldBe HttpStatus.OK
+            approve.body!!["state"] shouldBe "APPROVED"
+
+            // The public detail drive renders the CertificatePanel from live data.
+            val detail = restTemplate.getForEntity("/v1/listings/$listingId", String::class.java).body!!
+            val node = objectMapper.readTree(detail)
+            node.get("verificationStatus").asText() shouldBe "VERIFIED"
+            node.get("certificate").isNull shouldBe false
+            node.get("certificate").get("certifier").asText() shouldBe "HFSAA"
+            node.get("certificate").get("reviewedOn").asText().isNotBlank() shouldBe true
+            node.get("certificate").get("expiresOn").asText() shouldBe "2027-01-12"
+            node.get("certificate").get("certificateUrl").asText().contains("/v1/listings/$listingId/certificate") shouldBe true
+
+            // The certificate image proxy serves the archived bytes (View certificate).
+            val cert = client.exchange(
+                url("/v1/listings/$listingId/certificate"),
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                ByteArray::class.java,
+            )
+            cert.statusCode shouldBe HttpStatus.OK
+            cert.body!!.contentEquals(certBytes) shouldBe true
+        }
+
+        test("an unverified listing carries no certificate in the detail payload") {
+            val owner = signupAndLogin("vc-nocert-owner@example.com")
+            val listingId = createListing(owner.bearer, owner.id)
+
+            val detail = restTemplate.getForEntity("/v1/listings/$listingId", String::class.java).body!!
+            val node = objectMapper.readTree(detail)
+            node.get("verificationStatus").asText() shouldBe "UNVERIFIED"
+            node.get("certificate").isNull shouldBe true
+        }
+
+        test("approve rejects a malformed expiresOn") {
+            val owner = signupAndLogin("vc-badexp-owner@example.com")
+            val listingId = createListing(owner.bearer, owner.id)
+            val reviewId = claimAndGetReviewId(listingId, owner.bearer)
+            val vc = signupPromoteLogin("vc-badexp-member@example.com")
+
+            val resp = client.exchange(
+                url("/v1/verification-committee/reviews/$reviewId/approve"),
+                HttpMethod.POST,
+                authed(vc.bearer, body = mapOf("reason" to "x", "expiresOn" to "not-a-date")),
+                Map::class.java,
+            )
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
         }
 
         test("deciding an already-decided review is a 409 conflict") {

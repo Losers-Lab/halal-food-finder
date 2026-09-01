@@ -96,6 +96,20 @@ class VerificationCommitteeTest : FunSpec({
         verify { listings.updateVerificationStatus(listingId, VerificationStatus.VERIFIED) }
     }
 
+    test("approve records the certifier and expiry on the approved review (sc-73 read surface)") {
+        val reviewId = UUID.randomUUID()
+        val expiresOn = java.time.LocalDate.of(2027, 1, 12)
+        every { reviews.findById(reviewId) } returns pendingReview(reviewId)
+        every { reviews.save(any()) } returnsArgument 0
+        every { listings.updateVerificationStatus(listingId, VerificationStatus.VERIFIED) } returns aListing(VerificationStatus.VERIFIED)
+
+        val result = committee.approve(reviewId, vcId, now = now, certifier = "HFSAA", expiresOn = expiresOn)
+
+        result.certifier shouldBe "HFSAA"
+        result.expiresOn shouldBe expiresOn
+        verify { reviews.save(match { it.certifier == "HFSAA" && it.expiresOn == expiresOn }) }
+    }
+
     test("approve rejects a review that is not pending") {
         val reviewId = UUID.randomUUID()
         val alreadyApproved = pendingReview(reviewId)

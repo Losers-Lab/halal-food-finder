@@ -5,6 +5,7 @@ import com.tahirslist.domain.restaurant.VerificationStatus
 import com.tahirslist.domain.verification.HalalCertificationReview
 import com.tahirslist.domain.verification.VerificationState
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -33,9 +34,11 @@ class VerificationCommittee(
         reviews.findByState(VerificationState.AI_SUGGESTED)
 
     /**
-     * Approve a pending review. The review advances to APPROVED and the listing
-     * is promoted to VERIFIED (source table + search mirror kept in sync by the
-     * adapter).
+     * Approve a pending review. The review advances to APPROVED (recording the
+     * [certifier] and [expiresOn] the committee transcribed from the certificate
+     * image — the CertificatePanel's display facts, sc-73 follow-up) and the
+     * listing is promoted to VERIFIED (source table + search mirror kept in sync
+     * by the adapter).
      *
      * @throws ReviewNotFoundException if no review has [reviewId]
      *         (and, after a successful decision, if the listing it references has
@@ -48,9 +51,11 @@ class VerificationCommittee(
         decidedBy: UUID,
         reason: String? = null,
         now: Instant = Instant.now(),
+        certifier: String? = null,
+        expiresOn: LocalDate? = null,
     ): HalalCertificationReview {
         val decided = decide(reviewId, decidedBy, reason, now) {
-            it.approve(decidedBy, reason, now)
+            it.approve(decidedBy, reason, now, certifier, expiresOn)
         }
         // Approve is the ONLY path to a VERIFIED listing. The listing must still
         // exist; if it vanished since the review was created, fail loudly rather

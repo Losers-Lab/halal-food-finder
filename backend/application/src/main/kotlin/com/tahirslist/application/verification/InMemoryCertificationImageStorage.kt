@@ -20,4 +20,13 @@ class InMemoryCertificationImageStorage : CertificationImageStorage {
         stored.computeIfAbsent(listingId) { mutableListOf() }
             .add(StoredCertificationImage(contentType, bytes.copyOf()))
     }
+
+    override fun loadLatest(listingId: UUID): CertificationImageStorage.StoredCertificationImage? {
+        val list = stored[listingId] ?: return null
+        val latest = list.lastOrNull() ?: return null
+        return CertificationImageStorage.StoredCertificationImage(
+            contentType = latest.contentType,
+            bytes = latest.bytes.copyOf(),
+        )
+    }
 }

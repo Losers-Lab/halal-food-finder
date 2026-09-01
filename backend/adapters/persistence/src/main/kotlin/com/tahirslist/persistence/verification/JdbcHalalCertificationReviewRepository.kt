@@ -39,10 +39,10 @@ class JdbcHalalCertificationReviewRepository(
                 id, listing_id, submitted_by, state,
                 suggestion_verdict, suggestion_confidence, suggestion_reasoning,
                 decision_outcome, decision_by, decision_reason, decision_at,
-                ai_consent_at,
+                ai_consent_at, certifier, expires_on,
                 created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (id) DO UPDATE SET
                 state = EXCLUDED.state,
                 suggestion_verdict = EXCLUDED.suggestion_verdict,
@@ -53,6 +53,8 @@ class JdbcHalalCertificationReviewRepository(
                 decision_reason = EXCLUDED.decision_reason,
                 decision_at = EXCLUDED.decision_at,
                 ai_consent_at = EXCLUDED.ai_consent_at,
+                certifier = EXCLUDED.certifier,
+                expires_on = EXCLUDED.expires_on,
                 updated_at = EXCLUDED.updated_at
             """.trimIndent(),
             review.id,
@@ -67,6 +69,8 @@ class JdbcHalalCertificationReviewRepository(
             review.decision?.reason,
             review.decision?.decidedAt?.let { java.sql.Timestamp.from(it) },
             review.aiConsentGivenAt?.let { java.sql.Timestamp.from(it) },
+            review.certifier,
+            review.expiresOn?.let { java.sql.Date.valueOf(it) },
             java.sql.Timestamp.from(review.createdAt),
             java.sql.Timestamp.from(review.updatedAt),
         )
@@ -78,6 +82,13 @@ class JdbcHalalCertificationReviewRepository(
 
     override fun findByState(state: VerificationState): List<HalalCertificationReview> =
         jdbc.query(SELECT_SQL + " WHERE r.state = ?", { rs, _ -> mapReview(rs) }, state.name)
+
+    override fun findLatestApprovedByListing(listingId: UUID): HalalCertificationReview? =
+        jdbc.query(
+            SELECT_SQL + " WHERE r.listing_id = ? AND r.state = 'APPROVED' ORDER BY r.decision_at DESC NULLS LAST, r.updated_at DESC LIMIT 1",
+            { rs, _ -> mapReview(rs) },
+            listingId,
+        ).firstOrNull()
 
     private fun mapReview(rs: ResultSet): HalalCertificationReview = HalalCertificationReview(
         id = rs.getObject("id", UUID::class.java),
@@ -102,6 +113,8 @@ class JdbcHalalCertificationReviewRepository(
             )
         },
         aiConsentGivenAt = rs.getTimestamp("ai_consent_at")?.toInstant(),
+        certifier = rs.getString("certifier"),
+        expiresOn = rs.getDate("expires_on")?.toLocalDate(),
     )
 
     private companion object {
@@ -111,7 +124,7 @@ class JdbcHalalCertificationReviewRepository(
                 id, listing_id, submitted_by, state,
                 suggestion_verdict, suggestion_confidence, suggestion_reasoning,
                 decision_outcome, decision_by, decision_reason, decision_at,
-                ai_consent_at, created_at, updated_at
+                ai_consent_at, certifier, expires_on, created_at, updated_at
             FROM halal_certification_reviews r
             """
     }

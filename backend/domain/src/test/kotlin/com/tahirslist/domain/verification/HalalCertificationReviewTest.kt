@@ -103,6 +103,27 @@ class HalalCertificationReviewTest : FunSpec({
         reversed.state shouldBe VerificationState.REVERSED
     }
 
+    test("approve records the certifier and expiry transcribed from the certificate (sc-73 read surface)") {
+        val vc = UUID.randomUUID()
+        val expiresOn = java.time.LocalDate.of(2027, 1, 12)
+
+        val approved = review(VerificationState.AI_SUGGESTED)
+            .beginHumanReview()
+            .approve(vc, "cert matches", now, certifier = "HFSAA", expiresOn = expiresOn)
+
+        approved.certifier shouldBe "HFSAA"
+        approved.expiresOn shouldBe expiresOn
+    }
+
+    test("approve with a blank certifier stores null (omit unknown fields, detail-page.md §1.2)") {
+        val approved = review(VerificationState.AI_SUGGESTED)
+            .beginHumanReview()
+            .approve(UUID.randomUUID(), "ok", now, certifier = "   ", expiresOn = null)
+
+        approved.certifier shouldBe null
+        approved.expiresOn shouldBe null
+    }
+
     test("DENIED can be REVERSED (wrongful denial overturned)") {
         val denied = review(VerificationState.AI_SUGGESTED)
             .beginHumanReview().deny(UUID.randomUUID(), "mistaken denial", now)

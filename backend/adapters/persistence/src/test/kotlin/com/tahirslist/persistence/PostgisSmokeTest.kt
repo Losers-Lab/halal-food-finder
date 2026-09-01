@@ -60,9 +60,10 @@ class PostgisSmokeTest : FunSpec() {
             // sc-50/51/52 favorites table (V12), the sc-46
             // halal_certification_reviews table (V13), the sc-120
             // ai_consent_at column on reviews (V14), and the sc-73
-            // VERIFIED-status opening on restaurant_listings (V15) all
-            // run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 15
+            // VERIFIED-status opening on restaurant_listings (V15), and the
+            // sc-73 read-surface certifier + expires_on columns on reviews
+            // (V16) all run cleanly on a real PostGIS DB.
+            result.migrationsExecuted shouldBe 16
         }
     }
 }

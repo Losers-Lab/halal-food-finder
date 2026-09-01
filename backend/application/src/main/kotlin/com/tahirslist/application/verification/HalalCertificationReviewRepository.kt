@@ -27,4 +27,12 @@ interface HalalCertificationReviewRepository {
 
     /** All reviews currently in [state] (the VC workqueue reads AI_SUGGESTED). */
     fun findByState(state: VerificationState): List<HalalCertificationReview>
+
+    /**
+     * The most recently APPROVED review for [listingId], or null if the listing
+     * has no approved review. Backs the public read surface's certificate
+     * metadata (sc-73 follow-up): a VERIFIED listing's Certifier / reviewedOn /
+     * expiresOn come from its latest approval.
+     */
+    fun findLatestApprovedByListing(listingId: UUID): HalalCertificationReview?
 }

@@ -9,9 +9,12 @@ import com.tahirslist.application.listing.ListingSearchFilters
 import com.tahirslist.application.listing.ListingSearchQuery
 import com.tahirslist.application.listing.ListingSearchResult
 import com.tahirslist.application.listing.RestaurantListingRepository
+import com.tahirslist.application.verification.CertificationImageStorage
+import com.tahirslist.application.verification.HalalCertificationReviewRepository
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.RestaurantListing
+import com.tahirslist.domain.restaurant.VerificationStatus
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.responses.ApiResponses
@@ -53,6 +56,8 @@ class ListingReadController(
     private val listings: RestaurantListingRepository,
     private val images: ImagePort,
     private val search: ListingSearchQuery,
+    private val reviews: HalalCertificationReviewRepository,
+    private val certificates: CertificationImageStorage,
 ) {
 
     /** Upper bound of the closed 0..5 rating scale (sc-45), mirrored from the domain [Rating]. */
@@ -117,7 +122,7 @@ class ListingReadController(
         listings.findAll().map(::toBrowseCard)
 
     @GetMapping("/{id}")
-    @Operation(summary = "Restaurant detail", description = "Full listing detail including the full-res hero image URL.")
+    @Operation(summary = "Restaurant detail", description = "Full listing detail including the full-res hero image URL and, for a VERIFIED listing whose certification was approved, the certificate display facts (certifier / reviewedOn / expiresOn / certificateUrl) so the detail trust panel can render non-empty fields (sc-73 follow-up).")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Detail payload"),
@@ -127,6 +132,27 @@ class ListingReadController(
     fun detail(@PathVariable id: UUID): ResponseEntity<DetailResponse> {
         val listing = listings.findById(id) ?: return ResponseEntity.notFound().build()
         return ResponseEntity.ok(toDetail(listing))
+    }
+
+    @GetMapping("/{id}/certificate")
+    @Operation(summary = "Serve the listing's certification image", description = "Same-origin proxy returning the most recently archived certification image bytes for a listing (the CertificatePanel's View certificate target). SECURITY: cert images are archived evidence; surfacing them on a public read endpoint is a deliberate posture change reviewed by Omar in the sc-73 read-surface PR.")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Certificate image bytes"),
+            ApiResponse(responseCode = "404", description = "No certification image archived for this listing"),
+        ],
+    )
+    fun serveCertificate(
+        @PathVariable id: UUID,
+    ): ResponseEntity<ByteArray> {
+        val stored = certificates.loadLatest(id)
+            ?: return ResponseEntity.notFound().build()
+        val mediaType = runCatching { MediaType.parseMediaType(stored.contentType) }
+            .getOrDefault(MediaType.APPLICATION_OCTET_STREAM)
+        return ResponseEntity.ok()
+            .contentType(mediaType)
+            .cacheControl(CacheControl.maxAge(86_400, TimeUnit.SECONDS).cachePublic())
+            .body(stored.bytes)
     }
 
     @GetMapping("/{id}/image")
@@ -295,7 +321,36 @@ class ListingReadController(
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
         imageUrl = imageUrl(listing.id, ImageVariant.FULL),
+        certificate = certificateDetails(listing),
     )
+
+    /**
+     * The certificate display facts for a VERIFIED listing (sc-73 follow-up).
+     * Source of truth: the latest APPROVED certification review. [reviewedOn] is
+     * the VC's decision instant; [certifier]/[expiresOn] are the facts the
+     * committee transcribed at approval. `certificateUrl` points at the same-origin
+     * cert-image proxy. null when the listing has no approved review OR the read
+     * surface must not surface a cert (unverified listing) — the detail page then
+     * renders no certificate panel (detail-page.md §1.2 omit-unknown-fields).
+     */
+    private fun certificateDetails(listing: RestaurantListing): Certificate? {
+        if (listing.verificationStatus != VerificationStatus.VERIFIED) return null
+        val review = reviews.findLatestApprovedByListing(listing.id) ?: return null
+        val decision = review.decision ?: return null
+        if (decision.outcome.name != "APPROVED") return null
+        return Certificate(
+            certifier = review.certifier,
+            reviewedOn = decision.decidedAt.toString(),
+            expiresOn = review.expiresOn?.toString(),
+            certificateUrl = certificateUrl(listing.id),
+        )
+    }
+
+    private fun certificateUrl(id: UUID): String =
+        ServletUriComponentsBuilder.fromCurrentContextPath()
+            .path("/v1/listings/{id}/certificate")
+            .buildAndExpand(id)
+            .toUriString()
 
     private fun imageUrl(id: UUID, variant: ImageVariant): String =
         ServletUriComponentsBuilder.fromCurrentContextPath()
@@ -350,6 +405,19 @@ class ListingReadController(
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
         val imageUrl: String,
+        val certificate: Certificate? = null,
+    )
+
+    /** CertificatePanel display facts (detail-page.md §1.2, sc-73 follow-up). */
+    data class Certificate(
+        /** The issuing body (e.g. "HFSAA"); null when unknown → field omitted. */
+        val certifier: String?,
+        /** ISO-8601 instant the VC approved the certification ("Last reviewed"). */
+        val reviewedOn: String,
+        /** ISO-8601 date the certification expires; null when unknown → field omitted. */
+        val expiresOn: String?,
+        /** Same-origin URL serving the archived certification image. */
+        val certificateUrl: String,
     )
 
     /** One responsive candidate: `url` serves an image [width] pixels wide. */

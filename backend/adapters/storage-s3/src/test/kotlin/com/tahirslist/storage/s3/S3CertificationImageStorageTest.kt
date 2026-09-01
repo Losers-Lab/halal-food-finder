@@ -3,6 +3,7 @@ package com.tahirslist.storage.s3
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.core.spec.style.FunSpec
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import org.testcontainers.containers.MinIOContainer
 import org.testcontainers.utility.DockerImageName
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials
@@ -81,6 +82,28 @@ class S3CertificationImageStorageTest : FunSpec() {
             shouldThrow<NoSuchKeyException> {
                 s3.getObject(GetObjectRequest.builder().bucket(bucket).key(phantom).build())
             }
+        }
+
+        test("loadLatest reads back the most recently saved certification image, round-tripping bytes + content type") {
+            val listingId = UUID.randomUUID()
+
+            storage.save(listingId, "image/png", byteArrayOf(9, 8, 7))
+
+            val latest = storage.loadLatest(listingId)
+
+            latest shouldNotBe null
+            latest!!.contentType shouldBe "image/png"
+            latest.bytes shouldBe byteArrayOf(9, 8, 7)
+        }
+
+        test("loadLatest returns non-null across re-claims (history kept) and null for a listing with no cert") {
+            val listingId = UUID.randomUUID()
+
+            storage.save(listingId, "image/jpeg", byteArrayOf(1, 2))
+            storage.save(listingId, "image/png", byteArrayOf(3, 4))
+
+            storage.loadLatest(listingId) shouldNotBe null
+            storage.loadLatest(UUID.randomUUID()) shouldBe null
         }
     }
 }

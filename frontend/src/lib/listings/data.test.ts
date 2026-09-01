@@ -48,6 +48,21 @@ function detail(over: Partial<ListingDetail> = {}): ListingDetail {
   };
 }
 
+function certDetail(
+  over: Partial<ListingDetail> = {},
+): ListingDetail {
+  return {
+    ...detail(over),
+    verificationStatus: "VERIFIED",
+    certificate: {
+      certifier: "HFSAA",
+      reviewedOn: "2026-09-01T12:00:00Z",
+      expiresOn: "2027-01-12",
+      certificateUrl: `http://localhost:8080/v1/listings/${UUID}/certificate`,
+    },
+  };
+}
+
 describe("data seam — live listing reads (sc-171)", () => {
   beforeEach(() => {
     getListingsMock.mockReset();
@@ -106,6 +121,29 @@ describe("data seam — live listing reads (sc-171)", () => {
     expect(r?.imageUrl).toBe(`/v1/listings/${UUID}/image?variant=full`);
     expect(r?.imageSrcset?.[3].width).toBe(1920);
     expect(r?.imageSrcset?.[3].url).toBe(`/v1/listings/${UUID}/image?variant=thumbnail_1920`);
+  });
+
+  it("carries the certificate display facts through and normalizes the certificateUrl (sc-73 read surface)", async () => {
+    getListingMock.mockResolvedValue(certDetail());
+
+    const r = await getRestaurant(UUID);
+
+    expect(r?.verificationStatus).toBe("VERIFIED");
+    expect(r?.certificate).toEqual({
+      certifier: "HFSAA",
+      reviewedOn: "2026-09-01T12:00:00Z",
+      expiresOn: "2027-01-12",
+      // absolute backend origin rewritten to our same-origin /v1 path, like images.
+      certificateUrl: `/v1/listings/${UUID}/certificate`,
+    });
+  });
+
+  it("leaves certificate undefined when the backend emits none (unverified / no cert recorded)", async () => {
+    getListingMock.mockResolvedValue(detail());
+
+    const r = await getRestaurant(UUID);
+
+    expect(r?.certificate).toBeUndefined();
   });
 
   it("getRestaurant returns undefined on a 404 (drives the not-found state)", async () => {

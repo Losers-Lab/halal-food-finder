@@ -5,7 +5,9 @@ import java.util.UUID
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.model.S3Exception
@@ -36,6 +38,25 @@ class S3CertificationImageStorage(
             .contentType(contentType)
             .build()
         s3.putObject(request, RequestBody.fromBytes(bytes))
+    }
+
+    override fun loadLatest(listingId: UUID): CertificationImageStorage.StoredCertificationImage? {
+        ensureBucket()
+        val objects = s3.listObjectsV2(
+            ListObjectsV2Request.builder()
+                .bucket(bucket)
+                .prefix("certifications/$listingId/")
+                .build(),
+        ).contents()
+        // Keys carry no timestamps; history keeps one object per submission, so
+        // "latest" is the most recently modified of the listing's objects.
+        val latest = objects.maxByOrNull { it.lastModified() } ?: return null
+        val got = s3.getObject(GetObjectRequest.builder().bucket(bucket).key(latest.key()).build())
+        val bytes = got.readAllBytes()
+        return CertificationImageStorage.StoredCertificationImage(
+            contentType = got.response().contentType() ?: "application/octet-stream",
+            bytes = bytes,
+        )
     }
 
     private fun ensureBucket() {
