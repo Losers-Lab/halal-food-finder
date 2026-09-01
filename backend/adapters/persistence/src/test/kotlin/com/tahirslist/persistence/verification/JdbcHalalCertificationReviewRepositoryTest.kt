@@ -246,6 +246,62 @@ class JdbcHalalCertificationReviewRepositoryTest : FunSpec() {
             found.decision!!.decidedBy shouldBe vc
         }
 
+        test("save persists the certifier and expiry transcribed at approval (sc-73 read surface)") {
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val vc = newAccount()
+            val expiresOn = java.time.LocalDate.of(2027, 1, 12)
+            val approved = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.APPROVE, 0.95), now)
+                .beginHumanReview(now)
+                .approve(decidedBy = vc, reason = "cert matches", now = now, certifier = "HFSAA", expiresOn = expiresOn)
+
+            reviews.save(approved)
+            val found = reviews.findById(approved.id)
+
+            found!!.certifier shouldBe "HFSAA"
+            found.expiresOn shouldBe expiresOn
+        }
+
+        test("findLatestApprovedByListing returns the latest APPROVED review for a listing, else null") {
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val vc = newAccount()
+
+            val earlier = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.APPROVE, 0.9), now)
+                .beginHumanReview(now)
+                .approve(decidedBy = vc, now = now.plusSeconds(60), certifier = "OldCert")
+            val later = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.APPROVE, 0.95), now)
+                .beginHumanReview(now)
+                .approve(decidedBy = vc, now = now.plusSeconds(120), certifier = "NewCert")
+            reviews.save(earlier)
+            reviews.save(later)
+
+            val latest = reviews.findLatestApprovedByListing(listing)
+
+            latest!!.id shouldBe later.id
+            latest.certifier shouldBe "NewCert"
+            reviews.findLatestApprovedByListing(UUID.randomUUID()) shouldBe null
+        }
+
+        test("findLatestApprovedByListing ignores non-APPROVED reviews (a DENIED review is not a cert)") {
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val denied = HalalCertificationReview.create(listing, owner, now)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.4), now)
+                .beginHumanReview(now)
+                .deny(decidedBy = newAccount(), reason = "unreadable", now = now)
+            reviews.save(denied)
+
+            reviews.findLatestApprovedByListing(listing) shouldBe null
+        }
+
         test("an out-of-machine state is rejected by the CHECK constraint") {
             val owner = newAccount()
             val listing = aListing(owner)

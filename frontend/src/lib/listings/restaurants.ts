@@ -72,12 +72,22 @@ export type Restaurant = {
   /** Edge: absent when unknown — render without the primitive (never "N/A"). */
   hours?: DayHours[];
   certificate?: Certificate;
+  /**
+   * sc-49: the backend read surface's authoritative verification state
+   * (`ListingReadController` emits it on browse/search/detail after the
+   * sc-46/73 verification vertical landed). Absent on legacy fixtures/seed —
+   * `verificationStatus()` falls back to deriving from `certificate`.
+   */
+  verificationStatus?: VerificationStatus;
 };
 
-/** Which listing a card is: verified iff it has a non-expired certificate. */
+/** Which listing a card is: verified iff the backend (or a certificate) says so. */
 export type VerificationStatus = "VERIFIED" | "UNVERIFIED";
 
 export function verificationStatus(r: Restaurant): VerificationStatus {
+  // The backend read surface is authoritative when present (sc-49). Without it
+  // (legacy fixtures / seeds), fall back to the certificate-derived state.
+  if (r.verificationStatus) return r.verificationStatus;
   if (!r.certificate) return "UNVERIFIED";
   const expired = new Date(r.certificate.expiresOn).getTime() < Date.now();
   return expired ? "UNVERIFIED" : "VERIFIED";

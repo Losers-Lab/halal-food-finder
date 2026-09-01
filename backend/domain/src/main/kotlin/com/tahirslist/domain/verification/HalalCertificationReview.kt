@@ -1,6 +1,7 @@
 package com.tahirslist.domain.verification
 
 import java.time.Instant
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -36,6 +37,8 @@ data class HalalCertificationReview(
     val suggestion: VerificationSuggestion? = null,
     val decision: ReviewDecision? = null,
     val aiConsentGivenAt: Instant? = null,
+    val certifier: String? = null,
+    val expiresOn: LocalDate? = null,
 ) {
     companion object {
 
@@ -81,16 +84,20 @@ data class HalalCertificationReview(
             copy(state = VerificationState.HUMAN_REVIEW, updatedAt = now)
         }
 
-    /** HUMAN_REVIEW -> APPROVED (the listing may become VERIFIED — sc-46/73). */
+    /** AI_SUGGESTED -> HUMAN_REVIEW -> APPROVED (the listing may become VERIFIED — sc-46/73). */
     fun approve(
         decidedBy: UUID,
         reason: String? = null,
         now: Instant = Instant.now(),
+        certifier: String? = null,
+        expiresOn: LocalDate? = null,
     ): HalalCertificationReview =
         transition(setOf(VerificationState.HUMAN_REVIEW), "approve") {
             copy(
                 state = VerificationState.APPROVED,
                 decision = ReviewDecision(VerificationOutcome.APPROVED, decidedBy, reason, now),
+                certifier = certifier?.trim()?.takeIf { it.isNotBlank() },
+                expiresOn = expiresOn,
                 updatedAt = now,
             )
         }

@@ -34,7 +34,21 @@ export type BrowseListing = {
 };
 
 /** GET /v1/listings/{id} detail payload — BrowseListing + the full-res hero. */
-export type ListingDetail = BrowseListing & { imageUrl: string };
+export type ListingDetail = BrowseListing & {
+  imageUrl: string;
+  /**
+   * CertificatePanel display facts for a VERIFIED listing (sc-73 read surface):
+   * certifier / reviewedOn / expiresOn are transcribed by the Verification
+   * Committee at approval; certificateUrl serves the archived cert image.
+   * Absent (undefined) for unverified listings or when no cert is recorded.
+   */
+  certificate?: {
+    certifier: string | null;
+    reviewedOn: string;
+    expiresOn: string | null;
+    certificateUrl: string;
+  } | null;
+};
 
 /**
  * sc-73 Verification Committee pending review (GET /v1/verification-committee/
@@ -290,12 +304,15 @@ export const api = {
     id: string,
     reason?: string,
     signal?: AbortSignal,
+    cert?: { certifier?: string; expiresOn?: string },
   ): Promise<VerificationReview> =>
     request(
       `/v1/verification-committee/reviews/${encodeURIComponent(id)}/approve`,
-      // Optional reason — a blank/whitespace-only reason is omitted entirely
-      // so the backend never records an empty decision note.
-      { reason: reason?.trim() || undefined },
+      {
+        reason: reason?.trim() || undefined,
+        ...(cert?.certifier ? { certifier: cert.certifier } : {}),
+        ...(cert?.expiresOn ? { expiresOn: cert.expiresOn } : {}),
+      },
       { signal },
     ),
 

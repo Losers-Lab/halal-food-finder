@@ -1,5 +1,5 @@
 import { api, ApiError, type BrowseListing, type ListingDetail } from "@/lib/api/client";
-import type { Restaurant } from "./restaurants";
+import type { Restaurant, VerificationStatus } from "./restaurants";
 import type { CuttingMethod } from "./schemas";
 
 export type BrowseFilter = "ALL" | CuttingMethod;
@@ -71,6 +71,12 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
     lng: b.lng,
     cuisine: b.cuisine ?? "",
     cuttingMethod: b.cuttingMethod as CuttingMethod,
+    // sc-49: carry the backend's authoritative verification state through to the
+    // read model so cards + detail render the real trust badge. Absent on
+    // legacy payloads → `verificationStatus()` falls back to certificate-derived.
+    ...(b.verificationStatus
+      ? { verificationStatus: b.verificationStatus as VerificationStatus }
+      : {}),
     imageThumbnailUrl: sameOriginPath(b.imageThumbnailUrl),
     // sc-183: normalize every srcset entry URL to the same-origin proxy path.
     ...(b.imageSrcset?.length
@@ -82,6 +88,21 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
         }
       : {}),
     ...("imageUrl" in b ? { imageUrl: sameOriginPath(b.imageUrl) } : {}),
+    // sc-73 read surface: carry the certificate display facts (certifier /
+    // reviewedOn / expiresOn / certificateUrl) through so the detail page's
+    // CertificatePanel renders them from LIVE backend data. sameOriginPath
+    // rewrites the certificateUrl's origin to our own proxy path, exactly as
+    // the image URLs above. Absent payloads pass through as undefined.
+    ...("certificate" in b && b.certificate
+      ? {
+          certificate: {
+            certifier: b.certificate.certifier ?? "",
+            reviewedOn: b.certificate.reviewedOn,
+            expiresOn: b.certificate.expiresOn ?? "",
+            certificateUrl: sameOriginPath(b.certificate.certificateUrl),
+          },
+        }
+      : {}),
   };
 }
 

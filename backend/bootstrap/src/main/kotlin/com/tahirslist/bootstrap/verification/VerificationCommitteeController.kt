@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.time.LocalDate
 import java.util.UUID
 
 /**
@@ -81,9 +82,23 @@ class VerificationCommitteeController(
             reviewId = reviewId,
             decidedBy = committeeMemberId(authentication),
             reason = request?.reason,
+            certifier = request?.certifier,
+            expiresOn = request?.expiresOn?.let { parseExpiry(it) },
         )
         return ReviewResponse.from(decided)
     }
+
+    /**
+     * Parses the certificate expiry date. A malformed value → [IllegalArgumentException]
+     * so the global whitelist maps it to 400 `invalid_input` (never a 500); the
+     * DateTimeParseException type is deliberately translated for that reason.
+     */
+    private fun parseExpiry(raw: String): LocalDate =
+        try {
+            LocalDate.parse(raw.trim())
+        } catch (e: java.time.format.DateTimeParseException) {
+            throw IllegalArgumentException("expiresOn must be an ISO-8601 date (yyyy-MM-dd).")
+        }
 
     @PostMapping("/reviews/{reviewId}/deny")
     @Operation(summary = "Deny a verification", description = "Denies the certification review, recording the reason; the listing stays unverified.")
@@ -139,6 +154,10 @@ class VerificationCommitteeController(
 
     data class DecideRequest(
         val reason: String? = null,
+        /** The issuing body transcribed from the certificate image at approval (sc-73 read surface). */
+        val certifier: String? = null,
+        /** The certificate's expiry date (ISO-8601, e.g. "2027-01-12"), transcribed at approval. */
+        val expiresOn: String? = null,
     )
 
     data class ReviewResponse(
