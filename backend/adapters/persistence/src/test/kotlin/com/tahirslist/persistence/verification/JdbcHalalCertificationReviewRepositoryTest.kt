@@ -113,6 +113,20 @@ class JdbcHalalCertificationReviewRepositoryTest : FunSpec() {
             row.suggestionReasoning shouldBe "unclear"
         }
 
+        test("save persists the AI-analysis consent timestamp (sc-120)") {
+            val owner = newAccount()
+            val listing = aListing(owner)
+            val consentGivenAt = Instant.parse("2026-09-01T12:30:00Z")
+            val suggested = HalalCertificationReview.create(listing, owner, now, consentGivenAt)
+                .beginAiReview(now)
+                .recordAiSuggestion(VerificationSuggestion(SuggestionVerdict.NEEDS_REVIEW, 0.4), now)
+
+            reviews.save(suggested)
+
+            val row = loadRow(suggested.id)
+            row.aiConsentAt shouldBe "2026-09-01T12:30:00Z"
+        }
+
         test("save persists a human-approved review with its decision") {
             val owner = newAccount()
             val listing = aListing(owner)
@@ -182,13 +196,15 @@ class JdbcHalalCertificationReviewRepositoryTest : FunSpec() {
         val decisionBy: String?,
         val decisionReason: String?,
         val decisionAt: String?,
+        val aiConsentAt: String?,
     )
 
     private fun loadRow(id: UUID): Row =
         jdbc.query(
             """
             SELECT state, listing_id, submitted_by, suggestion_verdict, suggestion_confidence,
-                   suggestion_reasoning, decision_outcome, decision_by, decision_reason, decision_at
+                   suggestion_reasoning, decision_outcome, decision_by, decision_reason, decision_at,
+                   ai_consent_at
             FROM halal_certification_reviews
             WHERE id = ?
             """.trimIndent(),
@@ -204,6 +220,7 @@ class JdbcHalalCertificationReviewRepositoryTest : FunSpec() {
                     decisionBy = rs.getString("decision_by"),
                     decisionReason = rs.getString("decision_reason"),
                     decisionAt = rs.getTimestamp("decision_at")?.toInstant()?.toString(),
+                    aiConsentAt = rs.getTimestamp("ai_consent_at")?.toInstant()?.toString(),
                 )
             },
             id,

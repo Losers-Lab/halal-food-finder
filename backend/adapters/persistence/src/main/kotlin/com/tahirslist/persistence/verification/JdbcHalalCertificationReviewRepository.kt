@@ -29,9 +29,10 @@ class JdbcHalalCertificationReviewRepository(
                 id, listing_id, submitted_by, state,
                 suggestion_verdict, suggestion_confidence, suggestion_reasoning,
                 decision_outcome, decision_by, decision_reason, decision_at,
+                ai_consent_at,
                 created_at, updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             review.id,
             review.listingId,
@@ -44,6 +45,7 @@ class JdbcHalalCertificationReviewRepository(
             review.decision?.decidedBy,
             review.decision?.reason,
             review.decision?.decidedAt?.let { java.sql.Timestamp.from(it) },
+            review.aiConsentGivenAt?.let { java.sql.Timestamp.from(it) },
             java.sql.Timestamp.from(review.createdAt),
             java.sql.Timestamp.from(review.updatedAt),
         )
