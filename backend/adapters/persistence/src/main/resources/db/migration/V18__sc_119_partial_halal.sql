@@ -1,15 +1,16 @@
 -- sc-119: partial-halal modeling (founder re-scope 09-01).
 --
--- Adds the partial-halal model and refactors cutting to a boolean hand-cut:
+-- Adds the partial-halal model on top of the sc-42 hand-cut boolean (V17),
+-- which already replaced cutting_method with the nullable is_hand_cut boolean.
+-- This migration does NOT touch the cutting/hand-cut columns.
 --
---  1. restaurant_listings gains `hand_cut` (boolean; null = unspecified/unknown —
---     the old three-valued cutting_method enum is gone), `halal_scope`
---     (NOT_DISCLOSED / PARTIALLY_HALAL / FULLY_HALAL), and `cross_contamination`
+--  1. restaurant_listings gains `halal_scope`
+--     (NOT_DISCLOSED / PARTIALLY_HALAL / FULLY_HALAL) and `cross_contamination`
 --     (NO_CROSS_CONTAMINATION / PRESENT / UNCERTAIN).
 --  2. A child table restaurant_halal_items records WHICH items are halal per
 --     listing (mirrors the restaurant_listing_cuisines precedent).
---  3. listing_search (the search index projection) mirrors hand_cut, halal_scope
---     and cross_contamination so the read surface + cross-contamination INDEX
+--  3. listing_search (the search index projection) mirrors halal_scope and
+--     cross_contamination so the read surface + cross-contamination INDEX
 --     GATE work without re-joining the source row.
 --
 -- Semantics (sc-119 design doc):
@@ -27,9 +28,7 @@
 -- index stays searchable (no silent search regression). This mirrors the prior
 -- curation; the gate still protects going forward.
 
--- restaurant_listings: boolean hand-cut (replace the enum column).
-ALTER TABLE restaurant_listings DROP COLUMN cutting_method;
-ALTER TABLE restaurant_listings ADD COLUMN hand_cut BOOLEAN;
+-- restaurant_listings: partial-halal scope + cross-contamination gate.
 ALTER TABLE restaurant_listings ADD COLUMN halal_scope VARCHAR(32) NOT NULL DEFAULT 'NOT_DISCLOSED';
 ALTER TABLE restaurant_listings ADD COLUMN cross_contamination VARCHAR(32) NOT NULL DEFAULT 'UNCERTAIN';
 
@@ -51,9 +50,7 @@ CREATE TABLE restaurant_halal_items (
 -- Backfill existing rows to keep the curated index searchable.
 UPDATE restaurant_listings SET cross_contamination = 'NO_CROSS_CONTAMINATION';
 
--- listing_search: mirror the new columns; drop the old enum column.
-ALTER TABLE listing_search DROP COLUMN cutting_method;
-ALTER TABLE listing_search ADD COLUMN hand_cut BOOLEAN;
+-- listing_search: mirror halal_scope + cross_contamination.
 ALTER TABLE listing_search ADD COLUMN halal_scope VARCHAR(32) NOT NULL DEFAULT 'NOT_DISCLOSED';
 ALTER TABLE listing_search ADD COLUMN cross_contamination VARCHAR(32) NOT NULL DEFAULT 'UNCERTAIN';
 
@@ -61,10 +58,9 @@ ALTER TABLE listing_search ADD CONSTRAINT ck_listing_search_cross_contamination 
     cross_contamination IN ('NO_CROSS_CONTAMINATION', 'PRESENT', 'UNCERTAIN')
 );
 
--- Backfill the mirror with the node cross-contamination state.
+-- Backfill the mirror with the source cross-contamination state.
 UPDATE listing_search l
 SET cross_contamination = r.cross_contamination,
-    hand_cut           = r.hand_cut,
     halal_scope        = r.halal_scope
 FROM restaurant_listings r
 WHERE r.id = l.id;

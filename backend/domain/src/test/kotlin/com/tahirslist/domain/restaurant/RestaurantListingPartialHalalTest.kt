@@ -24,21 +24,21 @@ class RestaurantListingPartialHalalTest : FunSpec({
         ownerId = owner,
     )
 
-    test("new() carries a boolean handCut and defaults to unspecified (null)") {
+    test("new() carries a boolean isHandCut and defaults to unspecified (null)") {
         val unspecified = base()
-        unspecified.handCut shouldBe null
+        unspecified.isHandCut shouldBe null
 
         val handCut = RestaurantListing.new(
             name = "A", address = "1", location = LatLng(0.0, 0.0),
-            cuisine = Cuisine("x"), ownerId = owner, handCut = true,
+            cuisine = Cuisine("x"), ownerId = owner, isHandCut = true,
         )
-        handCut.handCut shouldBe true
+        handCut.isHandCut shouldBe true
 
         val notHandCut = RestaurantListing.new(
             name = "B", address = "2", location = LatLng(1.0, 1.0),
-            cuisine = Cuisine("x"), ownerId = owner, handCut = false,
+            cuisine = Cuisine("x"), ownerId = owner, isHandCut = false,
         )
-        notHandCut.handCut shouldBe false
+        notHandCut.isHandCut shouldBe false
     }
 
     test("new() defaults halalScope to NOT_DISCLOSED and halalItems to empty") {
@@ -100,7 +100,7 @@ class RestaurantListingPartialHalalTest : FunSpec({
         present.crossContamination.isIndexQualified() shouldBe false
     }
 
-    test("fromStorage round-trips handCut, halalScope, halalItems and crossContamination") {
+    test("fromStorage round-trips isHandCut, halalScope, halalItems and crossContamination") {
         val id = UUID.randomUUID()
         val now = java.time.Instant.now()
         val listing = RestaurantListing.fromStorage(
@@ -114,25 +114,25 @@ class RestaurantListingPartialHalalTest : FunSpec({
             provenance = null,
             verificationStatus = VerificationStatus.UNVERIFIED,
             createdAt = now,
-            handCut = true,
+            isHandCut = true,
             halalScope = HalalScope.PARTIALLY_HALAL,
             halalItems = setOf(HalalItem("lamb", true)),
             crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
         )
         listing.id shouldBe id
-        listing.handCut shouldBe true
+        listing.isHandCut shouldBe true
         listing.halalScope shouldBe HalalScope.PARTIALLY_HALAL
         listing.halalItems shouldBe setOf(HalalItem("lamb", true))
         listing.crossContamination shouldBe CrossContamination.NO_CROSS_CONTAMINATION
     }
 
     // Founder decision #4: hand-cut is a boolean, cuttingMethod/CuttingMethod are
-    // gone. This body references only handCut (Boolean?) — there is no
+    // gone. This body references only isHandCut (Boolean?) — there is no
     // CuttingMethod type anymore, so the file cannot compile against it.
-    test("handCut is a nullable boolean on the listing, not a cutting-method enum") {
+    test("isHandCut is a nullable boolean on the listing, not a cutting-method enum") {
         RestaurantListing.new(
             name = "C", address = "3", location = LatLng(2.0, 2.0),
-            cuisine = Cuisine("x"), ownerId = owner, handCut = true,
-        ).handCut shouldBe true
+            cuisine = Cuisine("x"), ownerId = owner, isHandCut = true,
+        ).isHandCut shouldBe true
     }
 })

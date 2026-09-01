@@ -64,36 +64,37 @@ Gate rule (founder #3): only `NO_CROSS_CONTAMINATION` qualifies for `listing_sea
 
 ### 3. Boolean hand-cut (sc-42 fold-in)
 
-`CuttingMethod` enum (HAND_CUT/MACHINE_CUT/UNSPECIFIED) is **deleted**. The
-listing carries `handCut: Boolean?` (`null` = unspecified/unknown, the old
-UNSPECIFIED). `CuttingMethodFilter` (HAND_CUT/MACHINE_CUT/BOTH) is **deleted**;
-`ListingSearchFilters.handCut: Boolean?` means `true` = hand-cut only, absent/`false`
-= any. "machine-cut" appears nowhere.
+The `is_hand_cut` boolean (sc-42, V17) is the cutting model on the merged base —
+`CuttingMethod` (HAND_CUT/MACHINE_CUT/UNSPECIFIED) is gone and replaced by the
+nullable boolean `isHandCut` (`null` = unspecified/unknown, the old UNSPECIFIED).
+`CuttingMethodFilter` (HAND_CUT/MACHINE_CUT/BOTH) is deleted;
+`ListingSearchFilters.handCutOnly: Boolean` means `true` = hand-cut only, absent/`false`
+= any. "machine-cut" appears nowhere. sc-119's V18 migration does NOT re-touch the
+cutting columns — V17 already landed them on main.
 
 ## Persistence (backend/adapters/persistence)
 
-New migration `V16__sc_119_partial_halal.sql`:
+New migration `V18__sc_119_partial_halal.sql` (renumbered to V18 because main's
+sc-42 already owns V17; V16 is sc-73 cert-metadata):
 
-- `restaurant_listings`: `ADD hand_cut BOOLEAN`, `ADD halal_scope
-  VARCHAR(32) NOT NULL DEFAULT 'NOT_DISCLOSED'`, `ADD cross_contamination
-  VARCHAR(32) NOT NULL DEFAULT 'UNCERTAIN'`; `DROP COLUMN cutting_method`.
+- `restaurant_listings`: `ADD halal_scope VARCHAR(32) NOT NULL DEFAULT
+  'NOT_DISCLOSED'`, `ADD cross_contamination VARCHAR(32) NOT NULL DEFAULT
+  'UNCERTAIN'` (the hand-cut boolean was added by sc-42's V17).
 - Child table `restaurant_halal_items(listing_id FK CASCADE, name, is_halal,
   PK(listing_id,name))` — mirrors the `restaurant_listing_cuisines` precedent.
-- `listing_search` (the **index**): `ADD hand_cut BOOLEAN`, `ADD halal_scope
-  VARCHAR(32)`, `ADD cross_contamination VARCHAR(32)`; `DROP COLUMN cutting_method`.
+- `listing_search` (the **index**): `ADD halal_scope VARCHAR(32)`, `ADD
+  cross_contamination VARCHAR(32)`.
 - **Backfill decision (flagged to Adnan):** existing rows are backfilled to
   `cross_contamination = 'NO_CROSS_CONTAMINATION'` so the currently-curated seed
   index stays searchable (no silent search regression). New rows default
   `UNCERTAIN` -> not indexed until a NO_CROSS_CONTAMINATION qualification exists.
-  `cutting_method` maps HAND_CUT -> `hand_cut = true`, else `NULL`.
 
 | Column                    | Table                | Default         |
 |---------------------------|----------------------|-----------------|
-| `hand_cut`                | restaurant_listings  | NULL            |
+| `is_hand_cut`             | restaurant_listings  | NULL (sc-42 V17)|
 | `halal_scope`             | restaurant_listings  | NOT_DISCLOSED   |
 | `cross_contamination`     | restaurant_listings  | UNCERTAIN       |
 | `restaurant_halal_items`  | child table          | —               |
-| `hand_cut`                | listing_search       | (mirrored)      |
 | `halal_scope`             | listing_search       | (mirrored)      |
 | `cross_contamination`     | listing_search       | (mirrored)      |
 
@@ -105,21 +106,22 @@ New migration `V16__sc_119_partial_halal.sql`:
   PRESENT/UNCERTAIN rows).
 - **Read (search):** `JdbcListingSearchQuery` additionally constrains
   `cross_contamination = 'NO_CROSS_CONTAMINATION'` as defence-in-depth, and the
-  `handCut` filter maps to `hand_cut = true`.
+  `handCutOnly` filter maps to `is_hand_cut = true`.
 
 ## Search / read surface
 
-- `ListingSearchFilters.handCut: Boolean?` replaces `cuttingMethod`.
-- `ListingSearchResult` / browse/detail cards expose `handCut`, `halalScope` and
+- `ListingSearchFilters.handCutOnly: Boolean` replaces `cuttingMethod` (sc-42).
+- `ListingSearchResult` / browse/detail cards expose `isHandCut`, `halalScope` and
   `crossContamination` so the trust components (docs/design/trust-components.md —
-  CutMethodIndicator will show hand-cut only) never overstate.
-- OpenAPI spec regenerated to the new field names; MACHINE_CUT removed.
+  HandCutIndicator will show hand-cut only) never overstate.
+- OpenAPI spec regenerated to the current field names; MACHINE_CUT removed.
 
 ## Foundry seed handling
 
 Foundry seed data (`V7`) supplies `UNSPECIFIED` cutting -> backfilled to
-`hand_cut = NULL` (unspecified), and `NO_CROSS_CONTAMINATION` cross-contamination
-(keeps the curated index populated). Halal scope defaults NOT_DISCLOSED for seeds.
+`is_hand_cut = NULL` (unspecified) by V17, and `NO_CROSS_CONTAMINATION`
+cross-contamination (keeps the curated index populated). Halal scope defaults
+NOT_DISCLOSED for seeds.
 
 ## Out of scope (follow-up, per card "modeling only")
 
