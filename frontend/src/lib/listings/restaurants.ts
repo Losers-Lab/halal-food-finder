@@ -1,5 +1,3 @@
-import type { CuttingMethod } from "./schemas";
-
 /**
  * Read-model types for the search/browse + detail screens (docs/design/
  * search-browse.md, detail-page.md).
@@ -39,7 +37,8 @@ export type Restaurant = {
   lat: number;
   lng: number;
   cuisine: string;
-  cuttingMethod: CuttingMethod;
+  /** sc-42: hand-cut is an on/off boolean extra. null = unknown (e.g. legacy/seed rows). */
+  isHandCut: boolean | null;
   rating?: number;
   reviewCount?: number;
   distanceMi?: number;

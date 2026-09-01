@@ -33,7 +33,7 @@ export function useListings(query: string, filter: BrowseFilter) {
       .then(() => {
         if (cancelled) return [];
         setStatus("loading");
-        return searchListings(query, filter === "ALL" ? undefined : filter);
+        return searchListings(query, filter === "HAND_CUT");
       })
       .then((r) => {
         if (cancelled) return;

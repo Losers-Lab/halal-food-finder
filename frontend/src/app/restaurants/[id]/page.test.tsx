@@ -15,7 +15,7 @@ function restaurant(over: Partial<Restaurant>): Restaurant {
     lat: 40.6916,
     lng: -73.9788,
     cuisine: "Middle Eastern",
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
     rating: 4.6,
     reviewCount: 89,
     distanceMi: 1.2,

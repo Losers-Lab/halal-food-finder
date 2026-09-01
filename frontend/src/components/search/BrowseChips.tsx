@@ -5,8 +5,8 @@ import type { BrowseFilter } from "@/lib/listings/data";
 /**
  * Browse chips — docs/design/search-browse.md §"Browse chips row". Dark chips
  * (bg-ink-900 text-cream-50 shadow-chip radius-full); active chip = brand-500 bg.
- * Each is a real control with aria-pressed. "ALL" = no cut filter; cutting-method
- * chips filter the list.
+ * Each is a real control with aria-pressed. "ALL" = no filtered read; the
+ * "Hand-cut" chip narrows to hand-cut listings only (an extra on/off boolean).
  */
 export function BrowseChips({
   active,
@@ -18,7 +18,6 @@ export function BrowseChips({
   const chips: { value: BrowseFilter; label: string }[] = [
     { value: "ALL", label: "All" },
     { value: "HAND_CUT", label: "Hand-cut" },
-    { value: "MACHINE_CUT", label: "Machine-cut" },
   ];
 
   return (

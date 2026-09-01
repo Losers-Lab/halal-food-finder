@@ -24,7 +24,7 @@ function restaurant(over: Partial<Restaurant>): Restaurant {
     lat: 1,
     lng: 1,
     cuisine: "Test",
-    cuttingMethod: "UNSPECIFIED",
+    isHandCut: null,
     ...over,
   };
 }
@@ -135,14 +135,14 @@ describe("cardThumbFallback (sc-183 legacy retry)", () => {
 });
 
 describe("searchListings", () => {
-  it("filters by cutting method when specified", () => {
-    expect(searchListings("", "HAND_CUT").every((r) => r.cuttingMethod === "HAND_CUT")).toBe(
+  it("filters by hand-cut only when specified", () => {
+    expect(searchListings("", true).every((r) => r.isHandCut === true)).toBe(
       true,
     );
-    expect(searchListings("", "HAND_CUT").length).toBeGreaterThan(0);
+    expect(searchListings("", true).length).toBeGreaterThan(0);
   });
 
-  it("returns everything for an empty query + ALL filter", () => {
+  it("returns everything for an empty query + no filter", () => {
     const all = searchListings("");
     expect(all.length).toBeGreaterThan(0);
   });

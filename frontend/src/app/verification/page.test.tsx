@@ -145,7 +145,7 @@ describe("VerificationPage — /verification (sc-73)", () => {
               lat: 0,
               lng: 0,
               cuisine: "Middle Eastern",
-              cuttingMethod: "HAND_CUT",
+              isHandCut: true,
             },
           },
         ],

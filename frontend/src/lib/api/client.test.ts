@@ -185,7 +185,7 @@ describe("api client", () => {
       lat: 40.7,
       lng: -74.0,
       cuisine: "middle eastern",
-      cuttingMethod: "HAND_CUT",
+      isHandCut: true,
       ownerId: "acc-1",
       verificationStatus: "UNVERIFIED",
       createdAt: "2026-08-30T00:00:00Z",
@@ -200,7 +200,7 @@ describe("api client", () => {
       lat: 40.7,
       lng: -74.0,
       cuisine: "Middle Eastern",
-      cuttingMethod: "HAND_CUT",
+      isHandCut: true,
     });
     expect(result.verificationStatus).toBe("UNVERIFIED");
     expect(result.id).toBe("u-1");
@@ -225,7 +225,6 @@ describe("api client", () => {
         lat: 40.7,
         lng: -74.0,
         cuisine: "Middle Eastern",
-        cuttingMethod: "UNSPECIFIED",
       }),
     ).rejects.toMatchObject({
       status: 400,
@@ -246,7 +245,7 @@ describe("api client", () => {
         lat: 40.7,
         lng: -74.0,
         cuisine: "Middle Eastern",
-        cuttingMethod: "HAND_CUT",
+        isHandCut: true,
       }),
     ).rejects.toMatchObject({ status: 404, code: "owner_not_found" });
   });
@@ -263,7 +262,7 @@ describe("api client", () => {
         lat: 40.7,
         lng: -74.0,
         cuisine: "Middle Eastern",
-        cuttingMethod: "HAND_CUT",
+        isHandCut: true,
       }),
     ).rejects.toMatchObject({ status: 401, code: "invalid_credentials" });
   });
@@ -280,7 +279,7 @@ describe("api client", () => {
           lat: 40.7,
           lng: -74.0,
           cuisine: "middle eastern",
-          cuttingMethod: "HAND_CUT",
+          isHandCut: true,
           ownerId: "acc-1",
           verificationStatus: "UNVERIFIED",
           createdAt: "2026-08-30T00:00:00Z",
@@ -294,7 +293,7 @@ describe("api client", () => {
       lat: 40.7,
       lng: -74.0,
       cuisine: "Middle Eastern",
-      cuttingMethod: "HAND_CUT",
+      isHandCut: true,
     });
     expect(fetch).toHaveBeenCalledWith(
       "/v1/listings",
@@ -317,7 +316,7 @@ describe("api client", () => {
           lat: 40.7,
           lng: -74.0,
           cuisine: "middle eastern",
-          cuttingMethod: "HAND_CUT",
+          isHandCut: true,
           ownerId: "acc-1",
           verificationStatus: "UNVERIFIED",
           createdAt: "2026-08-30T00:00:00Z",
@@ -331,7 +330,7 @@ describe("api client", () => {
       lat: 40.7,
       lng: -74.0,
       cuisine: "Middle Eastern",
-      cuttingMethod: "HAND_CUT",
+      isHandCut: true,
     });
     const [, options] = vi.mocked(fetch).mock.calls[0] as [
       string,
@@ -353,7 +352,7 @@ describe("api client", () => {
         lat: 40.7,
         lng: -74.0,
         cuisine: "Middle Eastern",
-        cuttingMethod: "HAND_CUT",
+        isHandCut: true,
       }),
     ).rejects.toMatchObject({ status: 401, code: "invalid_credentials" });
     // The backend was reached with the bearer token even though it 401'd.
@@ -377,7 +376,7 @@ describe("api client", () => {
             lat: 32.94807,
             lng: -96.728031,
             cuisine: null,
-            cuttingMethod: "UNSPECIFIED",
+            isHandCut: null,
             verificationStatus: "UNVERIFIED",
             imageThumbnailUrl:
               "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
@@ -406,7 +405,7 @@ describe("api client", () => {
           lat: 32.94807,
           lng: -96.728031,
           cuisine: null,
-          cuttingMethod: "UNSPECIFIED",
+          isHandCut: null,
           verificationStatus: "UNVERIFIED",
           imageThumbnailUrl:
             "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
@@ -444,7 +443,7 @@ describe("api client", () => {
             lat: 32.94807,
             lng: -96.728031,
             cuisine: null,
-            cuttingMethod: "UNSPECIFIED",
+            isHandCut: null,
             verificationStatus: "UNVERIFIED",
             imageThumbnailUrl:
               "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
