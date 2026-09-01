@@ -110,7 +110,7 @@ class FavoritesController(
             lat = listing.location.lat,
             lng = listing.location.lng,
             cuisine = listing.cuisine?.value,
-            cuttingMethod = listing.cuttingMethod.name,
+            isHandCut = listing.isHandCut,
             verificationStatus = listing.verificationStatus.name,
             imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
             imageSrcset = imageSrcset(listing.id),

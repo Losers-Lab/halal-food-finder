@@ -3,7 +3,6 @@ package com.tahirslist.application.verification
 import com.tahirslist.application.favorite.ListingNotFoundException
 import com.tahirslist.application.listing.RestaurantListingRepository
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -159,7 +158,7 @@ private fun aListing(id: UUID, ownerId: UUID): RestaurantListing = RestaurantLis
     address = "123 Main St",
     location = LatLng(40.7128, -74.0060),
     cuisine = Cuisine("mediterranean"),
-    cuttingMethod = CuttingMethod.HAND_CUT,
+    isHandCut = true,
     ownerId = ownerId,
     brandId = null,
     provenance = null,

@@ -3,7 +3,6 @@ package com.tahirslist.bootstrap.listing
 import com.tahirslist.application.image.ImagePort
 import com.tahirslist.application.image.ImageVariant
 import com.tahirslist.application.image.StoredImage
-import com.tahirslist.application.listing.CuttingMethodFilter
 import com.tahirslist.application.listing.CuisineLogic
 import com.tahirslist.application.listing.ListingSearchFilters
 import com.tahirslist.application.listing.ListingSearchQuery
@@ -64,17 +63,17 @@ class ListingReadController(
     private val ratingMax: Double = com.tahirslist.domain.restaurant.Rating.MAX.toDouble()
 
     @GetMapping("/search")
-    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `cuttingMethod` narrows to HAND_CUT/MACHINE_CUT (BOTH default = any); `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. (sc-10 location, sc-42 cutting, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
+    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `handCutOnly` (true/false; absent = any) is an extra on/off filter that narrows to hand-cut listings only; `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. (sc-10 location, sc-42 hand-cut, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Search results (distance ascending)"),
-            ApiResponse(responseCode = "400", description = "Malformed centre, radius, cuttingMethod, cuisine, cuisineLogic, price, or rating"),
+            ApiResponse(responseCode = "400", description = "Malformed centre, radius, handCutOnly, cuisine, cuisineLogic, price, or rating"),
         ],
     )
     fun search(
         @RequestParam(value = "center", required = false) center: String?,
         @RequestParam(value = "radius", required = false) radius: Double?,
-        @RequestParam(value = "cuttingMethod", required = false) cuttingMethod: String?,
+        @RequestParam(value = "handCutOnly", required = false) handCutOnly: String?,
         @RequestParam(value = "cuisine", required = false) cuisine: List<String>?,
         @RequestParam(value = "cuisineLogic", required = false) cuisineLogic: String?,
         @RequestParam(value = "minPrice", required = false) minPrice: Double?,
@@ -89,10 +88,11 @@ class ListingReadController(
         val parsed = parseCenter(center)
         requireNotNull(radius) { "radius is required" }
         require(radius > 0.0) { "radius must be positive" }
-        // Unknown cuttingMethod / cuisineLogic / malformed price values all surface
-        // as 400 invalid_input, never a 500 — the public search vocabulary is closed.
+        // Unknown cuisineLogic / malformed handCutOnly / malformed price values all
+        // surface as 400 invalid_input, never a 500 — the public search vocabulary
+        // is closed. handCutOnly is a plain on/off boolean: absent/false = no filter.
         val filters = ListingSearchFilters(
-            cuttingMethod = parseCuttingMethod(cuttingMethod),
+            handCutOnly = parseHandCutOnly(handCutOnly),
             cuisines = parseCuisines(cuisine),
             cuisineLogic = parseCuisineLogic(cuisineLogic),
             minPrice = parsePrice(minPrice, "minPrice"),
@@ -215,19 +215,15 @@ class ListingReadController(
     }
 
     /**
-     * Parses the `cuttingMethod` filter (sc-42). Missing / blank / `BOTH` mean
-     * "any" (no narrowing); HAND_CUT and MACHINE_CUT narrow the search. Any other
-     * value → IllegalArgumentException (→ 400 invalid_input, never a 500) so the
-     * public contract HAND_CUT|MACHINE_CUT|BOTH is the only accepted vocabulary.
+     * Parses the `handCutOnly` filter (sc-42): an EXTRA on/off boolean. Missing /
+     * blank / `false` mean "any cutting status" (no hand-cut predicate); `true`
+     * narrows to hand-cut listings only. Any other value → IllegalArgumentException
+     * (→ 400 invalid_input, never a 500) so the public contract stays closed.
      */
-    private fun parseCuttingMethod(raw: String?): CuttingMethodFilter {
-        val value = raw?.trim()?.uppercase()
-        return when (value) {
-            null, "", "BOTH" -> CuttingMethodFilter.BOTH
-            "HAND_CUT" -> CuttingMethodFilter.HAND_CUT
-            "MACHINE_CUT" -> CuttingMethodFilter.MACHINE_CUT
-            else -> throw IllegalArgumentException("cuttingMethod must be HAND_CUT|MACHINE_CUT|BOTH")
-        }
+    private fun parseHandCutOnly(raw: String?): Boolean = when (raw?.trim()?.lowercase()) {
+        null, "", "false" -> false
+        "true" -> true
+        else -> throw IllegalArgumentException("handCutOnly must be true or false")
     }
 
     /**
@@ -288,7 +284,7 @@ class ListingReadController(
         lat = listing.location.lat,
         lng = listing.location.lng,
         cuisine = listing.cuisine?.value,
-        cuttingMethod = listing.cuttingMethod.name,
+        isHandCut = listing.isHandCut,
         verificationStatus = listing.verificationStatus.name,
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
@@ -301,7 +297,7 @@ class ListingReadController(
         lat = result.location.lat,
         lng = result.location.lng,
         cuisine = result.cuisine?.value,
-        cuttingMethod = result.cuttingMethod.name,
+        isHandCut = result.isHandCut,
         verificationStatus = result.verificationStatus.name,
         imageThumbnailUrl = imageUrl(result.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(result.id),
@@ -316,7 +312,7 @@ class ListingReadController(
         lat = listing.location.lat,
         lng = listing.location.lng,
         cuisine = listing.cuisine?.value,
-        cuttingMethod = listing.cuttingMethod.name,
+        isHandCut = listing.isHandCut,
         verificationStatus = listing.verificationStatus.name,
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
@@ -372,7 +368,7 @@ class ListingReadController(
         val lat: Double,
         val lng: Double,
         val cuisine: String?,
-        val cuttingMethod: String,
+        val isHandCut: Boolean?,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
@@ -385,7 +381,7 @@ class ListingReadController(
         val lat: Double,
         val lng: Double,
         val cuisine: String?,
-        val cuttingMethod: String,
+        val isHandCut: Boolean?,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
@@ -400,7 +396,7 @@ class ListingReadController(
         val lat: Double,
         val lng: Double,
         val cuisine: String?,
-        val cuttingMethod: String,
+        val isHandCut: Boolean?,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,

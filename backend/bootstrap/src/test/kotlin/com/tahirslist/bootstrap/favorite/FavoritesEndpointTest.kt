@@ -113,7 +113,7 @@ class FavoritesEndpointTest : PostgresBootTest() {
             card["lat"].toString().toDouble() shouldBe 40.7128
             card["lng"].toString().toDouble() shouldBe -74.0060
             card["cuisine"] shouldBe "mediterranean"
-            card["cuttingMethod"] shouldBe "HAND_CUT"
+            card["isHandCut"] shouldBe true
             card["verificationStatus"] shouldBe "UNVERIFIED"
             card["imageThumbnailUrl"].toString() shouldNotBe ""
         }
@@ -223,7 +223,7 @@ class FavoritesEndpointTest : PostgresBootTest() {
             "lat" to 40.7128,
             "lng" to -74.0060,
             "cuisine" to "mediterranean",
-            "cuttingMethod" to "HAND_CUT",
+            "isHandCut" to true,
         )
         val resp = client.exchange(url("/v1/listings"), HttpMethod.POST, HttpEntity<Any>(body, headers), Map::class.java)
         resp.statusCode shouldBe HttpStatus.CREATED

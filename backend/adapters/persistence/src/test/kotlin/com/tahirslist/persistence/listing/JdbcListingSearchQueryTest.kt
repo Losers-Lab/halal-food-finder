@@ -1,7 +1,6 @@
 package com.tahirslist.persistence.listing
 
 import com.tahirslist.domain.restaurant.LatLng
-import com.tahirslist.application.listing.CuttingMethodFilter
 import com.tahirslist.application.listing.CuisineLogic
 import com.tahirslist.application.listing.ListingSearchFilters
 import com.tahirslist.application.listing.ListingSearchQuery
@@ -153,43 +152,42 @@ class JdbcListingSearchQueryTest : FunSpec() {
             val osmow = results.first { it.name == "Osmow's" }
             osmow.address.shouldNotBeBlank()
             osmow.verificationStatus.name shouldBe "UNVERIFIED"
-            osmow.cuttingMethod.name shouldBe "UNSPECIFIED"
+            osmow.isHandCut shouldBe null
         }
 
-        test("cuttingMethod filter narrows results to the matching stored method") {
-            // sc-42: insert controlled HAND_CUT / MACHINE_CUT rows at a location
-            // far from every seed, so these assertions are isolated from the 30
-            // UNSPECIFIED seed rows and from the other tests in this spec. The
-            // mirror into listing_search reproduces exactly what save() does.
+        test("handCutOnly filter returns only hand-cut listings (sc-42)") {
+            // sc-42: hand-cut is an EXTRA on/off boolean. With it off (default)
+            // every listing matches — hand-cut, not-hand-cut, and unknown (NULL).
+            // With it on, only listings claiming hand-cut match; unknown (NULL) is
+            // treated as not-hand-cut, the same null semantics price/rating use.
             insertCuttingTestRows()
             val center = LatLng(lat = 45.0, lng = -79.0)
 
-            // BOTH ("any") matches every method — both inserted rows.
-            val both = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(cuttingMethod = CuttingMethodFilter.BOTH), offset = 0, limit = 50)
-            both.map { it.name }.toSet() shouldBe setOf("Hand Cut Test", "Machine Cut Test")
+            // Default (no filter) matches every hand-cut status, including NULL.
+            val all = query.searchNearby(center = center, radiusMiles = 5.0, offset = 0, limit = 50)
+            all.map { it.name }.toSet() shouldBe setOf("Hand Cut Test", "Not Hand Cut Test")
 
-            // HAND_CUT matches only the hand-cut row.
-            val handCut = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(cuttingMethod = CuttingMethodFilter.HAND_CUT), offset = 0, limit = 50)
+            // handCutOnly = true narrows to hand-cut only.
+            val handCut = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(handCutOnly = true), offset = 0, limit = 50)
             handCut.map { it.name } shouldBe listOf("Hand Cut Test")
-            handCut.single().cuttingMethod.name shouldBe "HAND_CUT"
+            handCut.single().isHandCut shouldBe true
 
-            // MACHINE_CUT matches only the machine-cut row.
-            val machineCut = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(cuttingMethod = CuttingMethodFilter.MACHINE_CUT), offset = 0, limit = 50)
-            machineCut.map { it.name } shouldBe listOf("Machine Cut Test")
-            machineCut.single().cuttingMethod.name shouldBe "MACHINE_CUT"
+            // handCutOnly = false is the explicit "no hand-cut filter".
+            val explicitlyOff = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(handCutOnly = false), offset = 0, limit = 50)
+            explicitlyOff.map { it.name }.toSet() shouldBe setOf("Hand Cut Test", "Not Hand Cut Test")
         }
 
-        test("cuttingMethod filter combines with the location radius") {
-            // sc-42: the filter must not bypass the radius. Nesting the filter
-            // around Osmow's (UNSPECIFIED) co-located seed with a tiny radius:
-            // HAND_CUT finds nothing there, while BOTH still finds Osmow's.
+        test("handCutOnly combines with the location radius (sc-42)") {
+            // The filter must not bypass the radius. Nesting around Osmow's
+            // (unknown = not-hand-cut) co-located seed with a tiny radius:
+            // handCutOnly finds nothing there, while no filter still finds Osmow's.
             val center = LatLng(lat = 43.682921, lng = -79.418493)
 
-            val handCut = query.searchNearby(center = center, radiusMiles = 0.1, filters = ListingSearchFilters(cuttingMethod = CuttingMethodFilter.HAND_CUT), offset = 0, limit = 50)
+            val handCut = query.searchNearby(center = center, radiusMiles = 0.1, filters = ListingSearchFilters(handCutOnly = true), offset = 0, limit = 50)
             handCut shouldBe emptyList()
 
-            val both = query.searchNearby(center = center, radiusMiles = 0.1, filters = ListingSearchFilters(cuttingMethod = CuttingMethodFilter.BOTH), offset = 0, limit = 50)
-            both.single().name shouldBe "Osmow's"
+            val all = query.searchNearby(center = center, radiusMiles = 0.1, offset = 0, limit = 50)
+            all.single().name shouldBe "Osmow's"
         }
 
         test("price range filter narrows results to listings whose price falls inside the range") {
@@ -270,7 +268,7 @@ class JdbcListingSearchQueryTest : FunSpec() {
             mex.map { it.name }.toSet() shouldBe setOf("Taco Mixto", "Taco Solo")
         }
 
-        test("price + cuisine + cuttingMethod filters combine with the location radius") {
+        test("price + cuisine + handCutOnly filters combine with the location radius") {
             // sc-43 + sc-44 + sc-42: a listing must satisfy every active predicate
             // simultaneously (hand-cut AND mexican AND price 9..16, within radius).
             insertFilterTestRows()
@@ -279,7 +277,7 @@ class JdbcListingSearchQueryTest : FunSpec() {
             val combined = query.searchNearby(
                 center = center, radiusMiles = 5.0,
                 filters = ListingSearchFilters(
-                    cuttingMethod = CuttingMethodFilter.HAND_CUT,
+                    handCutOnly = true,
                     cuisines = listOf("mexican"),
                     minPrice = BigDecimal("9"),
                     maxPrice = BigDecimal("16"),
@@ -353,7 +351,7 @@ class JdbcListingSearchQueryTest : FunSpec() {
                 center = center, radiusMiles = 5.0,
                 filters = ListingSearchFilters(
                     minRating = BigDecimal("2.0"),
-                    cuttingMethod = CuttingMethodFilter.HAND_CUT,
+                    handCutOnly = true,
                     cuisines = listOf("mexican"),
                     minPrice = BigDecimal("12"),
                     maxPrice = BigDecimal("16"),
@@ -371,20 +369,20 @@ class JdbcListingSearchQueryTest : FunSpec() {
      * rows at 45N/79W. Idempotent via ON CONFLICT.
      */
     private fun insertFilterTestRows() {
-        // (id, name, cuisine, cutting, price, cuisines)
+        // (id, name, cuisine, isHandCut, price, cuisines)
         val rows = listOf(
-            listOf("20000000-0000-0000-0000-000000000001", "Taco Mixto", "mexican", "HAND_CUT", "15.00", listOf("mexican", "mediterranean")),
-            listOf("20000000-0000-0000-0000-000000000002", "Taco Solo", "mexican", "UNSPECIFIED", "10.00", listOf("mexican")),
-            listOf("20000000-0000-0000-0000-000000000003", "Med Grill", "mediterranean", "HAND_CUT", "20.00", listOf("mediterranean")),
-            listOf("20000000-0000-0000-0000-000000000004", "Budget Eats", null, "UNSPECIFIED", "5.00", emptyList<String>()),
-            listOf("20000000-0000-0000-0000-000000000005", "No Price Wagyu", null, "UNSPECIFIED", null, emptyList<String>()),
+            listOf("20000000-0000-0000-0000-000000000001", "Taco Mixto", "mexican", true, "15.00", listOf("mexican", "mediterranean")),
+            listOf("20000000-0000-0000-0000-000000000002", "Taco Solo", "mexican", null, "10.00", listOf("mexican")),
+            listOf("20000000-0000-0000-0000-000000000003", "Med Grill", "mediterranean", true, "20.00", listOf("mediterranean")),
+            listOf("20000000-0000-0000-0000-000000000004", "Budget Eats", null, null, "5.00", emptyList<String>()),
+            listOf("20000000-0000-0000-0000-000000000005", "No Price Wagyu", null, null, null, emptyList<String>()),
         )
         val ids = rows.map { UUID.fromString(it[0] as String) }
 
         rows.forEach { row ->
             jdbc.update(
                 """
-                INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status, price)
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price)
                 VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-78.0, 46.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?)
                 ON CONFLICT (id) DO NOTHING
                 """.trimIndent(),
@@ -392,7 +390,7 @@ class JdbcListingSearchQueryTest : FunSpec() {
                 row[1] as String,
                 "46.00, -78.00",
                 row[2] as String?,
-                row[3] as String,
+                row[3] as Boolean?,
                 (row[4] as String?)?.let { java.math.BigDecimal(it) },
             )
         }
@@ -400,8 +398,8 @@ class JdbcListingSearchQueryTest : FunSpec() {
         // Mirror into the denormalised projection, exactly the sc-10 save() contract.
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price)
-            SELECT id, name, address, location, cuisine, cutting_method, verification_status, price
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price
             FROM restaurant_listings WHERE id IN (?, ?, ?, ?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
@@ -431,25 +429,25 @@ class JdbcListingSearchQueryTest : FunSpec() {
 
         jdbc.update(
             """
-            INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status)
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status)
             VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, 'UNVERIFIED')
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
-            handId, "Hand Cut Test", "45.00, -79.00", -79.0, 45.0, "Grill", "HAND_CUT",
+            handId, "Hand Cut Test", "45.00, -79.00", -79.0, 45.0, "Grill", true,
         )
         jdbc.update(
             """
-            INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status)
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status)
             VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, 'UNVERIFIED')
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
-            machineId, "Machine Cut Test", "45.00, -79.00", -79.0, 45.0, "Grill", "MACHINE_CUT",
+            machineId, "Not Hand Cut Test", "45.00, -79.00", -79.0, 45.0, "Grill", false,
         )
         // Mirror into the denormalised projection, exactly the sc-10 save() contract.
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status)
-            SELECT id, name, address, location, cuisine, cutting_method, verification_status
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status
             FROM restaurant_listings WHERE id IN (?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
@@ -464,19 +462,19 @@ class JdbcListingSearchQueryTest : FunSpec() {
      * rows. Idempotent via ON CONFLICT.
      */
     private fun insertRatedTestRows() {
-        // (id, name, cuisine, cutting, price, rating)
+        // (id, name, cuisine, isHandCut, price, rating)
         val rows = listOf(
-            listOf("40000000-0000-0000-0000-000000000001", "Star Grill", "mexican", "HAND_CUT", "15.00", "4.8"),
-            listOf("40000000-0000-0000-0000-000000000002", "Clover Cafe", "mexican", "UNSPECIFIED", "10.00", "3.5"),
-            listOf("40000000-0000-0000-0000-000000000003", "Rustic Table", "mediterranean", "MACHINE_CUT", "20.00", "2.5"),
-            listOf("40000000-0000-0000-0000-000000000004", "No Rating Bistro", null, "UNSPECIFIED", "5.00", null),
+            listOf("40000000-0000-0000-0000-000000000001", "Star Grill", "mexican", true, "15.00", "4.8"),
+            listOf("40000000-0000-0000-0000-000000000002", "Clover Cafe", "mexican", null, "10.00", "3.5"),
+            listOf("40000000-0000-0000-0000-000000000003", "Rustic Table", "mediterranean", false, "20.00", "2.5"),
+            listOf("40000000-0000-0000-0000-000000000004", "No Rating Bistro", null, null, "5.00", null),
         )
         val ids = rows.map { UUID.fromString(it[0] as String) }
 
         rows.forEach { row ->
             jdbc.update(
                 """
-                INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating)
                 VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-77.0, 47.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?, ?)
                 ON CONFLICT (id) DO NOTHING
                 """.trimIndent(),
@@ -484,7 +482,7 @@ class JdbcListingSearchQueryTest : FunSpec() {
                 row[1] as String,
                 "47.00, -77.00",
                 row[2] as String?,
-                row[3] as String,
+                row[3] as Boolean?,
                 (row[4] as String?)?.let { BigDecimal(it) },
                 (row[5] as String?)?.let { BigDecimal(it) },
             )
@@ -493,8 +491,8 @@ class JdbcListingSearchQueryTest : FunSpec() {
         // Mirror into the denormalised projection, exactly the sc-10 save() contract.
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
-            SELECT id, name, address, location, cuisine, cutting_method, verification_status, price, rating
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating
             FROM restaurant_listings WHERE id IN (?, ?, ?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),

@@ -2,7 +2,6 @@ package com.tahirslist.persistence.favorite
 
 import com.tahirslist.application.favorite.FavoritesRepository
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Provenance
@@ -57,7 +56,7 @@ class JdbcFavoritesRepository(private val jdbc: JdbcTemplate) : FavoritesReposit
                 ST_Y(l.location::geometry) AS lat,
                 ST_X(l.location::geometry) AS lng,
                 l.cuisine,
-                l.cutting_method,
+                l.is_hand_cut,
                 l.price,
                 l.rating,
                 l.owner_id,
@@ -80,7 +79,7 @@ class JdbcFavoritesRepository(private val jdbc: JdbcTemplate) : FavoritesReposit
         address = getString("address"),
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
-        cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
+        isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
         price = getBigDecimal("price")?.let { Price(it) },
         rating = getBigDecimal("rating")?.let { Rating(it) },
         ownerId = getObject("owner_id", UUID::class.java),

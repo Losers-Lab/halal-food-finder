@@ -15,7 +15,8 @@ Notes:
   * Rows come from `verified_seeds` ONLY. The resolved-but-unconfirmed and
     not-on-photon lists are deliberately NOT seeded (amanah / Photon-only ruling).
   * Every row: UNVERIFIED, provenance 'research-seed / photon-geocode',
-    cuisine NULL, cutting_method UNSPECIFIED, owner_id NULL, brand_id -> brand.
+    cuisine NULL, is_hand_cut NULL (unknown; sc-42 boolean), owner_id NULL,
+    brand_id -> brand.
   * Idempotent: brands ON CONFLICT (name), listings ON CONFLICT (normalised
     location, scoped to seed provenance) DO NOTHING.
   * No ZIP/postal-format assumption: CA/ON Canadian postal strings are kept as-is.
@@ -68,7 +69,7 @@ def main() -> None:
     out.append("--")
     out.append("-- Source: OpenStreetMap via Photon (photon.komoot.io), ODbL 1.0; coordinates WGS84.")
     out.append("-- Every row starts UNVERIFIED with provenance 'research-seed / photon-geocode'")
-    out.append("-- (listing-first model), cuisine NULL, cutting_method UNSPECIFIED, owner_id NULL.")
+    out.append("-- (listing-first model), cuisine NULL, is_hand_cut NULL, owner_id NULL.")
     out.append("-- Brand vs location: one brand row per distinct name; The Halal Guys is 1 brand, 3 locations.")
     out.append("-- Idempotent: brands ON CONFLICT (name); listings ON CONFLICT (normalised location,")
     out.append("-- scoped to seed provenance) DO NOTHING — dedupe by geocoded-normalised location, not raw name.")
@@ -83,13 +84,13 @@ def main() -> None:
     for r in rows:
         out.append(
             "INSERT INTO restaurant_listings"
-            " (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)"
+            " (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)"
             " VALUES ("
             f" {sql_str(r['name'])},"
             f" {sql_str(r['address'])},"
             f" ST_SetSRID(ST_MakePoint({r['lon']:.6f}, {r['lat']:.6f}), 4326)::geography,"
             " NULL,"
-            " 'UNSPECIFIED',"
+            " NULL,"
             " NULL,"
             f" (SELECT id FROM brands WHERE name = {sql_str(r['name'])}),"
             f" {sql_str(PROVENANCE)},"

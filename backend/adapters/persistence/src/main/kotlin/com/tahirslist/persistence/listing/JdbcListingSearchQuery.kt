@@ -1,12 +1,10 @@
 package com.tahirslist.persistence.listing
 
-import com.tahirslist.application.listing.CuttingMethodFilter
 import com.tahirslist.application.listing.CuisineLogic
 import com.tahirslist.application.listing.ListingSearchFilters
 import com.tahirslist.application.listing.ListingSearchQuery
 import com.tahirslist.application.listing.ListingSearchResult
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -46,13 +44,11 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         // a 0 radius yields an empty result rather than an error.
         if (radiusMeters <= 0.0) return emptyList()
 
-        // sc-42: BOTH ("any") adds no predicate so every stored method matches;
-        // HAND_CUT / MACHINE_CUT add an equality predicate on the stored column.
-        val cuttingClause = if (filters.cuttingMethod == CuttingMethodFilter.BOTH) {
-            ""
-        } else {
-            "AND cutting_method = ?"
-        }
+        // sc-42: hand-cut is an EXTRA on/off boolean filter. When off (default)
+        // no predicate is added so every listing matches regardless of status;
+        // when on, a simple IS TRUE predicate (ignores NULL = unknown, which
+        // search treats as not-hand-cut — same null semantics as price/rating).
+        val handCutClause = if (filters.handCutOnly) "AND is_hand_cut" else ""
 
         // sc-44: cuisine AND/OR over the multi-cuisine join table.
         //   OR (default): the listing has ANY selected cuisine -> EXISTS.
@@ -100,7 +96,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 ST_Y(location::geometry) AS lat,
                 ST_X(location::geometry) AS lng,
                 cuisine,
-                cutting_method,
+                is_hand_cut,
                 verification_status,
                 rating,
                 ST_DistanceSphere(
@@ -113,7 +109,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
                 ?
             )
-            $cuttingClause
+            $handCutClause
             $cuisineClause
             $priceClause
             $ratingClause
@@ -133,7 +129,6 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
             center.lat,
             radiusMeters,
         )
-        if (filters.cuttingMethod != CuttingMethodFilter.BOTH) args.add(filters.cuttingMethod.name)
         args.addAll(normalizedCuisines)
         if (minPrice != null) args.add(minPrice)
         if (maxPrice != null) args.add(maxPrice)
@@ -149,7 +144,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         address = getString("address"),
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
-        cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
+        isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
         rating = getBigDecimal("rating")?.let { Rating(it) },
         distanceMiles = getDouble("distance_miles"),

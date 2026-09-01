@@ -2,7 +2,6 @@ package com.tahirslist.application.favorite
 
 import com.tahirslist.application.listing.RestaurantListingRepository
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import io.kotest.assertions.throwables.shouldThrow
@@ -94,7 +93,7 @@ private fun aListing(id: UUID): RestaurantListing = RestaurantListing.fromStorag
     address = "123 Main St",
     location = LatLng(40.7128, -74.0060),
     cuisine = Cuisine("mediterranean"),
-    cuttingMethod = CuttingMethod.HAND_CUT,
+    isHandCut = true,
     ownerId = UUID.randomUUID(),
     brandId = null,
     provenance = null,

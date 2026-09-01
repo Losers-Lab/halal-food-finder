@@ -20,6 +20,14 @@ import java.util.UUID
  * part of the partial-halal/alcohol MVP additions (sc-118): a display attribute
  * (no search filter), defaulting to false.
  *
+ * [isHandCut] is the founder's sc-42 ruling: there is NO machine-cut concept.
+ * Hand-cut is a plain boolean — a listing either claims it or not. null means
+ * "unknown / not claimed" (community/research seed rows, which never claim a
+ * method); true means hand-cut (Zabiha); false means not-hand-cut. Search treats
+ * null the same as false: only a hand-cut-only filter excludes it. This replaces
+ * the earlier either/or CuttingMethod enum (HAND_CUT | MACHINE_CUT) wholesale
+ * (V17 migrates the column).
+ *
  * NOTE: ODbL share-alike on OSM/Photon-derived listing fields is an open founder
  * decision (docs/reviews/sc-138-external-services.md §5). Flagged here, not
  * decided — do not resolve it in code.
@@ -30,7 +38,7 @@ data class RestaurantListing(
     val address: String,
     val location: LatLng,
     val cuisine: Cuisine?,
-    val cuttingMethod: CuttingMethod,
+    val isHandCut: Boolean?,
     val price: Price?,
     val rating: Rating?,
     val ownerId: UUID?,
@@ -56,7 +64,7 @@ data class RestaurantListing(
             address: String,
             location: LatLng,
             cuisine: Cuisine,
-            cuttingMethod: CuttingMethod,
+            isHandCut: Boolean? = null,
             ownerId: UUID,
             price: Price? = null,
             rating: Rating? = null,
@@ -72,7 +80,7 @@ data class RestaurantListing(
                 address = trimmedAddress,
                 location = location,
                 cuisine = cuisine,
-                cuttingMethod = cuttingMethod,
+                isHandCut = isHandCut,
                 price = price,
                 rating = rating,
                 ownerId = ownerId,
@@ -95,7 +103,7 @@ data class RestaurantListing(
             address: String,
             location: LatLng,
             cuisine: Cuisine?,
-            cuttingMethod: CuttingMethod,
+            isHandCut: Boolean? = null,
             price: Price? = null,
             rating: Rating? = null,
             ownerId: UUID?,
@@ -110,7 +118,7 @@ data class RestaurantListing(
             address = address,
             location = location,
             cuisine = cuisine,
-            cuttingMethod = cuttingMethod,
+            isHandCut = isHandCut,
             price = price,
             rating = rating,
             ownerId = ownerId,

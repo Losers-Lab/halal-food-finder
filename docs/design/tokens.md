@@ -107,7 +107,7 @@ Binding separation rules:
 
 - DO pair stamp green "Verified" with the stamp/seal glyph and the word "Verified".
 - DO keep "Unverified" in warm ink neutral with an outlined shape — hue-independent differentiation.
-- DO use icon + text for hand-cut/machine-cut indicators.
+- DO use icon + text for the hand-cut indicator.
 - DON'T encode meaning in red vs green alone (~8% of male users can't distinguish them).
 - DON'T use stamp green or brand red decoratively where they'd read as status.
 

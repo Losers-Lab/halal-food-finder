@@ -2,7 +2,6 @@ package com.tahirslist.persistence.listing
 
 import com.tahirslist.application.listing.RestaurantListingRepository
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Provenance
@@ -39,7 +38,7 @@ class JdbcRestaurantListingRepository(
         val saved: RestaurantListing = tx.execute {
             val id = jdbc.queryForObject(
                 """
-                INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served)
+                INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served)
                 VALUES (
                     ?, ?,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
@@ -53,7 +52,7 @@ class JdbcRestaurantListingRepository(
                 listing.location.lng, // ST_MakePoint(x = longitude, y = latitude)
                 listing.location.lat,
                 listing.cuisine?.value,
-                listing.cuttingMethod.name,
+                listing.isHandCut,
                 listing.ownerId,
                 listing.brandId,
                 listing.provenance?.value,
@@ -92,7 +91,7 @@ class JdbcRestaurantListingRepository(
     private fun mirrorIntoListingSearch(listing: RestaurantListing) {
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating, alcohol_served)
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, alcohol_served)
             VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?)
             """.trimIndent(),
             listing.id,
@@ -101,7 +100,7 @@ class JdbcRestaurantListingRepository(
             listing.location.lng,
             listing.location.lat,
             listing.cuisine?.value,
-            listing.cuttingMethod.name,
+            listing.isHandCut,
             listing.verificationStatus.name,
             listing.price?.value,
             listing.rating?.value,
@@ -119,7 +118,7 @@ class JdbcRestaurantListingRepository(
                 ST_Y(location::geometry) AS lat,
                 ST_X(location::geometry) AS lng,
                 cuisine,
-                cutting_method,
+                is_hand_cut,
                 price,
                 rating,
                 alcohol_served,
@@ -169,7 +168,7 @@ class JdbcRestaurantListingRepository(
                 ST_Y(location::geometry) AS lat,
                 ST_X(location::geometry) AS lng,
                 cuisine,
-                cutting_method,
+                is_hand_cut,
                 price,
                 rating,
                 alcohol_served,
@@ -189,7 +188,7 @@ class JdbcRestaurantListingRepository(
         address = getString("address"),
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
-        cuttingMethod = CuttingMethod.valueOf(getString("cutting_method")),
+        isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
         price = getBigDecimal("price")?.let { Price(it) },
         rating = getBigDecimal("rating")?.let { Rating(it) },
         alcoholServed = getBoolean("alcohol_served"),

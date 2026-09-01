@@ -1,6 +1,5 @@
 package com.tahirslist.persistence
 
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.Provenance
 import com.tahirslist.domain.restaurant.VerificationStatus
 import com.tahirslist.persistence.listing.JdbcRestaurantListingRepository
@@ -51,6 +50,19 @@ class SeedRestaurantsMigrationTest : FunSpec() {
         object {}.javaClass.getResourceAsStream("/db/migration/V7__seed_restaurants.sql")
             ?.bufferedReader()?.readText()
             ?: error("V7__seed_restaurants.sql not on the test classpath")
+
+    /**
+     * V7's INSERT statements, adapted to the post-V17 schema. V17 (sc-42)
+     * replaced `cutting_method` (UNSPECIFIED seed) with the nullable boolean
+     * `is_hand_cut`, so re-running the historical seed against the migrated
+     * schema must target the live columns. This is exactly the transform V17
+     * itself applies (UNSPECIFIED -> NULL), proving the seed stays idempotently
+     * re-runnable on the current schema.
+     */
+    private val seedSqlPostV17: String =
+        seedSql
+            .replace("cutting_method", "is_hand_cut")
+            .replace("'UNSPECIFIED'", "NULL")
 
     private fun countListings() =
         jdbc.queryForObject("SELECT count(*) FROM restaurant_listings", Int::class.java)
@@ -135,8 +147,9 @@ class SeedRestaurantsMigrationTest : FunSpec() {
         }
 
         test("V7 is idempotent: re-running the seed SQL adds no duplicates") {
-            // Re-execute the exact generated seed statements (ON CONFLICT DO NOTHING).
-            jdbc.execute(seedSql)
+            // Re-execute the exact generated seed statements (ON CONFLICT DO NOTHING),
+            // adapted to the post-V17 is_hand_cut schema (sc-42).
+            jdbc.execute(seedSqlPostV17)
             countListings() shouldBe 30
             countBrands() shouldBe 28
         }
@@ -149,11 +162,11 @@ class SeedRestaurantsMigrationTest : FunSpec() {
                 jdbc.update(
                     """
                     INSERT INTO restaurant_listings
-                        (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
+                        (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)
                     VALUES (
                         'The Halal Guys', 'duplicate address',
                         ST_SetSRID(ST_MakePoint(-79.384523, 43.665206), 4326)::geography,
-                        NULL, 'UNSPECIFIED', NULL, NULL, 'research-seed / photon-geocode', 'UNVERIFIED'
+                        NULL, NULL, NULL, NULL, 'research-seed / photon-geocode', 'UNVERIFIED'
                     )
                     """.trimIndent(),
                 )
@@ -165,10 +178,10 @@ class SeedRestaurantsMigrationTest : FunSpec() {
                 jdbc.update(
                     """
                     INSERT INTO restaurant_listings
-                        (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
+                        (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)
                     VALUES (
                         'X', '1 St', ST_SetSRID(ST_MakePoint(0.0, 0.0), 4326)::geography,
-                        NULL, 'UNSPECIFIED', NULL, NULL, 'some-other-source', 'UNVERIFIED'
+                        NULL, NULL, NULL, NULL, 'some-other-source', 'UNVERIFIED'
                     )
                     """.trimIndent(),
                 )
@@ -180,7 +193,7 @@ class SeedRestaurantsMigrationTest : FunSpec() {
                 jdbc.update(
                     """
                     INSERT INTO restaurant_listings
-                        (name, address, location, cuisine, cutting_method, owner_id, brand_id, provenance, verification_status)
+                        (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)
                     VALUES (
                         'Ghost', '1 St', ST_SetSRID(ST_MakePoint(1.0, 1.0), 4326)::geography,
                         NULL, 'UNSPECIFIED', NULL, '${UUID.randomUUID()}', 'research-seed / photon-geocode', 'UNVERIFIED'
@@ -202,7 +215,7 @@ class SeedRestaurantsMigrationTest : FunSpec() {
             found.ownerId shouldBe null
             found.provenance shouldBe Provenance.RESEARCH_SEED_PHOTON_GEOCODE
             found.verificationStatus shouldBe VerificationStatus.UNVERIFIED
-            found.cuttingMethod shouldBe CuttingMethod.UNSPECIFIED
+            found.isHandCut shouldBe null
             found.brandId.shouldNotBeNull()
             // OSM node coordinate round-trips.
             found.location.lat shouldBe (43.682921 plusOrMinus 0.0001)
