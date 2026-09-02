@@ -206,7 +206,7 @@ class VerificationClaimEndpointTest : PostgresBootTest() {
             "lat" to 40.7128,
             "lng" to -74.0060,
             "cuisine" to "mediterranean",
-            "cuttingMethod" to "HAND_CUT",
+            "isHandCut" to true,
         )
         val resp = client.exchange(url("/v1/listings"), HttpMethod.POST, HttpEntity<Any>(body, headers), Map::class.java)
         resp.statusCode shouldBe HttpStatus.CREATED

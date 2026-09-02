@@ -117,36 +117,31 @@ class ListingSearchEndpointTest : PostgresBootTest() {
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
         }
 
-        test("cuttingMethod=HAND_CUT narrows the search and excludes the UNSPECIFIED seed") {
-            // sc-42: the entire seed set is UNSPECIFIED, so a HAND_CUT filter
-            // around St. Clair must return nothing, while the same query without
-            // the filter returns hits — proving the filter actually narrows.
+        test("handCutOnly=true narrows the search and excludes the unknown seed (sc-42)") {
+            // sc-42: the entire seed set has an unknown (NULL) hand-cut status, so
+            // a handCutOnly filter around St. Clair returns nothing, while the
+            // same query without the filter returns hits — proving it narrows.
             val unfiltered = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0")
             (bodyOf(unfiltered).size() > 0) shouldBe true
 
-            val handCut = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=HAND_CUT")
+            val handCut = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&handCutOnly=true")
             handCut.statusCode shouldBe HttpStatus.OK
             bodyOf(handCut).size() shouldBe 0
         }
 
-        test("cuttingMethod=MACHINE_CUT narrows the search and excludes the UNSPECIFIED seed") {
-            val machineCut = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=MACHINE_CUT")
+        test("handCutOnly=false matches the no-filter result set (any cutting status)") {
+            val noFilter = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0")
+            val explicitlyOff = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&handCutOnly=false")
 
-            machineCut.statusCode shouldBe HttpStatus.OK
-            bodyOf(machineCut).size() shouldBe 0
-        }
-
-        test("cuttingMethod=BOTH matches the no-filter result set (any method)") {
-            val both = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=BOTH")
-
-            both.statusCode shouldBe HttpStatus.OK
-            val results = bodyOf(both)
+            explicitlyOff.statusCode shouldBe HttpStatus.OK
+            val results = bodyOf(explicitlyOff)
             (results.size() > 0) shouldBe true
             results[0].get("name").asText() shouldBe "Osmow's"
+            (results.size() == bodyOf(noFilter).size()) shouldBe true
         }
 
-        test("an invalid cuttingMethod returns 400 invalid_input, not a crash") {
-            val resp = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&cuttingMethod=STUNK")
+        test("a non-boolean handCutOnly returns 400 invalid_input, not a crash") {
+            val resp = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&handCutOnly=STUNK")
 
             resp.statusCode shouldBe HttpStatus.BAD_REQUEST
             bodyOf(resp).get("code").asText() shouldBe "invalid_input"
@@ -229,7 +224,7 @@ class ListingSearchEndpointTest : PostgresBootTest() {
             insertRatedEndpointRows()
             val base = "/v1/listings/search?center=47.0,-77.0&radius=2.0"
 
-            val resp = get("$base&minRating=1.0&cuttingMethod=HAND_CUT&cuisine=mexican&minPrice=12&maxPrice=16")
+            val resp = get("$base&minRating=1.0&handCutOnly=true&cuisine=mexican&minPrice=12&maxPrice=16")
             resp.statusCode shouldBe HttpStatus.OK
             val names = bodyOf(resp).map { it.get("name").asText() }
             names shouldBe listOf("Star Grill")
@@ -259,27 +254,27 @@ class ListingSearchEndpointTest : PostgresBootTest() {
      */
     private fun insertFilterRows() {
         val base = listOf(
-            listOf("30000000-0000-0000-0000-000000000001", "Taco Mixto", "mexican", "HAND_CUT", "15.00", listOf("mexican", "mediterranean")),
-            listOf("30000000-0000-0000-0000-000000000002", "Taco Solo", "mexican", "UNSPECIFIED", "10.00", listOf("mexican")),
-            listOf("30000000-0000-0000-0000-000000000003", "Med Grill", "mediterranean", "UNSPECIFIED", "20.00", listOf("mediterranean")),
-            listOf("30000000-0000-0000-0000-000000000004", "Budget Eats", null, "UNSPECIFIED", "5.00", emptyList<String>()),
-            listOf("30000000-0000-0000-0000-000000000005", "No Price Wagyu", null, "UNSPECIFIED", null, emptyList<String>()),
+            listOf("30000000-0000-0000-0000-000000000001", "Taco Mixto", "mexican", true, "15.00", listOf("mexican", "mediterranean")),
+            listOf("30000000-0000-0000-0000-000000000002", "Taco Solo", "mexican", null, "10.00", listOf("mexican")),
+            listOf("30000000-0000-0000-0000-000000000003", "Med Grill", "mediterranean", null, "20.00", listOf("mediterranean")),
+            listOf("30000000-0000-0000-0000-000000000004", "Budget Eats", null, null, "5.00", emptyList<String>()),
+            listOf("30000000-0000-0000-0000-000000000005", "No Price Wagyu", null, null, null, emptyList<String>()),
         )
         base.forEach { row ->
             jdbc.update(
                 """
-                INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status, price)
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price)
                 VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-78.5, 45.5), 4326)::geography, ?, ?, 'UNVERIFIED', ?)
                 ON CONFLICT (id) DO NOTHING
                 """.trimIndent(),
                 UUID.fromString(row[0] as String), row[1] as String, "45.50, -78.50",
-                row[2] as String?, row[3] as String, (row[4] as String?)?.let { BigDecimal(it) },
+                row[2] as String?, row[3] as Boolean?, (row[4] as String?)?.let { BigDecimal(it) },
             )
         }
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price)
-            SELECT id, name, address, location, cuisine, cutting_method, verification_status, price
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price
             FROM restaurant_listings WHERE id IN (?, ?, ?, ?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
@@ -306,31 +301,31 @@ class ListingSearchEndpointTest : PostgresBootTest() {
      * seeds and the price/cuisine rows at 45.5N/78.5W. Idempotent via ON CONFLICT.
      */
     private fun insertRatedEndpointRows() {
-        // (id, name, cuisine, cutting, price, rating)
+        // (id, name, cuisine, isHandCut, price, rating)
         val rows = listOf(
-            listOf("50000000-0000-0000-0000-000000000001", "Star Grill", "mexican", "HAND_CUT", "15.00", "4.8"),
-            listOf("50000000-0000-0000-0000-000000000002", "Clover Cafe", "mexican", "UNSPECIFIED", "10.00", "3.5"),
-            listOf("50000000-0000-0000-0000-000000000003", "Rustic Table", "mediterranean", "MACHINE_CUT", "20.00", "2.5"),
-            listOf("50000000-0000-0000-0000-000000000004", "No Rating Bistro", null, "UNSPECIFIED", "5.00", null),
+            listOf("50000000-0000-0000-0000-000000000001", "Star Grill", "mexican", true, "15.00", "4.8"),
+            listOf("50000000-0000-0000-0000-000000000002", "Clover Cafe", "mexican", null, "10.00", "3.5"),
+            listOf("50000000-0000-0000-0000-000000000003", "Rustic Table", "mediterranean", false, "20.00", "2.5"),
+            listOf("50000000-0000-0000-0000-000000000004", "No Rating Bistro", null, null, "5.00", null),
         )
         val ids = rows.map { UUID.fromString(it[0] as String) }
 
         rows.forEach { row ->
             jdbc.update(
                 """
-                INSERT INTO restaurant_listings (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating)
                 VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-77.0, 47.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?, ?)
                 ON CONFLICT (id) DO NOTHING
                 """.trimIndent(),
                 UUID.fromString(row[0] as String), row[1] as String, "47.00, -77.00",
-                row[2] as String?, row[3] as String,
+                row[2] as String?, row[3] as Boolean?,
                 (row[4] as String?)?.let { BigDecimal(it) }, (row[5] as String?)?.let { BigDecimal(it) },
             )
         }
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, cutting_method, verification_status, price, rating)
-            SELECT id, name, address, location, cuisine, cutting_method, verification_status, price, rating
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating
             FROM restaurant_listings WHERE id IN (?, ?, ?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),

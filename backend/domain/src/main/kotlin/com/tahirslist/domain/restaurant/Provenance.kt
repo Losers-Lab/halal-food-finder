@@ -10,7 +10,7 @@ package com.tahirslist.domain.restaurant
  *                            (`research-seed / photon-geocode`).
  *
  * Ordinary user-added listings (Add Listing use case) carry `null` provenance.
- * The vocabulary is deliberately kept separate from `cutting_method`'s enum
+ * The vocabulary is deliberately kept separate from the `is_hand_cut` boolean
  * (Omar adjudication): no cross-breeding between the two vocabularies.
  */
 data class Provenance(val raw: String) {

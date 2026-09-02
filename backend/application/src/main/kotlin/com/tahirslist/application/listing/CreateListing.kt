@@ -2,7 +2,6 @@ package com.tahirslist.application.listing
 
 import com.tahirslist.application.account.AccountRepository
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import java.util.UUID
@@ -28,7 +27,7 @@ class CreateListing(
         address: String,
         location: LatLng,
         cuisine: Cuisine,
-        cuttingMethod: CuttingMethod,
+        isHandCut: Boolean? = null,
         ownerId: UUID,
         alcoholServed: Boolean = false,
     ): RestaurantListing {
@@ -39,7 +38,7 @@ class CreateListing(
             address = address,
             location = location,
             cuisine = cuisine,
-            cuttingMethod = cuttingMethod,
+            isHandCut = isHandCut,
             ownerId = ownerId,
             alcoholServed = alcoholServed,
         )

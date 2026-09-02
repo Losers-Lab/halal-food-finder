@@ -1,7 +1,6 @@
 package com.tahirslist.application.listing
 
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -14,6 +13,9 @@ import java.util.UUID
  *
  * Sc-10 contract: distance is straight-line (great-circle) miles, computed by
  * PostGIS (ST_DistanceSphere) against the denormalised `listing_search` table.
+ *
+ * [isHandCut] is nullable: null = unknown / not claimed (seed rows); true =
+ * hand-cut; false = not hand-cut (sc-42 — no machine-cut concept).
  */
 data class ListingSearchResult(
     val id: UUID,
@@ -21,7 +23,7 @@ data class ListingSearchResult(
     val address: String,
     val location: LatLng,
     val cuisine: Cuisine?,
-    val cuttingMethod: CuttingMethod,
+    val isHandCut: Boolean?,
     val verificationStatus: VerificationStatus,
     val rating: Rating?,
     val distanceMiles: Double,

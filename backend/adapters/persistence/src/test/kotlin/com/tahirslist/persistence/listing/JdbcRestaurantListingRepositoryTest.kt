@@ -3,7 +3,6 @@ package com.tahirslist.persistence.listing
 import com.tahirslist.domain.account.Account
 import com.tahirslist.domain.account.Email
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Rating
@@ -58,14 +57,14 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
         address: String? = "123 Main St",
         locationExpr: String = "ST_SetSRID(ST_MakePoint(-74.006, 40.7128), 4326)::geography",
         cuisine: String? = "mediterranean",
-        cuttingMethod: String? = "HAND_CUT",
+        isHandCut: Boolean? = true,
         verificationStatus: String? = "UNVERIFIED",
     ): Int = jdbc.update(
         """
-        INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, owner_id, verification_status)
+        INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, verification_status)
         VALUES (?, ?, $locationExpr, ?, ?, ?, ?)
         """.trimIndent(),
-        name, address, cuisine, cuttingMethod, owner, verificationStatus,
+        name, address, cuisine, isHandCut, owner, verificationStatus,
     )
 
     init {
@@ -116,7 +115,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "123 Main St",
                 location = LatLng(40.7128, -74.0060),
                 cuisine = Cuisine("Mediterranean"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
             )
 
@@ -130,12 +129,26 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             found.address shouldBe "123 Main St"
             found.ownerId shouldBe owner.id
             found.cuisine!!.value shouldBe "mediterranean"
-            found.cuttingMethod shouldBe CuttingMethod.HAND_CUT
+            found.isHandCut shouldBe true
             found.verificationStatus shouldBe VerificationStatus.UNVERIFIED
             found.brandId shouldBe null
             found.provenance shouldBe null
             found.location.lat shouldBe (40.7128 plusOrMinus 0.0001)
             found.location.lng shouldBe (-74.0060 plusOrMinus 0.0001)
+        }
+
+        test("save round-trips the isHandCut boolean tri-state (sc-42)") {
+            val owner = accounts.save(Account.new(email = Email("handcut-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            fun roundTrip(handCut: Boolean?): RestaurantListing? {
+                val listing = RestaurantListing.new(
+                    name = "Cut Grill", address = "1 Knife Ave", location = LatLng(43.7, -79.4),
+                    cuisine = Cuisine("x"), isHandCut = handCut, ownerId = owner.id,
+                )
+                return listings.findById(listings.save(listing).id)
+            }
+            roundTrip(true)!!.isHandCut shouldBe true
+            roundTrip(false)!!.isHandCut shouldBe false
+            roundTrip(null)!!.isHandCut shouldBe null
         }
 
         test("findById returns null for an unknown id") {
@@ -149,7 +162,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "1 Verify Ave",
                 location = LatLng(43.7, -79.4),
                 cuisine = Cuisine("mediterranean"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
             )
             val saved = listings.save(listing)
@@ -179,7 +192,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "9 Search Rd",
                 location = LatLng(43.7, -79.4),
                 cuisine = Cuisine("Halal"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
             )
 
@@ -202,7 +215,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "7 Dine Dr",
                 location = LatLng(43.7, -79.4),
                 cuisine = Cuisine("Halal"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
                 price = Price(BigDecimal("15.50")),
             )
@@ -238,7 +251,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "5 Stars Ave",
                 location = LatLng(43.7, -79.4),
                 cuisine = Cuisine("Halal"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
                 rating = Rating(BigDecimal("4.8")),
             )
@@ -267,7 +280,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "8 Cork Ave",
                 location = LatLng(43.7, -79.4),
                 cuisine = Cuisine("Halal"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
                 alcoholServed = true,
             )
@@ -295,7 +308,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 address = "9 Dry Blvd",
                 location = LatLng(43.7, -79.4),
                 cuisine = Cuisine("Halal"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = owner.id,
             )
 
@@ -359,8 +372,8 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             shouldThrow<DataIntegrityViolationException> {
                 jdbc.update(
                     """
-                    INSERT INTO restaurant_listings (name, address, location, cuisine, cutting_method, verification_status, price)
-                    VALUES ('Neg Grill', '1 St', ST_SetSRID(ST_MakePoint(-74.0, 40.0), 4326)::geography, 'grill', 'UNSPECIFIED', 'UNVERIFIED', -1.0)
+                    INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, verification_status, price)
+                    VALUES ('Neg Grill', '1 St', ST_SetSRID(ST_MakePoint(-74.0, 40.0), 4326)::geography, 'grill', NULL, 'UNVERIFIED', -1.0)
                     """.trimIndent(),
                 )
             }
@@ -377,12 +390,25 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             }
         }
 
-        test("migration enforces cutting_method values") {
-            tryInsert(owner = newOwner(), cuttingMethod = "MACHINE_CUT")
-            tryInsert(owner = newOwner(), cuttingMethod = "UNSPECIFIED")
-            shouldThrow<DataIntegrityViolationException> {
-                tryInsert(owner = newOwner(), cuttingMethod = "FOO")
-            }
+        test("V17 replaces cutting_method with a nullable boolean is_hand_cut (sc-42)") {
+            // The machine-cut vocabulary is gone from the write path. is_hand_cut
+            // is a plain, nullable boolean: true / false / NULL (unknown).
+            val methodCol = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'restaurant_listings' AND column_name = 'cutting_method'",
+                Int::class.java,
+            )
+            methodCol shouldBe 0
+
+            val handCutCol = jdbc.queryForMap(
+                "SELECT data_type, is_nullable FROM information_schema.columns " +
+                    "WHERE table_name = 'restaurant_listings' AND column_name = 'is_hand_cut'",
+            )
+            handCutCol["data_type"] shouldBe "boolean"
+            handCutCol["is_nullable"] shouldBe "YES"
+
+            // NULL (unknown / not claimed) is legal — no CHECK vocabulary to violate.
+            tryInsert(owner = newOwner(), isHandCut = null)
+            tryInsert(owner = newOwner(), isHandCut = false)
         }
 
         test("migration enforces the owner_id foreign key (DB-level backstop)") {
@@ -400,7 +426,6 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             shouldThrow<DataIntegrityViolationException> {
                 tryInsert(owner = owner, locationExpr = "NULL")
             }
-            shouldThrow<DataIntegrityViolationException> { tryInsert(owner = owner, cuttingMethod = null) }
         }
 
         test("migration accepts NULL cuisine, owner and provenance (community seed contract)") {

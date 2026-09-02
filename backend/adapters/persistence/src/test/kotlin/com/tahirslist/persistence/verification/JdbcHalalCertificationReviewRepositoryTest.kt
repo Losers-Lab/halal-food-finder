@@ -3,7 +3,6 @@ package com.tahirslist.persistence.verification
 import com.tahirslist.domain.account.Account
 import com.tahirslist.domain.account.Email
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.verification.HalalCertificationReview
@@ -62,7 +61,7 @@ class JdbcHalalCertificationReviewRepositoryTest : FunSpec() {
                 address = "123 Main St",
                 location = LatLng(40.7128, -74.0060),
                 cuisine = Cuisine("mediterranean"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = ownerId,
             ),
         ).id

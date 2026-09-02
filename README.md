@@ -2,9 +2,9 @@
 
 > بِسْمِ اللهِ الرَّحْمٰنِ الرَّحِيْمِ
 
-A platform to help Muslims reliably find halal food, with a granular filter for
-**hand-cut vs. machine-cut** food and a formal verification process for
-restaurants.
+A platform to help Muslims reliably find halal food, with a granular **hand-cut**
+filter (an extra on/off switch — there is no machine-cut concept) and a formal
+verification process for restaurants.
 
 ## Status
 
@@ -23,8 +23,8 @@ frontend implementations (see [ARCHITECTURE.md](./ARCHITECTURE.md)).
 
 Tahir's List is designed to solve a real problem for Muslims: verifying
 that food is genuinely halal is hard, especially outside Muslim-majority
-countries, and the distinction between **hand-cut** and **machine-cut** meat
-matters to many people. The product's core ideas (from the Shortcut PRD):
+countries, and whether meat is **hand-cut** (Zabiha) matters to many people.
+The product's core ideas (from the Shortcut PRD):
 
 1. **Discoverable, searchable listings** of restaurants, searchable by
    location (Google Maps) with filters for food-cutting method, price, cuisine

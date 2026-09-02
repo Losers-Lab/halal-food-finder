@@ -3,7 +3,6 @@ package com.tahirslist.bootstrap.listing
 import com.tahirslist.application.listing.CreateListing
 import com.tahirslist.application.listing.ListingOwnerNotFoundException
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -66,7 +65,7 @@ class ListingController(private val createListing: CreateListing) {
             address = request.address,
             location = LatLng(lat = request.lat!!, lng = request.lng!!),
             cuisine = Cuisine(request.cuisine),
-            cuttingMethod = request.cuttingMethod,
+            isHandCut = request.isHandCut,
             ownerId = ownerId,
         )
         return ResponseEntity.status(HttpStatus.CREATED).body(ListingResponse.from(listing))
@@ -93,8 +92,11 @@ class ListingController(private val createListing: CreateListing) {
         @field:NotBlank(message = "cuisine is required")
         val cuisine: String,
 
-        @field:NotNull(message = "cuttingMethod is required")
-        val cuttingMethod: CuttingMethod,
+        /**
+         * Whether the listing is hand-cut (sc-42). Optional; null = unknown /
+         * not claimed. There is no machine-cut concept — this is a plain boolean.
+         */
+        val isHandCut: Boolean?,
     )
 
     data class ListingResponse(
@@ -104,7 +106,7 @@ class ListingController(private val createListing: CreateListing) {
         val lat: Double,
         val lng: Double,
         val cuisine: String,
-        val cuttingMethod: String,
+        val isHandCut: Boolean?,
         val ownerId: UUID,
         val verificationStatus: VerificationStatus,
         val createdAt: Instant,
@@ -120,7 +122,7 @@ class ListingController(private val createListing: CreateListing) {
                 // echoes a non-null value; the nullable domain field is only NULL
                 // for community seed rows, which this endpoint does not create.
                 cuisine = listing.cuisine!!.value,
-                cuttingMethod = listing.cuttingMethod.name,
+                isHandCut = listing.isHandCut,
                 // Add Listing always attaches the authenticated owner, so the
                 // response echoes a non-null id; only community seed rows have
                 // ownerId NULL, and this endpoint does not create those.

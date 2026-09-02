@@ -62,9 +62,9 @@ remains **unresolved** (see Part 2).
 From the PRD's objective and high-level user stories:
 
 - Users search for halal restaurants by **location** (with current-location
-  opt-in) and filter results by **cutting method** (hand-cut / machine-cut),
-  **price**, **cuisine** (AND/OR chaining, default OR), **rating**, and
-  **distance**.
+  opt-in) and filter results by **hand-cut** (an extra on/off switch — there is
+  no machine-cut concept), **price**, **cuisine** (AND/OR chaining, default OR),
+  **rating**, and **distance**.
 - Restaurant listings carry halal-relevant attributes: an **alcohol-served**
   flag (whether the establishment serves alcohol) and, **in MVP scope**,
   support for **partial-halal** restaurants (whole-restaurant vs partial

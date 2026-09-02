@@ -63,7 +63,7 @@ class PostgisSmokeTest : FunSpec() {
             // VERIFIED-status opening on restaurant_listings (V15), and the
             // sc-73 read-surface certifier + expires_on columns on reviews
             // (V16) all run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 16
+            result.migrationsExecuted shouldBe 17
         }
     }
 }

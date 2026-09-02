@@ -20,7 +20,7 @@ Land on page → search box is the first thing the eye hits (search-FIRST, no ma
 │  ┌──────────────────────────────────────┐  ┌───────────┐     │
 │  │ 🔍 Search restaurants, dishes…       │  │  Search   │     │  ← input ink-0, brand-500 button
 │  └──────────────────────────────────────┘  └───────────┘     │
-│   Browse: [All] [Hand-cut] [Machine-cut] [Near me]           │  ← dark chips (ink-900)
+│   Browse: [All] [Hand-cut] [Near me]                         │  ← dark chips (ink-900)
 ├──────────────────────────────────────────────────────────────┤
 │  24 spots near you                    [Map] [List]           │  ← results toolbar (v1: List only)
 │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐                │

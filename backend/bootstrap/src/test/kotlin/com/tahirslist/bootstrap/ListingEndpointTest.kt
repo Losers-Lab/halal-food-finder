@@ -85,7 +85,7 @@ class ListingEndpointTest : PostgresBootTest() {
             body["lat"].toString().toDouble() shouldBe 40.7128
             body["lng"].toString().toDouble() shouldBe -74.0060
             body["cuisine"] shouldBe "mediterranean"
-            body["cuttingMethod"] shouldBe "HAND_CUT"
+            body["isHandCut"] shouldBe true
             body["verificationStatus"] shouldBe "UNVERIFIED"
             body["ownerId"].toString() shouldBe ownerId.toString()
             UUID.fromString(body["id"].toString()) shouldNotBe null
@@ -93,7 +93,7 @@ class ListingEndpointTest : PostgresBootTest() {
             // Persistence round-trip: read the row back from PostGIS.
             val row = JdbcTemplate(dataSource).queryForList(
                 """
-                SELECT name, address, cuisine, cutting_method, verification_status, owner_id,
+                SELECT name, address, cuisine, is_hand_cut, verification_status, owner_id,
                        ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
                 FROM restaurant_listings WHERE id = ?
                 """.trimIndent(),
@@ -102,7 +102,7 @@ class ListingEndpointTest : PostgresBootTest() {
             row["name"] shouldBe "Halal Grill"
             row["address"] shouldBe "123 Main St"
             row["cuisine"] shouldBe "mediterranean"
-            row["cutting_method"] shouldBe "HAND_CUT"
+            row["is_hand_cut"] shouldBe true
             row["verification_status"] shouldBe "UNVERIFIED"
             row["owner_id"].toString() shouldBe ownerId.toString()
             (row["lat"] as Number).toDouble() shouldBe 40.7128
@@ -160,7 +160,7 @@ class ListingEndpointTest : PostgresBootTest() {
         "lat" to 40.7128,
         "lng" to -74.0060,
         "cuisine" to "mediterranean",
-        "cuttingMethod" to "HAND_CUT",
+        "isHandCut" to true,
     )
 
     private fun postJson(path: String, body: Any, bearer: String?): ResponseEntity<Map<*, *>> {

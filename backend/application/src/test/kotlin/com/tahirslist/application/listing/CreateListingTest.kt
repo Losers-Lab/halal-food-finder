@@ -4,7 +4,6 @@ import com.tahirslist.application.account.AccountRepository
 import com.tahirslist.domain.account.Account
 import com.tahirslist.domain.account.Email
 import com.tahirslist.domain.restaurant.Cuisine
-import com.tahirslist.domain.restaurant.CuttingMethod
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.VerificationStatus
 import io.kotest.assertions.throwables.shouldThrow
@@ -44,7 +43,7 @@ class CreateListingTest : FunSpec({
             address = "123 Main St",
             location = LatLng(40.7128, -74.0060),
             cuisine = Cuisine("mediterranean"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = ownerId,
         )
 
@@ -65,7 +64,7 @@ class CreateListingTest : FunSpec({
             address = "  123 Main St  ",
             location = LatLng(1.0, 2.0),
             cuisine = Cuisine("x"),
-            cuttingMethod = CuttingMethod.MACHINE_CUT,
+            isHandCut = false,
             ownerId = ownerId,
         )
 
@@ -81,13 +80,46 @@ class CreateListingTest : FunSpec({
             address = "123 Main St",
             location = LatLng(1.0, 2.0),
             cuisine = Cuisine("x"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = ownerId,
             alcoholServed = true,
         )
 
         listing.alcoholServed shouldBe true
         verify { listings.save(match { it.alcoholServed }) }
+    }
+
+    test("passes an explicit isHandCut flag to the saved listing (sc-42)") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            isHandCut = true,
+            ownerId = ownerId,
+        )
+
+        listing.isHandCut shouldBe true
+        verify { listings.save(match { it.isHandCut == true }) }
+    }
+
+    test("defaults isHandCut to null (unknown) when not supplied (sc-42)") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            ownerId = ownerId,
+        )
+
+        listing.isHandCut shouldBe null
+        verify { listings.save(match { it.isHandCut == null }) }
     }
 
     test("defaults alcoholServed to false when not supplied") {
@@ -99,7 +131,7 @@ class CreateListingTest : FunSpec({
             address = "123 Main St",
             location = LatLng(1.0, 2.0),
             cuisine = Cuisine("x"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = ownerId,
         )
 
@@ -117,7 +149,7 @@ class CreateListingTest : FunSpec({
                 address = "123 Main St",
                 location = LatLng(1.0, 2.0),
                 cuisine = Cuisine("x"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = UUID.randomUUID(),
             )
         }
@@ -134,7 +166,7 @@ class CreateListingTest : FunSpec({
                 address = "   ",
                 location = LatLng(1.0, 2.0),
                 cuisine = Cuisine("x"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = UUID.randomUUID(),
             )
         }
@@ -153,7 +185,7 @@ class CreateListingTest : FunSpec({
                 address = "123 Main St",
                 location = LatLng(1.0, 2.0),
                 cuisine = Cuisine("x"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = ownerId,
             )
         }

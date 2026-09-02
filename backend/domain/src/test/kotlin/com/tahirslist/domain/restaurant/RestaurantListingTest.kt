@@ -17,7 +17,7 @@ class RestaurantListingTest : FunSpec({
             address = " 123 Main St  ",
             location = LatLng(40.7128, -74.0060),
             cuisine = Cuisine("Mediterranean"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = owner,
         )
 
@@ -25,19 +25,48 @@ class RestaurantListingTest : FunSpec({
         listing.address shouldBe "123 Main St"             // trimmed
         listing.location shouldBe LatLng(40.7128, -74.0060)
         listing.cuisine shouldBe Cuisine("Mediterranean")
-        listing.cuttingMethod shouldBe CuttingMethod.HAND_CUT
+        listing.isHandCut shouldBe true
         listing.ownerId shouldBe owner
         listing.verificationStatus shouldBe VerificationStatus.UNVERIFIED // listing-first model
+    }
+
+    test("new() defaults isHandCut to null (unknown / not claimed)") {
+        // sc-42: hand-cut is an EXTRA boolean, not an either/or choice. A new
+        // listing that does not claim hand-cut records null (unknown) by default.
+        val listing = RestaurantListing.new(
+            name = "Plain Grill",
+            address = "9 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            ownerId = UUID.randomUUID(),
+        )
+        listing.isHandCut shouldBe null
+    }
+
+    test("isHandCut is a plain boolean tri-state, not a cutting-method enum") {
+        // sc-42: there is no machine-cut concept — only hand-cut, not-hand-cut,
+        // or unknown(null). Assert all three states on the domain model.
+        fun build(handCut: Boolean?) = RestaurantListing.new(
+            name = "X",
+            address = "1 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            isHandCut = handCut,
+            ownerId = UUID.randomUUID(),
+        )
+        build(true).isHandCut shouldBe true
+        build(false).isHandCut shouldBe false
+        build(null).isHandCut shouldBe null
     }
 
     test("new() assigns a random id and a createdAt timestamp") {
         val a = RestaurantListing.new(
             name = "A", address = "1 St", location = LatLng(0.0, 0.0),
-            cuisine = Cuisine("x"), cuttingMethod = CuttingMethod.MACHINE_CUT, ownerId = UUID.randomUUID(),
+            cuisine = Cuisine("x"), isHandCut = false, ownerId = UUID.randomUUID(),
         )
         val b = RestaurantListing.new(
             name = "B", address = "2 St", location = LatLng(1.0, 1.0),
-            cuisine = Cuisine("x"), cuttingMethod = CuttingMethod.MACHINE_CUT, ownerId = UUID.randomUUID(),
+            cuisine = Cuisine("x"), isHandCut = false, ownerId = UUID.randomUUID(),
         )
 
         a.id shouldNotBe b.id
@@ -50,7 +79,7 @@ class RestaurantListingTest : FunSpec({
             address = "1 St",
             location = LatLng(0.0, 0.0),
             cuisine = Cuisine("x"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = UUID.randomUUID(),
             price = Price(BigDecimal("9.99")),
         )
@@ -64,7 +93,7 @@ class RestaurantListingTest : FunSpec({
             address = "1 St",
             location = LatLng(0.0, 0.0),
             cuisine = Cuisine("x"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = UUID.randomUUID(),
             rating = Rating(BigDecimal("4.5")),
         )
@@ -73,14 +102,14 @@ class RestaurantListingTest : FunSpec({
         // Default is no rating (null).
         RestaurantListing.new(
             name = "Y", address = "2 St", location = LatLng(0.0, 0.0),
-            cuisine = Cuisine("x"), cuttingMethod = CuttingMethod.MACHINE_CUT, ownerId = UUID.randomUUID(),
+            cuisine = Cuisine("x"), isHandCut = false, ownerId = UUID.randomUUID(),
         ).rating shouldBe null
     }
 
     test("new() defaults alcoholServed to false") {
         val listing = RestaurantListing.new(
             name = "Y", address = "2 St", location = LatLng(0.0, 0.0),
-            cuisine = Cuisine("x"), cuttingMethod = CuttingMethod.MACHINE_CUT, ownerId = UUID.randomUUID(),
+            cuisine = Cuisine("x"), isHandCut = false, ownerId = UUID.randomUUID(),
         )
         listing.alcoholServed shouldBe false
     }
@@ -91,7 +120,7 @@ class RestaurantListingTest : FunSpec({
             address = "1 St",
             location = LatLng(0.0, 0.0),
             cuisine = Cuisine("x"),
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = UUID.randomUUID(),
             alcoholServed = true,
         )
@@ -105,7 +134,7 @@ class RestaurantListingTest : FunSpec({
                 address = "1 St",
                 location = LatLng(0.0, 0.0),
                 cuisine = Cuisine("x"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = UUID.randomUUID(),
             )
         }
@@ -118,7 +147,7 @@ class RestaurantListingTest : FunSpec({
                 address = "",
                 location = LatLng(0.0, 0.0),
                 cuisine = Cuisine("x"),
-                cuttingMethod = CuttingMethod.HAND_CUT,
+                isHandCut = true,
                 ownerId = UUID.randomUUID(),
             )
         }
@@ -162,7 +191,7 @@ class RestaurantListingTest : FunSpec({
             address = "307 E 14th St",
             location = LatLng(40.732288, -73.984423),
             cuisine = null,
-            cuttingMethod = CuttingMethod.UNSPECIFIED,
+            isHandCut = null,
             ownerId = null,
             brandId = brandId,
             provenance = Provenance.RESEARCH_SEED_PHOTON_GEOCODE,
@@ -184,7 +213,7 @@ class RestaurantListingTest : FunSpec({
             address = "1 Grill Ave",
             location = LatLng(40.0, -74.0),
             cuisine = null,
-            cuttingMethod = CuttingMethod.HAND_CUT,
+            isHandCut = true,
             ownerId = null,
             brandId = null,
             provenance = null,

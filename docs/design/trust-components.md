@@ -45,26 +45,27 @@ The core UX question: **"What does the user think is happening here?"** — a ve
 
 **Colorblind check:** differentiation from Verified is (a) filled-positive vs outlined-neutral, (b) checkmark vs circle glyph, (c) label text. Passing all three means deuteranopia/protanopia/tritanopia users get identical information.
 
-## 3. CutMethodIndicator (hand-cut / machine-cut)
+## 3. HandCutIndicator
 
-**Anatomy:** `[icon] Hand-cut` or `[icon] Machine-cut` — icon 16px + label.
+**Anatomy:** `[icon] Hand-cut` — icon 16px + label. There is NO machine-cut
+state (sc-42 founder ruling): hand-cut is an extra boolean a listing either
+claims or not, and the indicator is shown ONLY when the listing is hand-cut.
+When hand-cut is false/unknown, omit the component entirely.
 
 | | Icon | Color | Glyph concept |
 |---|---|---|---|
 | Hand-cut | `scissors` (line icon) | `neutral-700` icon, `neutral-500` text on `neutral-0/50` | hands/scissors |
-| Machine-cut | `cpu` or `gears` (line icon) | `neutral-700` icon, `neutral-500` text | gear/machine |
 
-- Presentation: quiet chip, radius `sm`, padding 4px 8px, `text-small`. NOT a colored pill — cutting method is information, not a judgment.
-- **Colorblind-safe rule:** the two states differ by ICON + WORD, never by hue. Both use the same neutral palette.
-- Tooltip/`title`: "Zabiha method: animal slaughtered by hand" / "…by automated mechanical process".
+- Presentation: quiet chip, radius `sm`, padding 4px 8px, `text-small`. NOT a colored pill — hand-cut is information, not a judgment.
+- Tooltip/`title`: "Zabiha method: animal slaughtered by hand".
 
 **Don't:**
-- DON'T imply machine-cut is worse (no warning icon, no muted/disabled styling beyond the shared neutral).
-- DON'T add a third ad-hoc style for "unknown" — if method is unknown, omit the component entirely (see Empty State rule).
+- DON'T render a distinct machine-cut state — it does not exist.
+- DON'T add a second style for "unknown" — if not hand-cut, omit the component entirely (see Empty State rule).
 
 ## 4. Shared rules (all three components)
 
-1. **One source of truth:** implement as React components `VerifiedBadge`, `UnverifiedTag`, `CutMethodIndicator` in `components/trust/`; consume tokens only; no local hex values.
+1. **One source of truth:** implement as React components `VerifiedBadge`, `UnverifiedTag`, `HandCutIndicator` in `components/trust/`; consume tokens only; no local hex values.
 2. **Never derive status styling ad hoc** on screens; always use these components.
 3. **Empty/unknown state:** when data is absent (e.g. cut method unknown), omit the component — never render a placeholder-styled shell that looks like a third status.
 4. **Loading state:** skeleton shimmer blocks matching final size (badge: 84×28px pill; indicator: 92×24px chip). No spinners inside trust marks.
