@@ -2,7 +2,10 @@ package com.tahirslist.bootstrap.listing
 
 import com.tahirslist.application.listing.CreateListing
 import com.tahirslist.application.listing.ListingOwnerNotFoundException
+import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalItem
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.RestaurantListing
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -67,6 +70,10 @@ class ListingController(private val createListing: CreateListing) {
             cuisine = Cuisine(request.cuisine),
             isHandCut = request.isHandCut,
             ownerId = ownerId,
+            halalScope = request.halalScope,
+            halalItems = request.halalItems,
+            crossContamination = request.crossContamination,
+            alcoholServed = request.alcoholServed,
         )
         return ResponseEntity.status(HttpStatus.CREATED).body(ListingResponse.from(listing))
     }
@@ -97,6 +104,14 @@ class ListingController(private val createListing: CreateListing) {
          * not claimed. There is no machine-cut concept — this is a plain boolean.
          */
         val isHandCut: Boolean?,
+
+        val halalScope: HalalScope = HalalScope.DEFAULT,
+
+        val halalItems: Set<HalalItem> = emptySet(),
+
+        val crossContamination: CrossContamination = CrossContamination.DEFAULT,
+
+        val alcoholServed: Boolean = false,
     )
 
     data class ListingResponse(
@@ -107,6 +122,7 @@ class ListingController(private val createListing: CreateListing) {
         val lng: Double,
         val cuisine: String,
         val isHandCut: Boolean?,
+        val halalScope: HalalScope,
         val ownerId: UUID,
         val verificationStatus: VerificationStatus,
         val createdAt: Instant,
@@ -123,6 +139,7 @@ class ListingController(private val createListing: CreateListing) {
                 // for community seed rows, which this endpoint does not create.
                 cuisine = listing.cuisine!!.value,
                 isHandCut = listing.isHandCut,
+                halalScope = listing.halalScope,
                 // Add Listing always attaches the authenticated owner, so the
                 // response echoes a non-null id; only community seed rows have
                 // ownerId NULL, and this endpoint does not create those.

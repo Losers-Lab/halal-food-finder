@@ -86,6 +86,7 @@ class ListingEndpointTest : PostgresBootTest() {
             body["lng"].toString().toDouble() shouldBe -74.0060
             body["cuisine"] shouldBe "mediterranean"
             body["isHandCut"] shouldBe true
+            body["halalScope"] shouldBe "NOT_DISCLOSED"
             body["verificationStatus"] shouldBe "UNVERIFIED"
             body["ownerId"].toString() shouldBe ownerId.toString()
             UUID.fromString(body["id"].toString()) shouldNotBe null

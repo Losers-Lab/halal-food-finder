@@ -3,7 +3,10 @@ package com.tahirslist.application.listing
 import com.tahirslist.application.account.AccountRepository
 import com.tahirslist.domain.account.Account
 import com.tahirslist.domain.account.Email
+import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalItem
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.VerificationStatus
 import io.kotest.assertions.throwables.shouldThrow
@@ -137,6 +140,55 @@ class CreateListingTest : FunSpec({
 
         listing.alcoholServed shouldBe false
         verify { listings.save(match { !it.alcoholServed }) }
+    }
+
+    test("passes an explicit partial-halal scope, halal items and cross-contamination to the saved listing") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            ownerId = ownerId,
+            isHandCut = true,
+            halalScope = HalalScope.PARTIALLY_HALAL,
+            halalItems = setOf(HalalItem("chicken", true), HalalItem("beef", false)),
+            crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
+        )
+
+        listing.isHandCut shouldBe true
+        listing.halalScope shouldBe HalalScope.PARTIALLY_HALAL
+        listing.halalItems shouldBe setOf(HalalItem("chicken", true), HalalItem("beef", false))
+        listing.crossContamination shouldBe CrossContamination.NO_CROSS_CONTAMINATION
+        verify {
+            listings.save(match {
+                it.isHandCut == true &&
+                    it.halalScope == HalalScope.PARTIALLY_HALAL &&
+                    it.halalItems == setOf(HalalItem("chicken", true), HalalItem("beef", false)) &&
+                    it.crossContamination == CrossContamination.NO_CROSS_CONTAMINATION
+            })
+        }
+    }
+
+    test("defaults isHandCut, halalScope, halalItems and crossContamination when not supplied") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            ownerId = ownerId,
+        )
+
+        listing.isHandCut shouldBe null
+        listing.halalScope shouldBe HalalScope.NOT_DISCLOSED
+        listing.halalItems shouldBe emptySet()
+        listing.crossContamination shouldBe CrossContamination.UNCERTAIN
+        verify { listings.save(match { it.crossContamination == CrossContamination.UNCERTAIN }) }
     }
 
     test("rejects a blank name before touching the owner or repository") {

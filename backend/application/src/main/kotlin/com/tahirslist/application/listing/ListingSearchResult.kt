@@ -1,6 +1,7 @@
 package com.tahirslist.application.listing
 
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -15,7 +16,10 @@ import java.util.UUID
  * PostGIS (ST_DistanceSphere) against the denormalised `listing_search` table.
  *
  * [isHandCut] is nullable: null = unknown / not claimed (seed rows); true =
- * hand-cut; false = not hand-cut (sc-42 — no machine-cut concept).
+ * hand-cut; false = not hand-cut (sc-42 — no machine-cut concept). [halalScope]
+ * is exposed so the search card can render the halal-coverage disclosure
+ * alongside the verification badge without overstating full halal-ness
+ * (verification is independent of scope — sc-119).
  */
 data class ListingSearchResult(
     val id: UUID,
@@ -24,6 +28,7 @@ data class ListingSearchResult(
     val location: LatLng,
     val cuisine: Cuisine?,
     val isHandCut: Boolean?,
+    val halalScope: HalalScope,
     val verificationStatus: VerificationStatus,
     val rating: Rating?,
     val distanceMiles: Double,

@@ -52,6 +52,14 @@ state (sc-42 founder ruling): hand-cut is an extra boolean a listing either
 claims or not, and the indicator is shown ONLY when the listing is hand-cut.
 When hand-cut is false/unknown, omit the component entirely.
 
+> **sc-119 note (09-01):** the cutting method is a **boolean hand-cut** field
+> (`isHandCut`) on the listing. The indicator renders only when the data is
+> present: `isHandCut = true` shows the hand-cut chip; when `isHandCut` is
+> `false`/`null` the component is omitted. The partial-halal scope surfaces
+> via a separate disclosure (see HalalScopeIndicator) so the hand-cut chip
+> never implies whole-restaurant halal-ness. Frontend re-render is a follow-up
+> (Maryam).
+
 | | Icon | Color | Glyph concept |
 |---|---|---|---|
 | Hand-cut | `scissors` (line icon) | `neutral-700` icon, `neutral-500` text on `neutral-0/50` | hands/scissors |

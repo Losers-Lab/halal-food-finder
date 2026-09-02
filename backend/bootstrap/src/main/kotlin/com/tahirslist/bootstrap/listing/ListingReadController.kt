@@ -10,6 +10,8 @@ import com.tahirslist.application.listing.ListingSearchResult
 import com.tahirslist.application.listing.RestaurantListingRepository
 import com.tahirslist.application.verification.CertificationImageStorage
 import com.tahirslist.application.verification.HalalCertificationReviewRepository
+import com.tahirslist.domain.restaurant.CrossContamination
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.RestaurantListing
@@ -63,7 +65,7 @@ class ListingReadController(
     private val ratingMax: Double = com.tahirslist.domain.restaurant.Rating.MAX.toDouble()
 
     @GetMapping("/search")
-    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `handCutOnly` (true/false; absent = any) is an extra on/off filter that narrows to hand-cut listings only; `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. (sc-10 location, sc-42 hand-cut, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
+    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `handCutOnly` (true/false; absent = any) is an extra on/off filter that narrows to hand-cut listings only; `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. Only no-cross-contamination listings are in the index. (sc-10 location, sc-42 hand-cut, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Search results (distance ascending)"),
@@ -285,6 +287,7 @@ class ListingReadController(
         lng = listing.location.lng,
         cuisine = listing.cuisine?.value,
         isHandCut = listing.isHandCut,
+        halalScope = listing.halalScope.name,
         verificationStatus = listing.verificationStatus.name,
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
@@ -298,6 +301,7 @@ class ListingReadController(
         lng = result.location.lng,
         cuisine = result.cuisine?.value,
         isHandCut = result.isHandCut,
+        halalScope = result.halalScope.name,
         verificationStatus = result.verificationStatus.name,
         imageThumbnailUrl = imageUrl(result.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(result.id),
@@ -313,6 +317,8 @@ class ListingReadController(
         lng = listing.location.lng,
         cuisine = listing.cuisine?.value,
         isHandCut = listing.isHandCut,
+        halalScope = listing.halalScope.name,
+        crossContamination = listing.crossContamination.name,
         verificationStatus = listing.verificationStatus.name,
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
@@ -369,6 +375,7 @@ class ListingReadController(
         val lng: Double,
         val cuisine: String?,
         val isHandCut: Boolean?,
+        val halalScope: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
@@ -382,6 +389,7 @@ class ListingReadController(
         val lng: Double,
         val cuisine: String?,
         val isHandCut: Boolean?,
+        val halalScope: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
@@ -397,6 +405,8 @@ class ListingReadController(
         val lng: Double,
         val cuisine: String?,
         val isHandCut: Boolean?,
+        val halalScope: String,
+        val crossContamination: String,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,

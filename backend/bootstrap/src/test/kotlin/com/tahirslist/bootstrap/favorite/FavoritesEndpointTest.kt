@@ -114,6 +114,7 @@ class FavoritesEndpointTest : PostgresBootTest() {
             card["lng"].toString().toDouble() shouldBe -74.0060
             card["cuisine"] shouldBe "mediterranean"
             card["isHandCut"] shouldBe true
+            card["halalScope"] shouldBe "NOT_DISCLOSED"
             card["verificationStatus"] shouldBe "UNVERIFIED"
             card["imageThumbnailUrl"].toString() shouldNotBe ""
         }

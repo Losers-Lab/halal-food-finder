@@ -1,7 +1,10 @@
 package com.tahirslist.persistence.favorite
 
 import com.tahirslist.application.favorite.FavoritesRepository
+import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalItem
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Provenance
@@ -59,6 +62,9 @@ class JdbcFavoritesRepository(private val jdbc: JdbcTemplate) : FavoritesReposit
                 l.is_hand_cut,
                 l.price,
                 l.rating,
+                l.alcohol_served,
+                l.halal_scope,
+                l.cross_contamination,
                 l.owner_id,
                 l.brand_id,
                 l.provenance,
@@ -82,10 +88,27 @@ class JdbcFavoritesRepository(private val jdbc: JdbcTemplate) : FavoritesReposit
         isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
         price = getBigDecimal("price")?.let { Price(it) },
         rating = getBigDecimal("rating")?.let { Rating(it) },
+        halalScope = HalalScope.valueOf(getString("halal_scope")),
+        crossContamination = CrossContamination.valueOf(getString("cross_contamination")),
         ownerId = getObject("owner_id", UUID::class.java),
         brandId = getObject("brand_id", UUID::class.java),
         provenance = getString("provenance")?.let { Provenance(it) },
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
         createdAt = getTimestamp("created_at").toInstant(),
-    )
+    ).withHalalItems()
+
+    /** Load the per-item halal scope child rows (sc-119). */
+    private fun RestaurantListing.withHalalItems(): RestaurantListing {
+        val items = jdbc.query(
+            """
+            SELECT name, is_halal
+            FROM restaurant_halal_items
+            WHERE listing_id = ?
+            ORDER BY name
+            """.trimIndent(),
+            { rs, _ -> HalalItem(name = rs.getString("name"), isHalal = rs.getBoolean("is_halal")) },
+            id,
+        )
+        return if (items.isEmpty()) this else copy(halalItems = items.toSet())
+    }
 }

@@ -111,6 +111,7 @@ class FavoritesController(
             lng = listing.location.lng,
             cuisine = listing.cuisine?.value,
             isHandCut = listing.isHandCut,
+            halalScope = listing.halalScope.name,
             verificationStatus = listing.verificationStatus.name,
             imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
             imageSrcset = imageSrcset(listing.id),

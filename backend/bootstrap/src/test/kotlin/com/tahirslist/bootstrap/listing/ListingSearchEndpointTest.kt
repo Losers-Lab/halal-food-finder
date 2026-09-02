@@ -263,8 +263,8 @@ class ListingSearchEndpointTest : PostgresBootTest() {
         base.forEach { row ->
             jdbc.update(
                 """
-                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price)
-                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-78.5, 45.5), 4326)::geography, ?, ?, 'UNVERIFIED', ?)
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price, cross_contamination)
+                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-78.5, 45.5), 4326)::geography, ?, ?, 'UNVERIFIED', ?, 'NO_CROSS_CONTAMINATION')
                 ON CONFLICT (id) DO NOTHING
                 """.trimIndent(),
                 UUID.fromString(row[0] as String), row[1] as String, "45.50, -78.50",
@@ -273,8 +273,8 @@ class ListingSearchEndpointTest : PostgresBootTest() {
         }
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price)
-            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, cross_contamination)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price, cross_contamination
             FROM restaurant_listings WHERE id IN (?, ?, ?, ?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
@@ -299,6 +299,7 @@ class ListingSearchEndpointTest : PostgresBootTest() {
      * Inserts four controlled rating rows at 47N/77W and mirrors them into
      * listing_search, isolating the rating endpoint assertions from the NULL-rating
      * seeds and the price/cuisine rows at 45.5N/78.5W. Idempotent via ON CONFLICT.
+     * All qualified (index gate).
      */
     private fun insertRatedEndpointRows() {
         // (id, name, cuisine, isHandCut, price, rating)
@@ -313,8 +314,8 @@ class ListingSearchEndpointTest : PostgresBootTest() {
         rows.forEach { row ->
             jdbc.update(
                 """
-                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating)
-                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-77.0, 47.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?, ?)
+                INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, cross_contamination)
+                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-77.0, 47.0), 4326)::geography, ?, ?, 'UNVERIFIED', ?, ?, 'NO_CROSS_CONTAMINATION')
                 ON CONFLICT (id) DO NOTHING
                 """.trimIndent(),
                 UUID.fromString(row[0] as String), row[1] as String, "47.00, -77.00",
@@ -324,8 +325,8 @@ class ListingSearchEndpointTest : PostgresBootTest() {
         }
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating)
-            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, cross_contamination)
+            SELECT id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, cross_contamination
             FROM restaurant_listings WHERE id IN (?, ?, ?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),

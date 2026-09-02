@@ -5,6 +5,7 @@ import com.tahirslist.application.listing.ListingSearchFilters
 import com.tahirslist.application.listing.ListingSearchQuery
 import com.tahirslist.application.listing.ListingSearchResult
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Rating
 import com.tahirslist.domain.restaurant.VerificationStatus
@@ -17,7 +18,8 @@ private const val METRES_PER_MILE = 1609.344
 
 /**
  * JDBC implementation of [ListingSearchQuery] against the denormalised
- * `listing_search` table (see V8__create_listing_search.sql).
+ * `listing_search` table (see V8__create_listing_search.sql, extended by
+ * V18__sc_119_partial_halal.sql).
  *
  * Exactly the ratified sc-10 contract in one query: `ST_DWithin` (geography,
  * metres) filters to the radius, `ST_DistanceSphere` (geometry, metres) orders
@@ -25,6 +27,14 @@ private const val METRES_PER_MILE = 1609.344
  * `geography(Point,4326)`, the centre is built as a geography for the filter
  * and cast to geometry for the sphere distance; the returned distance is
  * converted metres -> statute miles (/1609.344).
+ *
+ * sc-119:
+ *  - CROSS-CONTAMINATION INDEX GATE: the query always constrains
+ *    `cross_contamination = 'NO_CROSS_CONTAMINATION'` as defence-in-depth (the
+ *    mirror already only indexes qualified rows). PRESENT/UNCERTAIN listings can
+ *    never appear in search.
+ *  - The hand-cut filter ([ListingSearchFilters.handCutOnly]) maps to
+ *    `is_hand_cut = true` when set; absent = any (sc-42, no machine-cut).
  *
  * radius <= 0 would return nothing meaningfully and is a caller error; the
  * controller guards it (IllegalArgumentException -> 400).
@@ -97,6 +107,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 ST_X(location::geometry) AS lng,
                 cuisine,
                 is_hand_cut,
+                halal_scope,
                 verification_status,
                 rating,
                 ST_DistanceSphere(
@@ -109,6 +120,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
                 ?
             )
+            AND cross_contamination = 'NO_CROSS_CONTAMINATION'
             $handCutClause
             $cuisineClause
             $priceClause
@@ -145,6 +157,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
         isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
+        halalScope = HalalScope.valueOf(getString("halal_scope")),
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
         rating = getBigDecimal("rating")?.let { Rating(it) },
         distanceMiles = getDouble("distance_miles"),

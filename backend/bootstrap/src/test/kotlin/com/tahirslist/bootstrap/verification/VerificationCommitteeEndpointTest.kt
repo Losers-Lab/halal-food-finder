@@ -317,6 +317,7 @@ class VerificationCommitteeEndpointTest : PostgresBootTest() {
             "lng" to -74.0060,
             "cuisine" to "mediterranean",
             "isHandCut" to true,
+            "crossContamination" to "NO_CROSS_CONTAMINATION",
         )
         val resp = client.exchange(url("/v1/listings"), HttpMethod.POST, HttpEntity<Any>(body, headers), Map::class.java)
         resp.statusCode shouldBe HttpStatus.CREATED

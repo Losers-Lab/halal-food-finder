@@ -16,9 +16,7 @@ import java.util.UUID
  * (see V6 — Omar adjudication). [RestaurantListing.new] still requires both for
  * the authenticated Add Listing flow; seed rows are reconstituted via
  * [fromStorage] with nulls. [brandId] links a location to its brand (brand /
- * location split) and [provenance] stamps the row's origin. [alcoholServed] is
- * part of the partial-halal/alcohol MVP additions (sc-118): a display attribute
- * (no search filter), defaulting to false.
+ * location split) and [provenance] stamps the row's origin.
  *
  * [isHandCut] is the founder's sc-42 ruling: there is NO machine-cut concept.
  * Hand-cut is a plain boolean — a listing either claims it or not. null means
@@ -27,6 +25,17 @@ import java.util.UUID
  * null the same as false: only a hand-cut-only filter excludes it. This replaces
  * the earlier either/or CuttingMethod enum (HAND_CUT | MACHINE_CUT) wholesale
  * (V17 migrates the column).
+ *
+ * Partial-halal modeling (sc-119, founder re-scope):
+ *  - [halalScope] + [halalItems] model *which* items are halal per listing. This
+ *    is **orthogonal** to [verificationStatus]: a PARTIALLY_HALAL place may still
+ *    be VERIFIED (it can hold a certificate for the halal portion).
+ *  - [crossContamination] is a HARD index gate: only
+ *    [CrossContamination.NO_CROSS_CONTAMINATION] qualifies a listing for the
+ *    search index (see CrossContamination.isIndexQualified).
+ *  - [alcoholServed] is a display attribute (sc-118), part of the
+ *    partial-halal/alcohol MVP additions; it is a display attribute (no search
+ *    filter), defaulting to false.
  *
  * NOTE: ODbL share-alike on OSM/Photon-derived listing fields is an open founder
  * decision (docs/reviews/sc-138-external-services.md §5). Flagged here, not
@@ -46,6 +55,9 @@ data class RestaurantListing(
     val provenance: Provenance?,
     val verificationStatus: VerificationStatus,
     val createdAt: Instant,
+    val halalScope: HalalScope = HalalScope.DEFAULT,
+    val halalItems: Set<HalalItem> = emptySet(),
+    val crossContamination: CrossContamination = CrossContamination.DEFAULT,
     val alcoholServed: Boolean = false,
 ) {
     companion object {
@@ -68,6 +80,9 @@ data class RestaurantListing(
             ownerId: UUID,
             price: Price? = null,
             rating: Rating? = null,
+            halalScope: HalalScope = HalalScope.DEFAULT,
+            halalItems: Set<HalalItem> = emptySet(),
+            crossContamination: CrossContamination = CrossContamination.DEFAULT,
             alcoholServed: Boolean = false,
         ): RestaurantListing {
             val trimmedName = name.trim()
@@ -88,6 +103,9 @@ data class RestaurantListing(
                 provenance = null,
                 verificationStatus = VerificationStatus.DEFAULT,
                 createdAt = Instant.now(),
+                halalScope = halalScope,
+                halalItems = halalItems,
+                crossContamination = crossContamination,
                 alcoholServed = alcoholServed,
             )
         }
@@ -111,6 +129,9 @@ data class RestaurantListing(
             provenance: Provenance?,
             verificationStatus: VerificationStatus,
             createdAt: Instant,
+            halalScope: HalalScope = HalalScope.DEFAULT,
+            halalItems: Set<HalalItem> = emptySet(),
+            crossContamination: CrossContamination = CrossContamination.DEFAULT,
             alcoholServed: Boolean = false,
         ): RestaurantListing = RestaurantListing(
             id = id,
@@ -126,6 +147,9 @@ data class RestaurantListing(
             provenance = provenance,
             verificationStatus = verificationStatus,
             createdAt = createdAt,
+            halalScope = halalScope,
+            halalItems = halalItems,
+            crossContamination = crossContamination,
             alcoholServed = alcoholServed,
         )
     }

@@ -2,7 +2,10 @@ package com.tahirslist.persistence.listing
 
 import com.tahirslist.domain.account.Account
 import com.tahirslist.domain.account.Email
+import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Cuisine
+import com.tahirslist.domain.restaurant.HalalItem
+import com.tahirslist.domain.restaurant.HalalScope
 import com.tahirslist.domain.restaurant.LatLng
 import com.tahirslist.domain.restaurant.Price
 import com.tahirslist.domain.restaurant.Rating
@@ -61,8 +64,8 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
         verificationStatus: String? = "UNVERIFIED",
     ): Int = jdbc.update(
         """
-        INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, verification_status)
-        VALUES (?, ?, $locationExpr, ?, ?, ?, ?)
+        INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, verification_status, cross_contamination)
+        VALUES (?, ?, $locationExpr, ?, ?, ?, ?, 'NO_CROSS_CONTAMINATION')
         """.trimIndent(),
         name, address, cuisine, isHandCut, owner, verificationStatus,
     )
@@ -164,6 +167,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 cuisine = Cuisine("mediterranean"),
                 isHandCut = true,
                 ownerId = owner.id,
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
             )
             val saved = listings.save(listing)
             saved.verificationStatus shouldBe VerificationStatus.UNVERIFIED
@@ -194,6 +198,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 cuisine = Cuisine("Halal"),
                 isHandCut = true,
                 ownerId = owner.id,
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
             )
 
             val saved = listings.save(listing)
@@ -218,6 +223,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 isHandCut = true,
                 ownerId = owner.id,
                 price = Price(BigDecimal("15.50")),
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
             )
 
             val saved = listings.save(listing)
@@ -254,6 +260,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 isHandCut = true,
                 ownerId = owner.id,
                 rating = Rating(BigDecimal("4.8")),
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
             )
 
             val saved = listings.save(listing)
@@ -283,6 +290,7 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 isHandCut = true,
                 ownerId = owner.id,
                 alcoholServed = true,
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
             )
 
             val saved = listings.save(listing)
@@ -317,6 +325,81 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
 
             val found = listings.findById(saved.id)!!
             found.alcoholServed shouldBe false
+        }
+
+        test("save round-trips isHandCut, halalScope, halalItems and a qualified cross-contamination (sc-119)") {
+            val owner = accounts.save(Account.new(email = Email("sc119-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Partial Halal Grill",
+                address = "10 Scope Rd",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("mediterranean"),
+                ownerId = owner.id,
+                isHandCut = true,
+                halalScope = HalalScope.PARTIALLY_HALAL,
+                halalItems = setOf(HalalItem("chicken", true), HalalItem("beef", false)),
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
+            )
+
+            val saved = listings.save(listing)
+            saved.isHandCut shouldBe true
+
+            val found = listings.findById(saved.id)!!
+            found.isHandCut shouldBe true
+            found.halalScope shouldBe HalalScope.PARTIALLY_HALAL
+            found.halalItems shouldBe setOf(HalalItem("chicken", true), HalalItem("beef", false))
+            found.crossContamination shouldBe CrossContamination.NO_CROSS_CONTAMINATION
+
+            // Per-item halal scope persisted in the child table.
+            val itemCount = jdbc.queryForObject(
+                "SELECT count(*) FROM restaurant_halal_items WHERE listing_id = ?",
+                Int::class.java,
+                saved.id,
+            )
+            itemCount shouldBe 2
+        }
+
+        test("save defaults isHandCut/halalScope and crossContamination to the conservative unclaimed posture (sc-119)") {
+            val owner = accounts.save(Account.new(email = Email("sc119-default-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Unclaimed Grill",
+                address = "11 Default Rd",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("mediterranean"),
+                ownerId = owner.id,
+            )
+
+            val saved = listings.save(listing)
+            saved.isHandCut shouldBe null
+            saved.halalScope shouldBe HalalScope.NOT_DISCLOSED
+            saved.crossContamination shouldBe CrossContamination.UNCERTAIN
+        }
+
+        test("the cross-contamination index gate excludes PRESENT/UNCERTAIN listings from the search mirror (sc-119)") {
+            val owner = accounts.save(Account.new(email = Email("sc119-gate-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            fun saveQualified(cc: CrossContamination): UUID =
+                listings.save(
+                    RestaurantListing.new(
+                        name = "Gate ${cc} ${UUID.randomUUID()}",
+                        address = "12 Gate Rd",
+                        location = LatLng(43.7, -79.4),
+                        cuisine = Cuisine("mediterranean"),
+                        ownerId = owner.id,
+                        crossContamination = cc,
+                    ),
+                ).id
+
+            val qualifiedId = saveQualified(CrossContamination.NO_CROSS_CONTAMINATION)
+            val presentId = saveQualified(CrossContamination.PRESENT)
+            val uncertainId = saveQualified(CrossContamination.UNCERTAIN)
+
+            // Only the NO_CROSS_CONTAMINATION listing appears in the index.
+            val inIndex = jdbc.query(
+                "SELECT id FROM listing_search WHERE id IN (?, ?, ?)",
+                { rs, _ -> rs.getObject("id", UUID::class.java) },
+                qualifiedId, presentId, uncertainId,
+            )
+            inIndex shouldBe listOf(qualifiedId)
         }
 
         test("V11 adds an alcohol_served column defaulting to false (source + search projection)") {
@@ -372,8 +455,8 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             shouldThrow<DataIntegrityViolationException> {
                 jdbc.update(
                     """
-                    INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, verification_status, price)
-                    VALUES ('Neg Grill', '1 St', ST_SetSRID(ST_MakePoint(-74.0, 40.0), 4326)::geography, 'grill', NULL, 'UNVERIFIED', -1.0)
+                    INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, verification_status, price, cross_contamination)
+                    VALUES ('Neg Grill', '1 St', ST_SetSRID(ST_MakePoint(-74.0, 40.0), 4326)::geography, 'grill', NULL, 'UNVERIFIED', -1.0, 'NO_CROSS_CONTAMINATION')
                     """.trimIndent(),
                 )
             }
@@ -409,6 +492,32 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             // NULL (unknown / not claimed) is legal — no CHECK vocabulary to violate.
             tryInsert(owner = newOwner(), isHandCut = null)
             tryInsert(owner = newOwner(), isHandCut = false)
+        }
+
+        test("V18 enforces the cross_contamination CHECK and adds halal_scope (sc-119)") {
+            // cross_contamination and halal_scope are closed vocabularies enforced
+            // at the DB layer; an out-of-vocabulary value is rejected.
+            val ccCols = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'restaurant_listings' AND column_name = 'cross_contamination'",
+                Int::class.java,
+            )
+            ccCols shouldBe 1
+
+            val scopeCols = jdbc.queryForObject(
+                "SELECT count(*) FROM information_schema.columns WHERE table_name = 'restaurant_listings' AND column_name = 'halal_scope'",
+                Int::class.java,
+            )
+            scopeCols shouldBe 1
+
+            shouldThrow<DataIntegrityViolationException> {
+                jdbc.update(
+                    """
+                    INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, verification_status, cross_contamination)
+                    VALUES ('X', '1 St', ST_SetSRID(ST_MakePoint(-74.0, 40.0), 4326)::geography, 'grill', NULL, ?, 'UNVERIFIED', 'BOGUS')
+                    """.trimIndent(),
+                    newOwner(),
+                )
+            }
         }
 
         test("migration enforces the owner_id foreign key (DB-level backstop)") {
