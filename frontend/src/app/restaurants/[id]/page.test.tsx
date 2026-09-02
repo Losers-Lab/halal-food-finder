@@ -16,6 +16,7 @@ function restaurant(over: Partial<Restaurant>): Restaurant {
     lng: -73.9788,
     cuisine: "Middle Eastern",
     isHandCut: true,
+    isDelivery: false,
     rating: 4.6,
     reviewCount: 89,
     distanceMi: 1.2,
@@ -194,7 +195,7 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     expect(screen.queryByRole("img", { name: "New Spot" })).not.toBeInTheDocument();
   });
 
-  it("renders the full address and an embedded map preview with a pin (sc-187)", async () => {
+it("renders the full address and an embedded map preview with a pin (sc-187)", async () => {
     getRestaurantMock.mockResolvedValueOnce(restaurant({}));
     render(<RestaurantDetailPage />);
 
@@ -211,5 +212,24 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
       "src",
       "https://www.google.com/maps?q=40.6916,-73.9788&z=16&output=embed",
     );
+  });
+
+  it("renders the Delivery service-mode chip when the listing offers delivery (sc-184)", async () => {
+    getRestaurantMock.mockResolvedValueOnce(restaurant({ isDelivery: true }));
+    render(<RestaurantDetailPage />);
+
+    const delivery = await screen.findByText("Delivery");
+    expect(delivery.closest("span")).toHaveAttribute(
+      "title",
+      "This spot offers delivery",
+    );
+  });
+
+  it("does not show a Delivery chip for a pickup-only/unknown listing (sc-184)", async () => {
+    getRestaurantMock.mockResolvedValueOnce(restaurant({ isDelivery: false }));
+    render(<RestaurantDetailPage />);
+
+    expect(await screen.findByText("Al-Amir Grill")).toBeInTheDocument();
+    expect(screen.queryByText("Delivery")).not.toBeInTheDocument();
   });
 });

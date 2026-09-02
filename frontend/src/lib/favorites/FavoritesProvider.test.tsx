@@ -23,6 +23,7 @@ function restaurant(id = "l-1", name = "Al-Amir Grill"): Restaurant {
     lng: -73.9788,
     cuisine: "Middle Eastern",
     isHandCut: true,
+    isDelivery: false,
   };
 }
 

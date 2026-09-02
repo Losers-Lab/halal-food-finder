@@ -28,6 +28,7 @@ export type BrowseListing = {
   lng: number;
   cuisine: string | null;
   isHandCut: boolean | null;
+  isDelivery: boolean | null;
   verificationStatus: string;
   imageThumbnailUrl: string;
   imageSrcset?: { width: number; url: string }[] | null;

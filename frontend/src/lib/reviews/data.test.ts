@@ -58,6 +58,7 @@ describe("fetchVerificationQueue (sc-73)", () => {
       lng: -73.9788,
       cuisine: "Middle Eastern",
       isHandCut: true,
+      isDelivery: false,
     });
 
     const result = await fetchVerificationQueue();
@@ -82,7 +83,7 @@ describe("fetchVerificationQueue (sc-73)", () => {
   it("keeps a review when its listing read throws (one bad listing ≠ dead queue)", async () => {
     mockedGetReviews.mockResolvedValue([review(), review({ reviewId: "r-2", listingId: "l-2" })]);
     mockGetRestaurant.mockImplementation(async (id: string) =>
-      id === "l-1" ? ({ id: "l-1", name: "OK Grill", address: "1 St", lat: 0, lng: 0, cuisine: "X", isHandCut: true }) : Promise.reject(new Error("boom")),
+      id === "l-1" ? ({ id: "l-1", name: "OK Grill", address: "1 St", lat: 0, lng: 0, cuisine: "X", isHandCut: true, isDelivery: false }) : Promise.reject(new Error("boom")),
     );
 
     const result = await fetchVerificationQueue();

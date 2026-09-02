@@ -25,6 +25,7 @@ function restaurant(over: Partial<Restaurant>): Restaurant {
     lng: 1,
     cuisine: "Test",
     isHandCut: null,
+    isDelivery: false,
     ...over,
   };
 }

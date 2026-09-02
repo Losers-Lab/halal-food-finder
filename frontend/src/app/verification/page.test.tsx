@@ -146,6 +146,7 @@ describe("VerificationPage — /verification (sc-73)", () => {
               lng: 0,
               cuisine: "Middle Eastern",
               isHandCut: true,
+              isDelivery: false,
             },
           },
         ],

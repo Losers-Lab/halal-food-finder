@@ -35,6 +35,7 @@ function review(over: Partial<ReviewWithListing> = {}): ReviewWithListing {
       lng: -73.9788,
       cuisine: "Middle Eastern",
       isHandCut: true,
+      isDelivery: false,
     },
     ...over,
   };

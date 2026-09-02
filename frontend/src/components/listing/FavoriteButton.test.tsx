@@ -46,6 +46,7 @@ function restaurant(over: Partial<Restaurant> = {}): Restaurant {
     lng: -73.9788,
     cuisine: "Middle Eastern",
     isHandCut: true,
+    isDelivery: false,
     ...over,
   };
 }
