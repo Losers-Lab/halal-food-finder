@@ -391,7 +391,8 @@ class ListingSearchEndpointTest : PostgresBootTest() {
      * Inserts two controlled delivery rows at 48N/76W and mirrors them into
      * listing_search, so the isDelivery read field + deliveryOnly endpoint
      * assertions are isolated from the NULL-delivery seeds and the price/cuisine
-     * (45.5N/78.5W) / rating (47N/77W) rows. Idempotent via ON CONFLICT.
+     * (45.5N/78.5W) / rating (47N/77W) rows. Both are NO_CROSS_CONTAMINATION so
+     * they pass the sc-119 query-level index gate. Idempotent via ON CONFLICT.
      */
     private fun insertDeliveryEndpointRows() {
         val deliveryId = UUID.fromString("70000000-0000-0000-0000-000000000001")
@@ -399,24 +400,24 @@ class ListingSearchEndpointTest : PostgresBootTest() {
 
         jdbc.update(
             """
-            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status)
-            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-76.0, 48.0), 4326)::geography, ?, ?, ?, 'UNVERIFIED')
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-76.0, 48.0), 4326)::geography, ?, ?, ?, 'UNVERIFIED', 'NO_CROSS_CONTAMINATION')
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
             deliveryId, "Delivery Test", "48.00, -76.00", "mexican", true, true,
         )
         jdbc.update(
             """
-            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status)
-            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-76.0, 48.0), 4326)::geography, ?, ?, ?, 'UNVERIFIED')
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-76.0, 48.0), 4326)::geography, ?, ?, ?, 'UNVERIFIED', 'NO_CROSS_CONTAMINATION')
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),
             pickupId, "Pickup Test", "48.00, -76.00", "mexican", false, false,
         )
         jdbc.update(
             """
-            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status)
-            SELECT id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            SELECT id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination
             FROM restaurant_listings WHERE id IN (?, ?)
             ON CONFLICT (id) DO NOTHING
             """.trimIndent(),

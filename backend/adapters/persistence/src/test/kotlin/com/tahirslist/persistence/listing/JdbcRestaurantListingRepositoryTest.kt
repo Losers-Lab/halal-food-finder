@@ -189,6 +189,9 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 cuisine = Cuisine("Halal"),
                 isHandCut = true,
                 isDelivery = true,
+                // Index-qualified so save() mirrors it into the search projection
+                // (sc-119 gate: only NO_CROSS_CONTAMINATION listings are indexed).
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
                 ownerId = owner.id,
             )
 
