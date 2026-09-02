@@ -22,7 +22,7 @@ function restaurant(id = "l-1", name = "Al-Amir Grill"): Restaurant {
     lat: 40.6916,
     lng: -73.9788,
     cuisine: "Middle Eastern",
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
   };
 }
 

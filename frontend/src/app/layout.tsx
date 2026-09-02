@@ -37,7 +37,7 @@ export const metadata: Metadata = {
     template: "%s · Tahir's List",
   },
   description:
-    "find halal food — search restaurant listings with granular hand-cut vs machine-cut filters and formally verified certifications.",
+    "find halal food — search restaurant listings, filter by hand-cut, and view formally verified certifications.",
 };
 
 export default function RootLayout({

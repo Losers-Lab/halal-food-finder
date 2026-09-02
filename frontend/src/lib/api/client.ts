@@ -27,7 +27,7 @@ export type BrowseListing = {
   lat: number;
   lng: number;
   cuisine: string | null;
-  cuttingMethod: string;
+  isHandCut: boolean | null;
   verificationStatus: string;
   imageThumbnailUrl: string;
   imageSrcset?: { width: number; url: string }[] | null;

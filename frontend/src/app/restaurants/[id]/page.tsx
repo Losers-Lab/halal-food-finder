@@ -8,7 +8,6 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import {
   HandCutIndicator,
-  MachineCutIndicator,
   SealMark,
   UnverifiedTag,
   VerifiedBadge,
@@ -164,13 +163,9 @@ function RestaurantDetail({ restaurant }: { restaurant: Restaurant }) {
               .filter(Boolean)
               .join(" · ")}
           </p>
-          {restaurant.cuttingMethod === "HAND_CUT" ? (
+          {restaurant.isHandCut === true ? (
             <div className="mt-3">
               <HandCutIndicator />
-            </div>
-          ) : restaurant.cuttingMethod === "MACHINE_CUT" ? (
-            <div className="mt-3">
-              <MachineCutIndicator />
             </div>
           ) : null}
         </div>

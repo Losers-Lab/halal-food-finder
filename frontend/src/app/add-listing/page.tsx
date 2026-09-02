@@ -7,13 +7,11 @@ import { useForm } from "react-hook-form";
 import { Alert } from "@/components/auth/Alert";
 import { Button } from "@/components/auth/Button";
 import { Field } from "@/components/auth/Field";
-import { SelectField } from "@/components/listings/SelectField";
 import { UnverifiedTag } from "@/components/trust";
 import { api, ApiError, type ListingResponse } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import {
   createListingSchema,
-  CUTTING_METHOD_OPTIONS,
   type CreateListingFormValues,
 } from "@/lib/listings/schemas";
 
@@ -46,7 +44,7 @@ export default function AddListingPage() {
       lat: "",
       lng: "",
       cuisine: "",
-      cuttingMethod: "UNSPECIFIED",
+      isHandCut: false,
     },
   });
 
@@ -59,7 +57,9 @@ export default function AddListingPage() {
         lat: Number(values.lat),
         lng: Number(values.lng),
         cuisine: values.cuisine,
-        cuttingMethod: values.cuttingMethod,
+        // sc-42: omit when unchecked → the backend records unknown (null);
+        // checked → hand-cut.
+        ...(values.isHandCut ? { isHandCut: true } : {}),
       });
       setCreated(listing);
     } catch (err) {
@@ -240,21 +240,21 @@ export default function AddListingPage() {
             }}
           />
 
-          <SelectField
-            label="Cutting method"
-            helper="How is the meat slaughtered? If unknown, choose the last option."
-            error={errors.cuttingMethod?.message}
-            inputProps={{
-              ...register("cuttingMethod"),
-              disabled: isSubmitting,
-            }}
-          >
-            {CUTTING_METHOD_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </SelectField>
+          <label className="flex items-start gap-3">
+            <input
+              type="checkbox"
+              disabled={isSubmitting}
+              {...register("isHandCut")}
+              className="mt-0.5 h-5 w-5 rounded border-kraft-300 text-brand-500 focus:outline-2 focus:outline-offset-2 focus:outline-brand-500"
+            />
+            <span>
+              <span className="font-medium text-ink-900">Hand-cut (Zabiha)</span>
+              <span className="block text-small text-ink-500">
+                Check if the meat is slaughtered by hand. Leave unchecked if
+                unknown.
+              </span>
+            </span>
+          </label>
 
           <div className="pt-2">
             <Button

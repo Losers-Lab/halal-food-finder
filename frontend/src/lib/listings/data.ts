@@ -1,8 +1,7 @@
 import { api, ApiError, type BrowseListing, type ListingDetail } from "@/lib/api/client";
 import type { Restaurant, VerificationStatus } from "./restaurants";
-import type { CuttingMethod } from "./schemas";
 
-export type BrowseFilter = "ALL" | CuttingMethod;
+export type BrowseFilter = "ALL" | "HAND_CUT";
 
 export type { Restaurant } from "./restaurants";
 
@@ -12,25 +11,25 @@ export type { Restaurant } from "./restaurants";
  * /v1/listings (browse cards) and GET /v1/listings/{id} (detail) via the shared
  * api client. `seed.ts` is now only a test fixture / mock source.
  *
- * The backend default profile has NO query/cutting filters on the browse
- * endpoint (it returns all cards), so the search/cutting filtering that the
- * UI drives stays client-side here, exactly as the shelling screens already did.
+ * The backend default profile has NO query filters on the browse endpoint (it
+ * returns all cards), so the search/cutting filtering that the UI drives stays
+ * client-side here, exactly as the shelling screens already did.
  */
 
 /**
  * Pure client-side filter for the browse screens — mirrors the search behavior
  * that used to live on the seed: match name/cuisine/address against the query,
- * optionally restrict to a cutting method, then sort by distance.
+ * optionally restrict to hand-cut only, then sort by distance.
  */
 export function filterListings(
   restaurants: Restaurant[],
   query: string,
-  cuttingMethod?: CuttingMethod,
+  handCut?: boolean,
 ): Restaurant[] {
   const q = query.trim().toLowerCase();
   const filtered = restaurants.filter((r) => {
-    if (cuttingMethod && cuttingMethod !== "UNSPECIFIED") {
-      if (r.cuttingMethod !== cuttingMethod) return false;
+    if (handCut) {
+      if (r.isHandCut !== true) return false;
     }
     if (!q) return true;
     const haystack = `${r.name} ${r.cuisine} ${r.address}`.toLowerCase();
@@ -70,7 +69,7 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
     lat: b.lat,
     lng: b.lng,
     cuisine: b.cuisine ?? "",
-    cuttingMethod: b.cuttingMethod as CuttingMethod,
+    isHandCut: b.isHandCut ?? null,
     // sc-49: carry the backend's authoritative verification state through to the
     // read model so cards + detail render the real trust badge. Absent on
     // legacy payloads → `verificationStatus()` falls back to certificate-derived.
@@ -109,10 +108,10 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
 /** GET /v1/listings → mapped + filtered browse cards. */
 export async function searchListings(
   query: string,
-  cuttingMethod?: CuttingMethod,
+  handCutOnly?: boolean,
 ): Promise<Restaurant[]> {
   const cards = await api.getListings();
-  return filterListings(cards.map(toRestaurant), query, cuttingMethod);
+  return filterListings(cards.map(toRestaurant), query, handCutOnly);
 }
 
 /**

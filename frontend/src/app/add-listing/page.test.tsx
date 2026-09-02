@@ -41,10 +41,7 @@ async function fillValidForm() {
   await user.type(screen.getByLabelText("Latitude"), "40.7128");
   await user.type(screen.getByLabelText("Longitude"), "-74.0060");
   await user.type(screen.getByLabelText("Cuisine"), "Middle Eastern");
-  await user.selectOptions(
-    screen.getByLabelText("Cutting method"),
-    "HAND_CUT",
-  );
+  await user.click(screen.getByRole("checkbox", { name: /Hand-cut/ }));
   await user.click(screen.getByRole("button", { name: "Add listing" }));
 }
 
@@ -96,7 +93,7 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
       lat: 40.7128,
       lng: -74.006,
       cuisine: "middle eastern",
-      cuttingMethod: "HAND_CUT",
+      isHandCut: true,
       ownerId: "acc-1",
       verificationStatus: "UNVERIFIED",
       createdAt: "2026-08-30T00:00:00Z",
@@ -111,7 +108,7 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
         lat: 40.7128,
         lng: -74.006,
         cuisine: "Middle Eastern",
-        cuttingMethod: "HAND_CUT",
+        isHandCut: true,
       }),
     );
 
@@ -132,7 +129,7 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
     );
   });
 
-  it("defaults the cutting method to UNSPECIFIED (any) until the user chooses", async () => {
+  it("omits isHandCut when the hand-cut box is left unchecked (recorded unknown)", async () => {
     vi.mocked(api.createListing).mockResolvedValueOnce({
       id: "l-1",
       name: "Al-Amir Grill",
@@ -140,7 +137,6 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
       lat: 40.7128,
       lng: -74.006,
       cuisine: "middle eastern",
-      cuttingMethod: "UNSPECIFIED",
       ownerId: "acc-1",
       verificationStatus: "UNVERIFIED",
       createdAt: "2026-08-30T00:00:00Z",
@@ -156,9 +152,13 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
     await user.click(screen.getByRole("button", { name: "Add listing" }));
 
     await waitFor(() =>
-      expect(api.createListing).toHaveBeenCalledWith(
-        expect.objectContaining({ cuttingMethod: "UNSPECIFIED" }),
-      ),
+      expect(api.createListing).toHaveBeenCalledWith({
+        name: "Al-Amir Grill",
+        address: "123 Main St",
+        lat: 40.7128,
+        lng: -74.006,
+        cuisine: "Middle Eastern",
+      }),
     );
   });
 
@@ -183,7 +183,7 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
       lat: 40.7128,
       lng: -74.006,
       cuisine: "middle eastern",
-      cuttingMethod: "HAND_CUT",
+      isHandCut: true,
       ownerId: "acc-1",
       verificationStatus: "UNVERIFIED",
       createdAt: "2026-08-30T00:00:00Z",
@@ -211,7 +211,7 @@ describe("AddListingPage (sc-138) — validation + backend error surfacing", () 
     expect(screen.getByText("Longitude is required.")).toBeInTheDocument();
     expect(screen.getByText("Cuisine is required.")).toBeInTheDocument();
 
-    // cuttingMethod is defaulted, so only the text fields are invalid.
+    // isHandCut is optional; only the text fields are invalid.
     expect(api.createListing).not.toHaveBeenCalled();
   });
 

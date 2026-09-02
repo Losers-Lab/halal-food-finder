@@ -103,7 +103,7 @@ export function ReviewCard({
                 </Link>
               </h3>
               <p className="mt-1 text-small text-ink-500">
-                {[listing.cuisine, listing.cuttingMethod === "UNSPECIFIED" ? null : listing.cuttingMethod]
+                {[listing.cuisine, listing.isHandCut === true ? "Hand-cut" : null]
                   .filter(Boolean)
                   .join(" · ")}
               </p>

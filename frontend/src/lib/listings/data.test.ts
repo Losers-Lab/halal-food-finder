@@ -27,7 +27,7 @@ function card(over: Partial<BrowseListing> = {}): BrowseListing {
     lat: 32.94807,
     lng: -96.728031,
     cuisine: null,
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
     verificationStatus: "UNVERIFIED",
     imageThumbnailUrl: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail`,
     // sc-183: the backend's pre-rendered multi-width thumbnail set.
@@ -99,14 +99,14 @@ describe("data seam — live listing reads (sc-171)", () => {
     expect(r[0].imageThumbnailUrl).toBe(`/v1/listings/${UUID}/image?variant=thumbnail`);
   });
 
-  it("filters browse results by query and cutting method through the pure helper", async () => {
+  it("filters browse results by query and hand-cut through the pure helper", async () => {
     getListingsMock.mockResolvedValue([
-      card({ name: "Afrah", cuttingMethod: "HAND_CUT" }),
-      card({ id: "other", name: "Burger Joint", cuttingMethod: "MACHINE_CUT" }),
+      card({ name: "Afrah", isHandCut: true }),
+      card({ id: "other", name: "Burger Joint", isHandCut: false }),
     ]);
 
-    const byCut = await searchListings("", "MACHINE_CUT");
-    expect(byCut.map((x) => x.name)).toEqual(["Burger Joint"]);
+    const byCut = await searchListings("", true);
+    expect(byCut.map((x) => x.name)).toEqual(["Afrah"]);
 
     const byQuery = await searchListings("afrah");
     expect(byQuery.map((x) => x.id)).toEqual([UUID]);
@@ -172,9 +172,9 @@ describe("data seam — live listing reads (sc-171)", () => {
 
 describe("filterListings (pure browse filter)", () => {
   const list: Restaurant[] = [
-    { id: "a", name: "Al-Amir Grill", address: "1 St", lat: 1, lng: 1, cuisine: "Middle Eastern", cuttingMethod: "HAND_CUT", distanceMi: 2.0 },
-    { id: "b", name: "Karachi Kitchen", address: "2 St", lat: 1, lng: 1, cuisine: "Pakistani", cuttingMethod: "HAND_CUT", distanceMi: 0.4 },
-    { id: "c", name: "Burger Joint", address: "3 St", lat: 1, lng: 1, cuisine: "American", cuttingMethod: "MACHINE_CUT", distanceMi: 1.2 },
+    { id: "a", name: "Al-Amir Grill", address: "1 St", lat: 1, lng: 1, cuisine: "Middle Eastern", isHandCut: true, distanceMi: 2.0 },
+    { id: "b", name: "Karachi Kitchen", address: "2 St", lat: 1, lng: 1, cuisine: "Pakistani", isHandCut: true, distanceMi: 0.4 },
+    { id: "c", name: "Burger Joint", address: "3 St", lat: 1, lng: 1, cuisine: "American", isHandCut: false, distanceMi: 1.2 },
   ];
 
   it("matches query against name/cuisine/address and sorts by distance", () => {
@@ -183,8 +183,8 @@ describe("filterListings (pure browse filter)", () => {
     expect(filterListings(list, "").map((x) => x.id)).toEqual(["b", "c", "a"]);
   });
 
-  it("restricts to a cutting method when specified (UNSPECIFIED means no filter)", () => {
-    expect(filterListings(list, "", "MACHINE_CUT")).toHaveLength(1);
+  it("restricts to hand-cut only when handCut is set (absent/false = no filter)", () => {
+    expect(filterListings(list, "", true)).toHaveLength(2);
     expect(filterListings(list, "", undefined).length).toBe(3);
   });
 });

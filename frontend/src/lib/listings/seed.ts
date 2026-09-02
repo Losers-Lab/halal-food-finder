@@ -2,15 +2,15 @@ import {
   type Restaurant,
   verificationStatus,
 } from "./restaurants";
-import type { CuttingMethod } from "./schemas";
 
 /**
  * In-memory read fixture (sc-171). The runtime browse + detail screens now read
  * from the live backend via `data.ts` (GET /v1/listings / {id}). This module is
  * retained as a pure TEST FIXTURE / mock source only — rich seed listings
- * covering every card/detail state (verified/unverified, hand/machine cut,
- * valid/expiring/expired certs) so the UI is buildable and testable without the
- * live backend. Nothing in the runtime path imports it as its source.
+ * covering every card/detail state (verified/unverified, hand-cut / not /
+ * unknown, valid/expiring/expired certs) so the UI is buildable and testable
+ * without the live backend. Nothing in the runtime path imports it as its
+ * source.
  */
 
 /** The current date used for expiry-state calculations (test seam). */
@@ -31,8 +31,9 @@ const seedHelpers: Shares = {
 
 /**
  * Seed listings mirroring approved sketches (006-stamps-search, 007-detail-stamps).
- * Deliberately covers every card/detail state: verified vs unverified, hand vs
- * machine cut, and — on the detail tier — valid / expiring-soon / expired certs.
+ * Deliberately covers every card/detail state: verified vs unverified, hand-cut vs
+ * not vs unknown (isHandCut true/false/null), and — on the detail tier — valid /
+ * expiring-soon / expired certs.
  *
  * sc-157: each listing carries the two bundled image variants served by the
  * backend ImagePort (`GET /v1/listings/{id}/image?variant=thumbnail|full`,
@@ -47,7 +48,7 @@ export const SEED: Restaurant[] = [
     lat: 40.6916,
     lng: -73.9788,
     cuisine: "Middle Eastern",
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
     rating: 4.6,
     reviewCount: 89,
     distanceMi: 1.2,
@@ -78,7 +79,7 @@ export const SEED: Restaurant[] = [
     lat: 40.5774,
     lng: -73.9596,
     cuisine: "Pakistani",
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
     rating: 4.8,
     reviewCount: 612,
     distanceMi: 0.4,
@@ -108,7 +109,7 @@ export const SEED: Restaurant[] = [
     lat: 40.7027,
     lng: -73.9895,
     cuisine: "Middle Eastern",
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
     rating: 4.6,
     reviewCount: 1204,
     distanceMi: 1.1,
@@ -128,7 +129,7 @@ export const SEED: Restaurant[] = [
     lat: 40.6519,
     lng: -73.9302,
     cuisine: "American",
-    cuttingMethod: "MACHINE_CUT",
+    isHandCut: false,
     rating: 4.4,
     reviewCount: 2377,
     distanceMi: 2.3,
@@ -142,7 +143,7 @@ export const SEED: Restaurant[] = [
     lat: 40.6777,
     lng: -73.9497,
     cuisine: "Lebanese",
-    cuttingMethod: "HAND_CUT",
+    isHandCut: true,
     rating: 4.7,
     reviewCount: 540,
     distanceMi: 1.8,
@@ -162,7 +163,7 @@ export const SEED: Restaurant[] = [
     lat: 40.684,
     lng: -73.9914,
     cuisine: "American",
-    cuttingMethod: "MACHINE_CUT",
+    isHandCut: false,
     rating: 4.5,
     reviewCount: 8912,
     distanceMi: 2.6,
@@ -176,7 +177,7 @@ export const SEED: Restaurant[] = [
     lat: 40.7143,
     lng: -73.9447,
     cuisine: "Brazilian",
-    cuttingMethod: "UNSPECIFIED",
+    isHandCut: null,
     rating: 4.9,
     reviewCount: 321,
     distanceMi: 3.2,
@@ -187,12 +188,12 @@ export const SEED: Restaurant[] = [
 
 export function searchListings(
   query: string,
-  cuttingMethod?: CuttingMethod,
+  handCutOnly?: boolean,
 ): Restaurant[] {
   const q = query.trim().toLowerCase();
   return SEED.filter((r) => {
-    if (cuttingMethod && cuttingMethod !== "UNSPECIFIED") {
-      if (r.cuttingMethod !== cuttingMethod) return false;
+    if (handCutOnly) {
+      if (r.isHandCut !== true) return false;
     }
     if (!q) return true;
     const haystack = `${r.name} ${r.cuisine} ${r.address}`.toLowerCase();

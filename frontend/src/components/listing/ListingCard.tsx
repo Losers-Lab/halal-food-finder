@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   HandCutIndicator,
-  MachineCutIndicator,
   UnverifiedTag,
   VerifiedBadge,
 } from "@/components/trust";
@@ -89,13 +88,9 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
 
         {meta ? <p className="mt-1 text-small text-ink-500">{meta}</p> : null}
 
-        {restaurant.cuttingMethod === "HAND_CUT" ? (
+        {restaurant.isHandCut === true ? (
           <div className="mt-3">
             <HandCutIndicator />
-          </div>
-        ) : restaurant.cuttingMethod === "MACHINE_CUT" ? (
-          <div className="mt-3">
-            <MachineCutIndicator />
           </div>
         ) : null}
       </div>

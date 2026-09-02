@@ -1,8 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  createListingSchema,
-  CUTTING_METHOD_OPTIONS,
-} from "./schemas";
+import { createListingSchema } from "./schemas";
 
 const valid = {
   name: "  Al-Amir Grill  ",
@@ -10,7 +7,7 @@ const valid = {
   lat: "40.7128",
   lng: "-74.0060",
   cuisine: "Middle Eastern",
-  cuttingMethod: "HAND_CUT",
+  isHandCut: true,
 } as const;
 
 describe("createListingSchema (sc-138)", () => {
@@ -79,19 +76,22 @@ describe("createListingSchema (sc-138)", () => {
     ).toBe(false);
   });
 
-  it("rejects an unknown cuttingMethod", () => {
-    const result = createListingSchema.safeParse({
-      ...valid,
-      cuttingMethod: "SOMETHING_ELSE",
-    });
-    expect(result.success).toBe(false);
+  it("accepts the optional isHandCut boolean (checked or omitted)", () => {
+    expect(createListingSchema.safeParse({ ...valid, isHandCut: true }).success).toBe(
+      true,
+    );
+    expect(createListingSchema.safeParse({ ...valid, isHandCut: false }).success).toBe(
+      true,
+    );
+    const { isHandCut: _dropped, ...without } = valid;
+    expect(createListingSchema.safeParse(without).success).toBe(true);
   });
 
-  it("exposes all three cutting-method options for the select (incl. UNSPECIFIED)", () => {
-    expect(CUTTING_METHOD_OPTIONS.map((o) => o.value)).toEqual([
-      "HAND_CUT",
-      "MACHINE_CUT",
-      "UNSPECIFIED",
-    ]);
+  it("rejects a non-boolean isHandCut", () => {
+    const result = createListingSchema.safeParse({
+      ...valid,
+      isHandCut: "yes",
+    });
+    expect(result.success).toBe(false);
   });
 });
