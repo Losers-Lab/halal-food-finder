@@ -195,6 +195,41 @@ class JdbcListingSearchQueryTest : FunSpec() {
             any.map { it.name } shouldBe listOf("Qualified Test")
         }
 
+        test("price range filter narrows results to listings whose price falls inside the range") {
+            // sc-43: insert controlled priced rows far from the seeds so these
+            // assertions are isolated from the 30 NULL-price seed rows.
+            insertFilterTestRows()
+            val center = LatLng(lat = 46.0, lng = -78.0)
+
+            // No price filter -> every controlled row within the radius.
+            val all = query.searchNearby(center = center, radiusMiles = 5.0, offset = 0, limit = 50)
+            all.map { it.name }.toSet() shouldBe setOf("Taco Mixto", "Taco Solo", "Med Grill", "Budget Eats", "No Price Wagyu")
+
+            // min + max bound the range (inclusive).
+            val mid = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(minPrice = BigDecimal("12"), maxPrice = BigDecimal("18")),
+                offset = 0, limit = 50,
+            )
+            mid.map { it.name } shouldBe listOf("Taco Mixto")
+
+            // minPrice only.
+            val minOnly = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(minPrice = BigDecimal("11")),
+                offset = 0, limit = 50,
+            )
+            minOnly.map { it.name }.toSet() shouldBe setOf("Taco Mixto", "Med Grill")
+
+            // A NULL-price row never matches a price filter (V6 null semantics).
+            val low = query.searchNearby(
+                center = center, radiusMiles = 5.0,
+                filters = ListingSearchFilters(maxPrice = BigDecimal("7")),
+                offset = 0, limit = 50,
+            )
+            low.map { it.name } shouldBe listOf("Budget Eats")
+        }
+
         test("cuisine filter with OR (default) matches a listing with ANY selected cuisine") {
             // sc-44: OR is the PRD default. A multi-cuisine listing matches via any
             // one of its cuisines; a NULL-cuisine listing never matches.
