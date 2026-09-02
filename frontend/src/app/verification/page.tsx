@@ -33,7 +33,7 @@ export default function VerificationPage() {
   return (
     <div className="min-h-screen bg-cream-50">
       <SiteHeader />
-      <main className="mx-auto max-w-[1200px] px-5 py-12 pb-32">
+      <main className="mx-auto max-w-[1200px] px-5 py-12 pb-32 lg:pb-12">
         <header>
           <h1 className="text-title text-ink-900">Verification Committee</h1>
           <p className="mt-2 max-w-2xl text-body text-ink-500">

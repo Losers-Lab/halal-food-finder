@@ -24,7 +24,7 @@ function SearchResults() {
   return (
     <div className="min-h-screen bg-cream-50">
       <SiteHeader />
-      <main className="mx-auto max-w-[1200px] px-5 py-12 pb-32">
+      <main className="mx-auto max-w-[1200px] px-5 py-12 pb-32 lg:pb-12">
         <section className="text-center">
           <h1 className="text-title text-ink-900">
             {q ? (

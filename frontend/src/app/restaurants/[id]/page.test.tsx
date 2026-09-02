@@ -122,6 +122,9 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     ).toBeInTheDocument();
     expect(screen.queryByText("Halal verification")).not.toBeInTheDocument();
     expect(screen.queryByText("Verified")).not.toBeInTheDocument();
+    // Exactly ONE "Unverified" badge — the title-row one. The redundant badge
+    // inside the status panel was removed (sc-185 Item 3).
+    expect(screen.getAllByText("Unverified")).toHaveLength(1);
   });
 
   it("renders the not-found panel when the id is unknown (header/footer intact)", async () => {

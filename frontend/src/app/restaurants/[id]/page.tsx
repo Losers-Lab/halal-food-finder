@@ -65,7 +65,7 @@ export default function RestaurantDetailPage() {
   return (
     <div className="min-h-screen bg-cream-50">
       <SiteHeader />
-      <main className="mx-auto max-w-[1200px] px-5 py-8 pb-32">
+      <main className="mx-auto max-w-[1200px] px-5 py-8 pb-32 lg:pb-8">
         <BackLink />
 
         {status === "loading" ? <DetailSkeleton /> : null}
@@ -289,10 +289,7 @@ function UnverifiedPanel() {
       aria-label="Verification status"
       className="rounded-lg border-[1.5px] border-ink-300 bg-ink-100 p-6"
     >
-      <div className="flex items-center gap-2">
-        <UnverifiedTag />
-      </div>
-      <p className="mt-3 text-body text-ink-700">
+      <p className="text-body text-ink-700">
         This listing hasn&apos;t been verified yet. Owners can claim it and submit
         their certification for review.
       </p>

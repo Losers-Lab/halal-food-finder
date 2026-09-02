@@ -64,7 +64,7 @@ export function MobileTabBar() {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-20 border-t border-kraft-300 bg-ink-0 pb-[env(safe-area-inset-bottom)]"
+      className="fixed inset-x-0 bottom-0 z-20 border-t border-kraft-300 bg-ink-0 pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
       <div className="grid h-14 grid-cols-4">
         {TABS.map((tab) => {
