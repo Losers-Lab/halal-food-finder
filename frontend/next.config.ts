@@ -21,6 +21,11 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
   "connect-src 'self'",
+  // sc-187: embedded map preview on the detail page loads a Google Maps oEmbed
+  // frame (https://www.google.com/maps?q=<lat>,<lng>&output=embed) to draw a
+  // location pin. Only Google may be framed. `frame-ancestors 'none'` (our own
+  // clickjacking control) is unrelated and untouched.
+  "frame-src https://www.google.com",
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",

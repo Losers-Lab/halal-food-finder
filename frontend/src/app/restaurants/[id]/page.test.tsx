@@ -193,4 +193,23 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     expect(await screen.findByText("New Spot")).toBeInTheDocument();
     expect(screen.queryByRole("img", { name: "New Spot" })).not.toBeInTheDocument();
   });
+
+  it("renders the full address and an embedded map preview with a pin (sc-187)", async () => {
+    getRestaurantMock.mockResolvedValueOnce(restaurant({}));
+    render(<RestaurantDetailPage />);
+
+    // Full structured address (street, city, ZIP) from the listing read surface.
+    expect(
+      await screen.findByText("112 Atlantic Ave, Brooklyn, NY"),
+    ).toBeInTheDocument();
+
+    // Embedded map preview pinned at the listing's lat/lng — Google Maps oEmbed.
+    const frame = screen.getByTitle(
+      "Map showing the location of Al-Amir Grill",
+    );
+    expect(frame).toHaveAttribute(
+      "src",
+      "https://www.google.com/maps?q=40.6916,-73.9788&z=16&output=embed",
+    );
+  });
 });
