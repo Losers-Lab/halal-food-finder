@@ -168,6 +168,30 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             roundTrip(null)!!.isDelivery shouldBe null
         }
 
+        test("save round-trips the structured address fields (sc-187)") {
+            val owner = accounts.save(Account.new(email = Email("addr-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Addr Grill",
+                address = "3885 Belt Line Rd",
+                city = "Addison",
+                province = "TX",
+                postal = "75001",
+                country = "US",
+                location = LatLng(32.953530, -96.849844),
+                cuisine = Cuisine("lebanese"),
+                isHandCut = true,
+                ownerId = owner.id,
+            )
+
+            val found = listings.findById(listings.save(listing).id)
+            found shouldNotBe null
+            found!!.address shouldBe "3885 Belt Line Rd"  // street line preserved
+            found.city shouldBe "Addison"
+            found.province shouldBe "TX"
+            found.postal shouldBe "75001"
+            found.country shouldBe "US"
+        }
+
         test("V18 adds an is_delivery column to the source listing and the search projection (sc-184)") {
             for (table in listOf("restaurant_listings", "listing_search")) {
                 val col = jdbc.queryForMap(

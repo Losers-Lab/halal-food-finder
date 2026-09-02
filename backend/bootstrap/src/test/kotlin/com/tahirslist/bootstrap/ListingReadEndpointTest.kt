@@ -122,6 +122,29 @@ class ListingReadEndpointTest : PostgresBootTest() {
             detail.get("imageSrcset").size() shouldBe ImageVariant.thumbnailVariants.size
         }
 
+        test("browse and detail cards expose the structured address fields (sc-187)") {
+            // Browse card for a US seed row surfaces city/province/postal/country.
+            val browseBody = restTemplate.getForEntity("/v1/listings", String::class.java).body!!
+            val cards: JsonNode = objectMapper.readTree(browseBody)
+            val alAmir = (0 until cards.size()).map { cards[it] }
+                .first { it.get("name").asText() == "Al-Amir Lebanese Restaurant & Club" }
+            alAmir.get("address").asText() shouldBe "3885 Belt Line Rd"  // street line preserved
+            alAmir.get("city").asText() shouldBe "Addison"
+            alAmir.get("province").asText() shouldBe "TX"
+            alAmir.get("postal").asText() shouldBe "75001"
+            alAmir.get("country").asText() shouldBe "US"
+
+            // Detail for a CA seed row surfaces the same fields (non-US locality).
+            val id = seededListingId("Aroma Fine Indian Cuisine")
+            val detailBody = restTemplate.getForEntity("/v1/listings/$id", String::class.java).body!!
+            val detail: JsonNode = objectMapper.readTree(detailBody)
+            detail.get("address").asText() shouldBe "287 King St W"
+            detail.get("city").asText() shouldBe "Toronto"
+            detail.get("province").asText() shouldBe "ON"
+            detail.get("postal").asText() shouldBe "M5V 0W3"
+            detail.get("country").asText() shouldBe "CA"
+        }
+
         test("detail for an unknown listing returns 404") {
             val resp = getBytes("/v1/listings/${UUID.randomUUID()}")
 

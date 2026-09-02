@@ -74,6 +74,30 @@ class CreateListingTest : FunSpec({
         verify { listings.save(match { it.name == "Halal Grill" && it.address == "123 Main St" }) }
     }
 
+    test("passes the structured address fields to the saved listing (sc-187)") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Al-Amir",
+            address = "3885 Belt Line Rd",
+            city = "Addison",
+            province = "TX",
+            postal = "75001",
+            country = "US",
+            location = LatLng(32.953530, -96.849844),
+            cuisine = Cuisine("lebanese"),
+            isHandCut = true,
+            ownerId = ownerId,
+        )
+
+        listing.city shouldBe "Addison"
+        listing.province shouldBe "TX"
+        listing.postal shouldBe "75001"
+        listing.country shouldBe "US"
+        verify { listings.save(match { it.city == "Addison" && it.province == "TX" && it.postal == "75001" && it.country == "US" }) }
+    }
+
     test("passes an explicit alcoholServed flag to the saved listing") {
         val ownerId = registeredOwner()
         every { listings.save(any()) } answers { firstArg() }

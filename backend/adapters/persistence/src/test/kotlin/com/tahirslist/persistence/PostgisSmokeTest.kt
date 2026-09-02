@@ -63,9 +63,10 @@ class PostgisSmokeTest : FunSpec() {
             // VERIFIED-status opening on restaurant_listings (V15), the
             // sc-73 read-surface certifier + expires_on columns on reviews
             // (V16), the sc-42 hand-cut boolean (V17), the sc-119 partial-halal
-            // columns + restaurant_halal_items (V18), and the sc-184
-            // is_delivery column (V19) all run cleanly on a real PostGIS DB.
-            result.migrationsExecuted shouldBe 19
+            // columns + restaurant_halal_items (V18), the sc-184
+            // is_delivery column (V19), and the sc-187 structured address
+            // columns (V20) all run cleanly on a real PostGIS DB.
+            result.migrationsExecuted shouldBe 20
         }
     }
 }
