@@ -105,6 +105,50 @@ class RestaurantListingTest : FunSpec({
         ).rating shouldBe null
     }
 
+    test("new() defaults isDelivery to null (unknown / not claimed)") {
+        // sc-184: delivery is an EXTRA boolean, not an either/or choice. A new
+        // listing that does not claim delivery records null (unknown) by default,
+        // mirroring the sc-42 hand-cut tri-state.
+        val listing = RestaurantListing.new(
+            name = "Plain Grill",
+            address = "9 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            ownerId = UUID.randomUUID(),
+        )
+        listing.isDelivery shouldBe null
+    }
+
+    test("new() carries an explicit isDelivery flag (sc-184)") {
+        val listing = RestaurantListing.new(
+            name = "X",
+            address = "1 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            isHandCut = true,
+            isDelivery = true,
+            ownerId = UUID.randomUUID(),
+        )
+        listing.isDelivery shouldBe true
+    }
+
+    test("isDelivery is a plain boolean tri-state, like isHandCut (sc-184)") {
+        // sc-184 mirrors the sc-42 pattern: delivery is true / false / null
+        // (unknown/not claimed) — never an enum of service modes.
+        fun build(delivery: Boolean?) = RestaurantListing.new(
+            name = "X",
+            address = "1 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            isHandCut = true,
+            isDelivery = delivery,
+            ownerId = UUID.randomUUID(),
+        )
+        build(true).isDelivery shouldBe true
+        build(false).isDelivery shouldBe false
+        build(null).isDelivery shouldBe null
+    }
+
     test("new() defaults alcoholServed to false") {
         val listing = RestaurantListing.new(
             name = "Y", address = "2 St", location = LatLng(0.0, 0.0),
@@ -213,6 +257,7 @@ class RestaurantListingTest : FunSpec({
             location = LatLng(40.0, -74.0),
             cuisine = null,
             isHandCut = true,
+            isDelivery = true,
             ownerId = null,
             brandId = null,
             provenance = null,
@@ -222,5 +267,6 @@ class RestaurantListingTest : FunSpec({
         )
 
         listing.alcoholServed shouldBe true
+        listing.isDelivery shouldBe true
     }
 })

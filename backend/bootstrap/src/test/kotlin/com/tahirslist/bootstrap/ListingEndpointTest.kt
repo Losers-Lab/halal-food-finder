@@ -94,7 +94,7 @@ class ListingEndpointTest : PostgresBootTest() {
             // Persistence round-trip: read the row back from PostGIS.
             val row = JdbcTemplate(dataSource).queryForList(
                 """
-                SELECT name, address, cuisine, is_hand_cut, verification_status, owner_id,
+                SELECT name, address, cuisine, is_hand_cut, is_delivery, verification_status, owner_id,
                        ST_Y(location::geometry) AS lat, ST_X(location::geometry) AS lng
                 FROM restaurant_listings WHERE id = ?
                 """.trimIndent(),
@@ -104,10 +104,32 @@ class ListingEndpointTest : PostgresBootTest() {
             row["address"] shouldBe "123 Main St"
             row["cuisine"] shouldBe "mediterranean"
             row["is_hand_cut"] shouldBe true
+            row["is_delivery"] shouldBe true
             row["verification_status"] shouldBe "UNVERIFIED"
             row["owner_id"].toString() shouldBe ownerId.toString()
             (row["lat"] as Number).toDouble() shouldBe 40.7128
             (row["lng"] as Number).toDouble() shouldBe -74.0060
+        }
+
+        test("POST /v1/listings accepts an isDelivery flag and echoes it in the response (sc-184)") {
+            val (_, bearer) = signupAndLogin("listing-delivery@example.com")
+
+            val body = validListingBody().toMutableMap().apply { this["isDelivery"] = false }
+            val resp = createListingWithCustomToken(bearer, body)
+
+            resp.statusCode shouldBe HttpStatus.CREATED
+            resp.body!!["isDelivery"] shouldBe false
+        }
+
+        test("POST /v1/listings defaults isDelivery to null (unknown) when omitted (sc-184)") {
+            val (_, bearer) = signupAndLogin("listing-nodelivery@example.com")
+
+            val body = validListingBody().toMutableMap().apply { this.remove("isDelivery") }
+            val resp = createListingWithCustomToken(bearer, body)
+
+            resp.statusCode shouldBe HttpStatus.CREATED
+            resp.body!!.containsKey("isDelivery") shouldBe true
+            resp.body!!["isDelivery"] shouldBe null
         }
 
         test("POST /v1/listings without a token returns a generic 401") {
@@ -162,6 +184,7 @@ class ListingEndpointTest : PostgresBootTest() {
         "lng" to -74.0060,
         "cuisine" to "mediterranean",
         "isHandCut" to true,
+        "isDelivery" to true,
     )
 
     private fun postJson(path: String, body: Any, bearer: String?): ResponseEntity<Map<*, *>> {

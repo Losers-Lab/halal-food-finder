@@ -125,6 +125,40 @@ class CreateListingTest : FunSpec({
         verify { listings.save(match { it.isHandCut == null }) }
     }
 
+    test("passes an explicit isDelivery flag to the saved listing (sc-184)") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            isHandCut = true,
+            isDelivery = true,
+            ownerId = ownerId,
+        )
+
+        listing.isDelivery shouldBe true
+        verify { listings.save(match { it.isDelivery == true }) }
+    }
+
+    test("defaults isDelivery to null (unknown) when not supplied (sc-184)") {
+        val ownerId = registeredOwner()
+        every { listings.save(any()) } answers { firstArg() }
+
+        val listing = createListing.execute(
+            name = "Halal Grill",
+            address = "123 Main St",
+            location = LatLng(1.0, 2.0),
+            cuisine = Cuisine("x"),
+            ownerId = ownerId,
+        )
+
+        listing.isDelivery shouldBe null
+        verify { listings.save(match { it.isDelivery == null }) }
+    }
+
     test("defaults alcoholServed to false when not supplied") {
         val ownerId = registeredOwner()
         every { listings.save(any()) } answers { firstArg() }
