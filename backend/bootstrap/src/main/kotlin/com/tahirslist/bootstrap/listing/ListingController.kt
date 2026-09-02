@@ -69,6 +69,7 @@ class ListingController(private val createListing: CreateListing) {
             location = LatLng(lat = request.lat!!, lng = request.lng!!),
             cuisine = Cuisine(request.cuisine),
             isHandCut = request.isHandCut,
+            isDelivery = request.isDelivery,
             ownerId = ownerId,
             halalScope = request.halalScope,
             halalItems = request.halalItems,
@@ -112,6 +113,13 @@ class ListingController(private val createListing: CreateListing) {
         val crossContamination: CrossContamination = CrossContamination.DEFAULT,
 
         val alcoholServed: Boolean = false,
+
+        /**
+         * Whether the listing offers delivery (sc-184). Optional; null = unknown /
+         * not claimed. Modelled on the sc-42 pattern: pickup is the implicit
+         * baseline default, delivery is the extra flag a listing claims.
+         */
+        val isDelivery: Boolean?,
     )
 
     data class ListingResponse(
@@ -123,6 +131,7 @@ class ListingController(private val createListing: CreateListing) {
         val cuisine: String,
         val isHandCut: Boolean?,
         val halalScope: HalalScope,
+        val isDelivery: Boolean?,
         val ownerId: UUID,
         val verificationStatus: VerificationStatus,
         val createdAt: Instant,
@@ -140,6 +149,7 @@ class ListingController(private val createListing: CreateListing) {
                 cuisine = listing.cuisine!!.value,
                 isHandCut = listing.isHandCut,
                 halalScope = listing.halalScope,
+                isDelivery = listing.isDelivery,
                 // Add Listing always attaches the authenticated owner, so the
                 // response echoes a non-null id; only community seed rows have
                 // ownerId NULL, and this endpoint does not create those.

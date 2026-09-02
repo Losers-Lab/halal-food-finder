@@ -154,6 +154,81 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
             roundTrip(null)!!.isHandCut shouldBe null
         }
 
+        test("save round-trips the isDelivery boolean tri-state (sc-184)") {
+            val owner = accounts.save(Account.new(email = Email("deliv-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            fun roundTrip(delivery: Boolean?): RestaurantListing? {
+                val listing = RestaurantListing.new(
+                    name = "Deliver Grill", address = "1 Grub Ave", location = LatLng(43.7, -79.4),
+                    cuisine = Cuisine("x"), isHandCut = true, isDelivery = delivery, ownerId = owner.id,
+                )
+                return listings.findById(listings.save(listing).id)
+            }
+            roundTrip(true)!!.isDelivery shouldBe true
+            roundTrip(false)!!.isDelivery shouldBe false
+            roundTrip(null)!!.isDelivery shouldBe null
+        }
+
+        test("V18 adds an is_delivery column to the source listing and the search projection (sc-184)") {
+            for (table in listOf("restaurant_listings", "listing_search")) {
+                val col = jdbc.queryForMap(
+                    "SELECT data_type, is_nullable FROM information_schema.columns " +
+                        "WHERE table_name = ? AND column_name = 'is_delivery'",
+                    table,
+                )
+                col["data_type"] shouldBe "boolean"
+                col["is_nullable"] shouldBe "YES" // null = unknown / not claimed (sc-42 null semantics)
+            }
+        }
+
+        test("save persists isDelivery and mirrors it into the search projection (sc-184)") {
+            val owner = accounts.save(Account.new(email = Email("deliv-mirror-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Delivery Grill",
+                address = "4 Delivery Dr",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                isHandCut = true,
+                isDelivery = true,
+                // Index-qualified so save() mirrors it into the search projection
+                // (sc-119 gate: only NO_CROSS_CONTAMINATION listings are indexed).
+                crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
+                ownerId = owner.id,
+            )
+
+            val saved = listings.save(listing)
+            saved.isDelivery shouldBe true
+
+            // isDelivery round-trips through the source read path.
+            val found = listings.findById(saved.id)!!
+            found.isDelivery shouldBe true
+
+            // The search projection mirrors the flag (sc-184 reads listing_search only).
+            val mirrored = jdbc.queryForObject(
+                "SELECT is_delivery FROM listing_search WHERE id = ?",
+                Boolean::class.java,
+                saved.id,
+            )
+            mirrored shouldBe true
+        }
+
+        test("save defaults isDelivery to null (unknown) (sc-184)") {
+            val owner = accounts.save(Account.new(email = Email("deliv-none-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val listing = RestaurantListing.new(
+                name = "Pickup Grill",
+                address = "9 Dry Blvd",
+                location = LatLng(43.7, -79.4),
+                cuisine = Cuisine("Halal"),
+                isHandCut = true,
+                ownerId = owner.id,
+            )
+
+            val saved = listings.save(listing)
+            saved.isDelivery shouldBe null
+
+            val found = listings.findById(saved.id)!!
+            found.isDelivery shouldBe null
+        }
+
         test("findById returns null for an unknown id") {
             listings.findById(UUID.randomUUID()) shouldBe null
         }

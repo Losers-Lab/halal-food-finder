@@ -20,6 +20,11 @@ import java.util.UUID
  * is exposed so the search card can render the halal-coverage disclosure
  * alongside the verification badge without overstating full halal-ness
  * (verification is independent of scope — sc-119).
+ *
+ * [isDelivery] is nullable on the same sc-42 pattern (sc-184): null = unknown /
+ * not claimed (seed rows); true = offers delivery; false = no delivery
+ * (pickup-only). Pickup is the implicit baseline default; delivery is the extra
+ * flag a listing claims.
  */
 data class ListingSearchResult(
     val id: UUID,
@@ -29,6 +34,7 @@ data class ListingSearchResult(
     val cuisine: Cuisine?,
     val isHandCut: Boolean?,
     val halalScope: HalalScope,
+    val isDelivery: Boolean?,
     val verificationStatus: VerificationStatus,
     val rating: Rating?,
     val distanceMiles: Double,

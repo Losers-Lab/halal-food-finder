@@ -48,11 +48,11 @@ class JdbcRestaurantListingRepository(
         val saved: RestaurantListing = tx.execute {
             val id = jdbc.queryForObject(
                 """
-                INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
+                INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, is_delivery, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
                 VALUES (
                     ?, ?,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 RETURNING id
                 """.trimIndent(),
@@ -63,6 +63,7 @@ class JdbcRestaurantListingRepository(
                 listing.location.lat,
                 listing.cuisine?.value,
                 listing.isHandCut,
+                listing.isDelivery,
                 listing.ownerId,
                 listing.brandId,
                 listing.provenance?.value,
@@ -110,14 +111,15 @@ class JdbcRestaurantListingRepository(
         if (listing.crossContamination.isIndexQualified()) {
             jdbc.update(
                 """
-                INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
-                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
+                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     name = EXCLUDED.name,
                     address = EXCLUDED.address,
                     location = EXCLUDED.location,
                     cuisine = EXCLUDED.cuisine,
                     is_hand_cut = EXCLUDED.is_hand_cut,
+                    is_delivery = EXCLUDED.is_delivery,
                     verification_status = EXCLUDED.verification_status,
                     price = EXCLUDED.price,
                     rating = EXCLUDED.rating,
@@ -132,6 +134,7 @@ class JdbcRestaurantListingRepository(
                 listing.location.lat,
                 listing.cuisine?.value,
                 listing.isHandCut,
+                listing.isDelivery,
                 listing.verificationStatus.name,
                 listing.price?.value,
                 listing.rating?.value,
@@ -166,6 +169,7 @@ class JdbcRestaurantListingRepository(
                 ST_X(location::geometry) AS lng,
                 cuisine,
                 is_hand_cut,
+                is_delivery,
                 price,
                 rating,
                 alcohol_served,
@@ -218,6 +222,7 @@ class JdbcRestaurantListingRepository(
                 ST_X(location::geometry) AS lng,
                 cuisine,
                 is_hand_cut,
+                is_delivery,
                 price,
                 rating,
                 alcohol_served,
@@ -240,6 +245,7 @@ class JdbcRestaurantListingRepository(
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
         isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
+        isDelivery = getObject("is_delivery", java.lang.Boolean::class.java) as Boolean?,
         price = getBigDecimal("price")?.let { Price(it) },
         rating = getBigDecimal("rating")?.let { Rating(it) },
         alcoholServed = getBoolean("alcohol_served"),

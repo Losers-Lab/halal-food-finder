@@ -147,6 +147,53 @@ class ListingSearchEndpointTest : PostgresBootTest() {
             bodyOf(resp).get("code").asText() shouldBe "invalid_input"
         }
 
+        test("deliveryOnly=true narrows the search and excludes the unknown seed (sc-184)") {
+            // sc-184: the entire seed set has an unknown (NULL) delivery status, so
+            // a deliveryOnly filter around St. Clair returns nothing, while the
+            // same query without the filter returns hits — proving it narrows.
+            val unfiltered = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0")
+            (bodyOf(unfiltered).size() > 0) shouldBe true
+
+            val delivery = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&deliveryOnly=true")
+            delivery.statusCode shouldBe HttpStatus.OK
+            bodyOf(delivery).size() shouldBe 0
+        }
+
+        test("deliveryOnly=false matches the no-filter result set (any delivery status)") {
+            val noFilter = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0")
+            val explicitlyOff = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&deliveryOnly=false")
+
+            explicitlyOff.statusCode shouldBe HttpStatus.OK
+            val results = bodyOf(explicitlyOff)
+            (results.size() > 0) shouldBe true
+            results[0].get("name").asText() shouldBe "Osmow's"
+            (results.size() == bodyOf(noFilter).size()) shouldBe true
+        }
+
+        test("a non-boolean deliveryOnly returns 400 invalid_input, not a crash") {
+            val resp = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0&deliveryOnly=STUNK")
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
+            bodyOf(resp).get("code").asText() shouldBe "invalid_input"
+        }
+
+        test("each search card exposes the isDelivery read field (sc-184)") {
+            // Insert controlled delivery rows far from the NULL-delivery seeds so
+            // the read field can be asserted as true/false on the wire.
+            insertDeliveryEndpointRows()
+            val base = "/v1/listings/search?center=48.0,-76.0&radius=2.0"
+
+            val resp = get(base)
+            resp.statusCode shouldBe HttpStatus.OK
+            val byName = bodyOf(resp).associate { it.get("name").asText() to it }
+            byName["Delivery Test"]!!.get("isDelivery").asBoolean() shouldBe true
+            byName["Pickup Test"]!!.get("isDelivery").asBoolean() shouldBe false
+
+            // deliveryOnly narrows the same rows.
+            val only = get("$base&deliveryOnly=true")
+            bodyOf(only).map { it.get("name").asText() } shouldBe listOf("Delivery Test")
+        }
+
         test("price range narrows results through the live search endpoint (sc-43)") {
             // Controlled priced rows far from the seeds (mirrored into listing_search).
             insertFilterRows()
@@ -338,5 +385,43 @@ class ListingSearchEndpointTest : PostgresBootTest() {
                 UUID.fromString(row[0] as String), row[2] as String,
             )
         }
+    }
+
+    /**
+     * Inserts two controlled delivery rows at 48N/76W and mirrors them into
+     * listing_search, so the isDelivery read field + deliveryOnly endpoint
+     * assertions are isolated from the NULL-delivery seeds and the price/cuisine
+     * (45.5N/78.5W) / rating (47N/77W) rows. Both are NO_CROSS_CONTAMINATION so
+     * they pass the sc-119 query-level index gate. Idempotent via ON CONFLICT.
+     */
+    private fun insertDeliveryEndpointRows() {
+        val deliveryId = UUID.fromString("70000000-0000-0000-0000-000000000001")
+        val pickupId = UUID.fromString("70000000-0000-0000-0000-000000000002")
+
+        jdbc.update(
+            """
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-76.0, 48.0), 4326)::geography, ?, ?, ?, 'UNVERIFIED', 'NO_CROSS_CONTAMINATION')
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            deliveryId, "Delivery Test", "48.00, -76.00", "mexican", true, true,
+        )
+        jdbc.update(
+            """
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(-76.0, 48.0), 4326)::geography, ?, ?, ?, 'UNVERIFIED', 'NO_CROSS_CONTAMINATION')
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            pickupId, "Pickup Test", "48.00, -76.00", "mexican", false, false,
+        )
+        jdbc.update(
+            """
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            SELECT id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination
+            FROM restaurant_listings WHERE id IN (?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            deliveryId, pickupId,
+        )
     }
 }

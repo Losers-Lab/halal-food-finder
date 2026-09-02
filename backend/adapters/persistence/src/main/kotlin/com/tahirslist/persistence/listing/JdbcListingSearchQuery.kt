@@ -60,6 +60,13 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         // search treats as not-hand-cut — same null semantics as price/rating).
         val handCutClause = if (filters.handCutOnly) "AND is_hand_cut" else ""
 
+        // sc-184: delivery-only is the same EXTRA on/off boolean filter as
+        // hand-cut (sc-42). When off (default) no predicate is added so every
+        // listing matches regardless of delivery status; when on, a simple
+        // IS TRUE predicate (ignores NULL = unknown, which search treats as
+        // no-delivery — pickup is the implicit baseline default).
+        val deliveryClause = if (filters.deliveryOnly) "AND is_delivery" else ""
+
         // sc-44: cuisine AND/OR over the multi-cuisine join table.
         //   OR (default): the listing has ANY selected cuisine -> EXISTS.
         //   AND: the listing has ALL selected cuisines -> COUNT(DISTINCT matched) == selected count.
@@ -108,6 +115,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
                 cuisine,
                 is_hand_cut,
                 halal_scope,
+                is_delivery,
                 verification_status,
                 rating,
                 ST_DistanceSphere(
@@ -122,6 +130,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
             )
             AND cross_contamination = 'NO_CROSS_CONTAMINATION'
             $handCutClause
+            $deliveryClause
             $cuisineClause
             $priceClause
             $ratingClause
@@ -158,6 +167,7 @@ class JdbcListingSearchQuery(private val jdbc: JdbcTemplate) : ListingSearchQuer
         cuisine = getString("cuisine")?.let { Cuisine(it) },
         isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,
         halalScope = HalalScope.valueOf(getString("halal_scope")),
+        isDelivery = getObject("is_delivery", java.lang.Boolean::class.java) as Boolean?,
         verificationStatus = VerificationStatus.valueOf(getString("verification_status")),
         rating = getBigDecimal("rating")?.let { Rating(it) },
         distanceMiles = getDouble("distance_miles"),

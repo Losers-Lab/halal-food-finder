@@ -150,6 +150,7 @@ class JdbcListingSearchQueryTest : FunSpec() {
             osmow.verificationStatus.name shouldBe "UNVERIFIED"
             osmow.isHandCut shouldBe null      // seed rows carry no hand-cut claim
             osmow.halalScope shouldBe HalalScope.NOT_DISCLOSED
+            osmow.isDelivery shouldBe null     // seed rows carry no delivery claim (sc-184)
         }
 
         test("handCutOnly filter returns only hand-cut listings (sc-42)") {
@@ -193,6 +194,44 @@ class JdbcListingSearchQueryTest : FunSpec() {
 
             val any = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(), offset = 0, limit = 50)
             any.map { it.name } shouldBe listOf("Qualified Test")
+        }
+
+        test("deliveryOnly filter returns only listings claiming delivery (sc-184)") {
+            // sc-184 mirrors the sc-42 hand-cut pattern: delivery is an EXTRA
+            // on/off boolean. With it off (default) every listing matches —
+            // delivery, no-delivery, and unknown (NULL). With it on, only listings
+            // claiming delivery match; unknown (NULL) is treated as no-delivery.
+            insertDeliveryTestRows()
+            val center = LatLng(lat = 49.0, lng = -75.0)
+
+            // Default (no filter) matches every delivery status, including NULL.
+            val all = query.searchNearby(center = center, radiusMiles = 5.0, offset = 0, limit = 50)
+            all.map { it.name }.toSet() shouldBe setOf("Delivery Test", "Pickup Test")
+
+            // deliveryOnly = true narrows to delivery only.
+            val delivery = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(deliveryOnly = true), offset = 0, limit = 50)
+            delivery.map { it.name } shouldBe listOf("Delivery Test")
+            delivery.single().isDelivery shouldBe true
+
+            // deliveryOnly = false is the explicit "no delivery filter".
+            val explicitlyOff = query.searchNearby(center = center, radiusMiles = 5.0, filters = ListingSearchFilters(deliveryOnly = false), offset = 0, limit = 50)
+            explicitlyOff.map { it.name }.toSet() shouldBe setOf("Delivery Test", "Pickup Test")
+        }
+
+        test("deliveryOnly combines with the location radius (sc-184)") {
+            // The filter must not bypass the radius. Nesting around Osmow's
+            // (unknown = no-delivery) co-located seed with a tiny radius:
+            // deliveryOnly finds nothing there, while no filter still finds Osmow's.
+            val center = LatLng(lat = 43.682921, lng = -79.418493)
+
+            val delivery = query.searchNearby(
+                center = center, radiusMiles = 0.1,
+                filters = ListingSearchFilters(deliveryOnly = true), offset = 0, limit = 50,
+            )
+            delivery shouldBe emptyList()
+
+            val all = query.searchNearby(center = center, radiusMiles = 0.1, offset = 0, limit = 50)
+            all.single().name shouldBe "Osmow's"
         }
 
         test("price range filter narrows results to listings whose price falls inside the range") {
@@ -445,9 +484,50 @@ class JdbcListingSearchQueryTest : FunSpec() {
     }
 
     /**
-     * Inserts three controlled rows at 48N/76W to prove the cross-contamination
-     * index gate: one qualified (NO_CROSS_CONTAMINATION) and two gated
-     * (PRESENT / UNCERTAIN). Idempotent.
+     * Inserts two controlled delivery-test rows at 49N/75W (far from the seeds
+     * and the gate rows at 48N/76W) and mirrors them into listing_search exactly
+     * as save() does, isolating the delivery assertions from the NULL-delivery
+     * seeds and the cutting (45N/79W) / filter (46N/78W) / rating (47N/77W) /
+     * gate (48N/76W) rows. Both are NO_CROSS_CONTAMINATION so they pass the
+     * sc-119 index gate. Idempotent via ON CONFLICT.
+     */
+    private fun insertDeliveryTestRows() {
+        val deliveryId = UUID.fromString("60000000-0000-0000-0000-000000000001")
+        val pickupId = UUID.fromString("60000000-0000-0000-0000-000000000002")
+
+        jdbc.update(
+            """
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, 'UNVERIFIED', 'NO_CROSS_CONTAMINATION')
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            deliveryId, "Delivery Test", "49.00, -75.00", -75.0, 49.0, "Grill", true, true,
+        )
+        jdbc.update(
+            """
+            INSERT INTO restaurant_listings (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, 'UNVERIFIED', 'NO_CROSS_CONTAMINATION')
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            pickupId, "Pickup Test", "49.00, -75.00", -75.0, 49.0, "Grill", false, false,
+        )
+        // Mirror into the denormalised projection, exactly the sc-10 save() contract.
+        jdbc.update(
+            """
+            INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination)
+            SELECT id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, cross_contamination
+            FROM restaurant_listings WHERE id IN (?, ?)
+            ON CONFLICT (id) DO NOTHING
+            """.trimIndent(),
+            deliveryId, pickupId,
+        )
+    }
+
+    /**
+     * Inserts four controlled rating rows at 47N/77W and mirrors them into
+     * listing_search exactly as save() does, isolating the rating assertions
+     * from the NULL-rating seeds and the filter (46N/78W) / cutting (45N/79W)
+     * rows. Idempotent via ON CONFLICT.
      */
     private fun insertGatedRows() {
         val qualified = UUID.fromString("30000000-0000-0000-0000-000000000001")

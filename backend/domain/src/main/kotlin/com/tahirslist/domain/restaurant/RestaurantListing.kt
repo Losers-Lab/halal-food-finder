@@ -37,6 +37,16 @@ import java.util.UUID
  *    partial-halal/alcohol MVP additions; it is a display attribute (no search
  *    filter), defaulting to false.
  *
+ * [isDelivery] is the sc-184 service-mode field, modelled on the same sc-42
+ * tri-state boolean pattern: delivery is an EXTRA on/off flag a listing claims
+ * or not, NOT an enum of service modes. null means "unknown / not claimed"
+ * (community/research seed rows); true means offers delivery; false means no
+ * delivery (pickup-only). Search treats null the same as false: only a
+ * delivery-only filter excludes it. Sc-184 stays deliberately lean (pickup is
+ * the implicit baseline default), so a listing claims delivery explicitly and
+ * pickup is the absence of that claim — the frontend child story surfaces this
+ * dimension on cards/detail and wires a deliveryOnly search filter.
+ *
  * NOTE: ODbL share-alike on OSM/Photon-derived listing fields is an open founder
  * decision (docs/reviews/sc-138-external-services.md §5). Flagged here, not
  * decided — do not resolve it in code.
@@ -48,6 +58,7 @@ data class RestaurantListing(
     val location: LatLng,
     val cuisine: Cuisine?,
     val isHandCut: Boolean?,
+    val isDelivery: Boolean?,
     val price: Price?,
     val rating: Rating?,
     val ownerId: UUID?,
@@ -77,6 +88,7 @@ data class RestaurantListing(
             location: LatLng,
             cuisine: Cuisine,
             isHandCut: Boolean? = null,
+            isDelivery: Boolean? = null,
             ownerId: UUID,
             price: Price? = null,
             rating: Rating? = null,
@@ -96,6 +108,7 @@ data class RestaurantListing(
                 location = location,
                 cuisine = cuisine,
                 isHandCut = isHandCut,
+                isDelivery = isDelivery,
                 price = price,
                 rating = rating,
                 ownerId = ownerId,
@@ -122,6 +135,7 @@ data class RestaurantListing(
             location: LatLng,
             cuisine: Cuisine?,
             isHandCut: Boolean? = null,
+            isDelivery: Boolean? = null,
             price: Price? = null,
             rating: Rating? = null,
             ownerId: UUID?,
@@ -140,6 +154,7 @@ data class RestaurantListing(
             location = location,
             cuisine = cuisine,
             isHandCut = isHandCut,
+            isDelivery = isDelivery,
             price = price,
             rating = rating,
             ownerId = ownerId,

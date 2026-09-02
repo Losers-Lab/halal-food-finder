@@ -65,17 +65,18 @@ class ListingReadController(
     private val ratingMax: Double = com.tahirslist.domain.restaurant.Rating.MAX.toDouble()
 
     @GetMapping("/search")
-    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `handCutOnly` (true/false; absent = any) is an extra on/off filter that narrows to hand-cut listings only; `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. Only no-cross-contamination listings are in the index. (sc-10 location, sc-42 hand-cut, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
+    @Operation(summary = "Search restaurants by location", description = "Returns listings within `radius` (miles) of `center` (latitude,longitude), ordered by straight-line distance ascending. `handCutOnly` (true/false; absent = any) is an extra on/off filter that narrows to hand-cut listings only; `deliveryOnly` (true/false; absent = any) narrows to listings offering delivery (sc-184); `cuisine` (repeatable) with `cuisineLogic` AND or OR (default OR) narrows by multi-cuisine membership; `minPrice`/`maxPrice` bound the price range; `minRating` sets the minimum listing rating on the 0..5 scale. Only no-cross-contamination listings are in the index. (sc-10 location, sc-42 hand-cut, sc-184 delivery, sc-43 price, sc-44 cuisine, sc-45 rating). Public — the core search UX.")
     @ApiResponses(
         value = [
             ApiResponse(responseCode = "200", description = "Search results (distance ascending)"),
-            ApiResponse(responseCode = "400", description = "Malformed centre, radius, handCutOnly, cuisine, cuisineLogic, price, or rating"),
+            ApiResponse(responseCode = "400", description = "Malformed centre, radius, handCutOnly, deliveryOnly, cuisine, cuisineLogic, price, or rating"),
         ],
     )
     fun search(
         @RequestParam(value = "center", required = false) center: String?,
         @RequestParam(value = "radius", required = false) radius: Double?,
         @RequestParam(value = "handCutOnly", required = false) handCutOnly: String?,
+        @RequestParam(value = "deliveryOnly", required = false) deliveryOnly: String?,
         @RequestParam(value = "cuisine", required = false) cuisine: List<String>?,
         @RequestParam(value = "cuisineLogic", required = false) cuisineLogic: String?,
         @RequestParam(value = "minPrice", required = false) minPrice: Double?,
@@ -90,11 +91,13 @@ class ListingReadController(
         val parsed = parseCenter(center)
         requireNotNull(radius) { "radius is required" }
         require(radius > 0.0) { "radius must be positive" }
-        // Unknown cuisineLogic / malformed handCutOnly / malformed price values all
-        // surface as 400 invalid_input, never a 500 — the public search vocabulary
-        // is closed. handCutOnly is a plain on/off boolean: absent/false = no filter.
+        // Unknown cuisineLogic / malformed handCutOnly / deliveryOnly / malformed
+        // price values all surface as 400 invalid_input, never a 500 — the public
+        // search vocabulary is closed. handCutOnly and deliveryOnly are plain
+        // on/off booleans: absent/false = no filter.
         val filters = ListingSearchFilters(
             handCutOnly = parseHandCutOnly(handCutOnly),
+            deliveryOnly = parseDeliveryOnly(deliveryOnly),
             cuisines = parseCuisines(cuisine),
             cuisineLogic = parseCuisineLogic(cuisineLogic),
             minPrice = parsePrice(minPrice, "minPrice"),
@@ -229,6 +232,19 @@ class ListingReadController(
     }
 
     /**
+     * Parses the `deliveryOnly` filter (sc-184): an EXTRA on/off boolean, on the
+     * same pattern as `handCutOnly` (sc-42). Missing / blank / `false` mean "any
+     * delivery status" (no delivery predicate); `true` narrows to listings that
+     * claim delivery. Any other value → IllegalArgumentException (→ 400
+     * invalid_input, never a 500) so the public contract stays closed.
+     */
+    private fun parseDeliveryOnly(raw: String?): Boolean = when (raw?.trim()?.lowercase()) {
+        null, "", "false" -> false
+        "true" -> true
+        else -> throw IllegalArgumentException("deliveryOnly must be true or false")
+    }
+
+    /**
      * Parses the `cuisine` filters (sc-44). Values are trimmed + lowercased to
      * match the lowercase-stored values and de-duplicated. A blank or over-long
      * value (the [Cuisine] boundary) → IllegalArgumentException (→ 400). Empty
@@ -288,6 +304,7 @@ class ListingReadController(
         cuisine = listing.cuisine?.value,
         isHandCut = listing.isHandCut,
         halalScope = listing.halalScope.name,
+        isDelivery = listing.isDelivery,
         verificationStatus = listing.verificationStatus.name,
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
@@ -302,6 +319,7 @@ class ListingReadController(
         cuisine = result.cuisine?.value,
         isHandCut = result.isHandCut,
         halalScope = result.halalScope.name,
+        isDelivery = result.isDelivery,
         verificationStatus = result.verificationStatus.name,
         imageThumbnailUrl = imageUrl(result.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(result.id),
@@ -319,6 +337,7 @@ class ListingReadController(
         isHandCut = listing.isHandCut,
         halalScope = listing.halalScope.name,
         crossContamination = listing.crossContamination.name,
+        isDelivery = listing.isDelivery,
         verificationStatus = listing.verificationStatus.name,
         imageThumbnailUrl = imageUrl(listing.id, ImageVariant.THUMBNAIL_400),
         imageSrcset = imageSrcset(listing.id),
@@ -376,6 +395,7 @@ class ListingReadController(
         val cuisine: String?,
         val isHandCut: Boolean?,
         val halalScope: String,
+        val isDelivery: Boolean?,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
@@ -390,6 +410,7 @@ class ListingReadController(
         val cuisine: String?,
         val isHandCut: Boolean?,
         val halalScope: String,
+        val isDelivery: Boolean?,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
@@ -407,6 +428,7 @@ class ListingReadController(
         val isHandCut: Boolean?,
         val halalScope: String,
         val crossContamination: String,
+        val isDelivery: Boolean?,
         val verificationStatus: String,
         val imageThumbnailUrl: String,
         val imageSrcset: List<SrcsetEntry>,
