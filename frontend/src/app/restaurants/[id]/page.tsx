@@ -13,6 +13,7 @@ import {
   VerifiedBadge,
 } from "@/components/trust";
 import { CertificatePanel } from "@/components/detail/CertificatePanel";
+import { MapPreview } from "@/components/detail/MapPreview";
 import { RestaurantPhoto } from "@/components/listing/RestaurantPhoto";
 import { FavoriteButton } from "@/components/listing/FavoriteButton";
 import type { Restaurant } from "@/lib/listings/restaurants";
@@ -238,6 +239,14 @@ function Sidebar({ restaurant }: { restaurant: Restaurant }) {
       <section aria-label="Location">
         <h2 className="text-heading text-ink-900">Location</h2>
         <p className="mt-2 text-body text-ink-700">{restaurant.address}</p>
+        {/* sc-187: embedded map preview with a location pin from the listing's lat/lng. */}
+        <div className="mt-3">
+          <MapPreview
+            lat={restaurant.lat}
+            lng={restaurant.lng}
+            restaurantName={restaurant.name}
+          />
+        </div>
         <a
           className="mt-2 inline-block text-label text-brand-500 underline-offset-2 hover:underline"
           href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`}
