@@ -377,6 +377,7 @@ describe("api client", () => {
             lng: -96.728031,
             cuisine: null,
             isHandCut: null,
+            isDelivery: null,
             verificationStatus: "UNVERIFIED",
             imageThumbnailUrl:
               "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
@@ -388,6 +389,7 @@ describe("api client", () => {
     const result = await api.getListings();
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("12ca4fe9-2884-4cac-9528-cc38fc0efa2f");
+    expect(result[0].isDelivery).toBeNull();
     expect(fetch).toHaveBeenCalledWith(
       "/v1/listings",
       expect.objectContaining({ method: "GET", body: undefined }),
@@ -444,6 +446,7 @@ describe("api client", () => {
             lng: -96.728031,
             cuisine: null,
             isHandCut: null,
+            isDelivery: true,
             verificationStatus: "UNVERIFIED",
             imageThumbnailUrl:
               "http://localhost:8080/v1/listings/12ca4fe9-2884-4cac-9528-cc38fc0efa2f/image?variant=thumbnail",
@@ -455,6 +458,7 @@ describe("api client", () => {
     const result = await api.getFavorites();
     expect(result).toHaveLength(1);
     expect(result[0].id).toBe("12ca4fe9-2884-4cac-9528-cc38fc0efa2f");
+    expect(result[0].isDelivery).toBe(true);
     expect(fetch).toHaveBeenCalledWith(
       "/v1/favorites",
       expect.objectContaining({ method: "GET", body: undefined }),

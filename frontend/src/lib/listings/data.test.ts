@@ -28,6 +28,7 @@ function card(over: Partial<BrowseListing> = {}): BrowseListing {
     lng: -96.728031,
     cuisine: null,
     isHandCut: true,
+    isDelivery: false,
     verificationStatus: "UNVERIFIED",
     imageThumbnailUrl: `http://localhost:8080/v1/listings/${UUID}/image?variant=thumbnail`,
     // sc-183: the backend's pre-rendered multi-width thumbnail set.
@@ -88,6 +89,7 @@ describe("data seam — live listing reads (sc-171)", () => {
     ]);
     expect(r[0].imageUrl).toBeUndefined(); // browse cards never carry the full-res
     expect(r[0].cuisine).toBe(""); // null cuisine → empty, not "N/A"
+    expect(r[0].isDelivery).toBe(false); // sc-184 read model carries the delivery flag
   });
 
   it("leaves imageSrcset undefined when the backend sends no srcset (pre-ingest/legacy)", async () => {
@@ -110,6 +112,22 @@ describe("data seam — live listing reads (sc-171)", () => {
 
     const byQuery = await searchListings("afrah");
     expect(byQuery.map((x) => x.id)).toEqual([UUID]);
+  });
+
+  it("pipes the deliveryOnly flag through to the browse filter (sc-184)", async () => {
+    getListingsMock.mockResolvedValue([
+      card({ id: "d1", name: "Deliveroo", isDelivery: true }),
+      card({ id: "p1", name: "Pickup Only", isDelivery: false }),
+      card({ id: "u1", name: "Unknown Mode", isDelivery: null }),
+    ]);
+
+    // deliveryOnly=true narrows to listings that claim delivery only.
+    const byDelivery = await searchListings("", undefined, true);
+    expect(byDelivery.map((x) => x.id)).toEqual(["d1"]);
+
+    // absent deliveryOnly = no delivery predicate (every row matches), exactly
+    // like the sc-42 hand-cut on/off filter.
+    expect(await searchListings("")).toHaveLength(3);
   });
 
   it("getRestaurant maps the detail payload, normalizing the full-res hero URL", async () => {
@@ -172,9 +190,9 @@ describe("data seam — live listing reads (sc-171)", () => {
 
 describe("filterListings (pure browse filter)", () => {
   const list: Restaurant[] = [
-    { id: "a", name: "Al-Amir Grill", address: "1 St", lat: 1, lng: 1, cuisine: "Middle Eastern", isHandCut: true, distanceMi: 2.0 },
-    { id: "b", name: "Karachi Kitchen", address: "2 St", lat: 1, lng: 1, cuisine: "Pakistani", isHandCut: true, distanceMi: 0.4 },
-    { id: "c", name: "Burger Joint", address: "3 St", lat: 1, lng: 1, cuisine: "American", isHandCut: false, distanceMi: 1.2 },
+    { id: "a", name: "Al-Amir Grill", address: "1 St", lat: 1, lng: 1, cuisine: "Middle Eastern", isHandCut: true, isDelivery: true, distanceMi: 2.0 },
+    { id: "b", name: "Karachi Kitchen", address: "2 St", lat: 1, lng: 1, cuisine: "Pakistani", isHandCut: true, isDelivery: false, distanceMi: 0.4 },
+    { id: "c", name: "Burger Joint", address: "3 St", lat: 1, lng: 1, cuisine: "American", isHandCut: false, isDelivery: null, distanceMi: 1.2 },
   ];
 
   it("matches query against name/cuisine/address and sorts by distance", () => {
@@ -186,5 +204,10 @@ describe("filterListings (pure browse filter)", () => {
   it("restricts to hand-cut only when handCut is set (absent/false = no filter)", () => {
     expect(filterListings(list, "", true)).toHaveLength(2);
     expect(filterListings(list, "", undefined).length).toBe(3);
+  });
+
+  it("restricts to delivery-only when deliveryOnly is set (false/null = no delivery) (sc-184)", () => {
+    expect(filterListings(list, "", undefined, true)).toHaveLength(1);
+    expect(filterListings(list, "", undefined, false).length).toBe(3);
   });
 });

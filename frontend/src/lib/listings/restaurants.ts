@@ -39,6 +39,13 @@ export type Restaurant = {
   cuisine: string;
   /** sc-42: hand-cut is an on/off boolean extra. null = unknown (e.g. legacy/seed rows). */
   isHandCut: boolean | null;
+  /**
+   * sc-184: service-mode delivery flag, on the same tri-state pattern as
+   * `isHandCut`. Delivery is an EXTRA on/off flag a listing claims — pickup is
+   * the implicit baseline default, so `null` = unknown / not claimed and
+   * `false` = pickup-only. Cards/detail surface it only when `true`.
+   */
+  isDelivery: boolean | null;
   rating?: number;
   reviewCount?: number;
   distanceMi?: number;

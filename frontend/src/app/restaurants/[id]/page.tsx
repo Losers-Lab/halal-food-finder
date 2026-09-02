@@ -7,6 +7,7 @@ import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { MobileTabBar } from "@/components/layout/MobileTabBar";
 import {
+  DeliveryIndicator,
   HandCutIndicator,
   SealMark,
   UnverifiedTag,
@@ -167,6 +168,11 @@ function RestaurantDetail({ restaurant }: { restaurant: Restaurant }) {
           {restaurant.isHandCut === true ? (
             <div className="mt-3">
               <HandCutIndicator />
+            </div>
+          ) : null}
+          {restaurant.isDelivery === true ? (
+            <div className="mt-3">
+              <DeliveryIndicator />
             </div>
           ) : null}
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  DeliveryIndicator,
   HandCutIndicator,
   UnverifiedTag,
   VerifiedBadge,
@@ -91,6 +92,12 @@ export function ListingCard({ restaurant }: { restaurant: Restaurant }) {
         {restaurant.isHandCut === true ? (
           <div className="mt-3">
             <HandCutIndicator />
+          </div>
+        ) : null}
+
+        {restaurant.isDelivery === true ? (
+          <div className="mt-3">
+            <DeliveryIndicator />
           </div>
         ) : null}
       </div>

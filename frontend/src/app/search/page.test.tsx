@@ -14,6 +14,7 @@ function restaurant(over: Partial<Restaurant>): Restaurant {
     lng: -73.9788,
     cuisine: "Middle Eastern",
     isHandCut: true,
+    isDelivery: false,
     rating: 4.6,
     reviewCount: 89,
     distanceMi: 1.2,
@@ -179,8 +180,34 @@ describe("SearchPage — search-first + browse chips (search-browse.md)", () => 
     const handCut = await screen.findByRole("button", { name: "Hand-cut" });
     expect(handCut).toHaveAttribute("aria-pressed", "false");
     await userEvent.click(handCut);
-    expect(searchMock).toHaveBeenCalledWith("", true);
+    expect(searchMock).toHaveBeenCalledWith("", true, false);
     await waitFor(() => expect(handCut).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  it("the Delivery chip narrows the backend read to delivery-only (sc-184)", async () => {
+    searchMock.mockResolvedValue([]);
+    render(<SearchPage />);
+
+    const delivery = await screen.findByRole("button", { name: "Delivery" });
+    expect(delivery).toHaveAttribute("aria-pressed", "false");
+    await userEvent.click(delivery);
+    // useListings maps the DELIVERY chip to the third (deliveryOnly) boolean.
+    expect(searchMock).toHaveBeenCalledWith("", false, true);
+    await waitFor(() => expect(delivery).toHaveAttribute("aria-pressed", "true"));
+  });
+
+  it("renders the Delivery chip on cards that offer delivery, not on pickup-only (sc-184)", async () => {
+    searchMock.mockResolvedValue([
+      restaurant({ id: "d1", name: "Deliveroo", isDelivery: true }),
+      restaurant({ id: "p1", name: "Pickup Only", isDelivery: false }),
+    ]);
+    render(<SearchPage />);
+
+    expect(await screen.findByText("Deliveroo")).toBeInTheDocument();
+    // Exactly ONE card carries the Delivery service-mode indicator (the chip's
+    // `title` is unique to the card indicator — the filter chip has no title).
+    // The pickup-only card carries none.
+    expect(screen.getAllByTitle("This spot offers delivery")).toHaveLength(1);
   });
 
   it("a legacy card still renders its stored thumbnail when the widest srcset variant 404s (sc-183 fallback)", async () => {

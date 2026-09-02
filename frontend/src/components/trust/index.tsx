@@ -166,3 +166,40 @@ export function HandCutIndicator() {
     </CutMethodIndicatorBase>
   );
 }
+
+function DeliveryBoxIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      aria-hidden="true"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M8 1.5 14 4.5v7L8 14.5 2 11.5v-7L8 1.5Z" />
+      <path d="M2.2 4.6 8 7.6l5.8-3M8 7.6V14" />
+    </svg>
+  );
+}
+
+/**
+ * DeliveryIndicator — `[📦 Delivery]` service-mode chip (sc-184). Pickup is the
+ * implicit baseline; delivery is the extra on/off flag a listing claims, so the
+ * indicator renders only when `isDelivery === true` on the read model. Same
+ * quiet neutral chip family as HandCutIndicator.
+ */
+export function DeliveryIndicator() {
+  return (
+    <CutMethodIndicatorBase
+      icon={<DeliveryBoxIcon />}
+      label="This spot offers delivery"
+    >
+      Delivery
+    </CutMethodIndicatorBase>
+  );
+}

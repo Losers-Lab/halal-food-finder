@@ -6,7 +6,10 @@ import type { BrowseFilter } from "@/lib/listings/data";
  * Browse chips — docs/design/search-browse.md §"Browse chips row". Dark chips
  * (bg-ink-900 text-cream-50 shadow-chip radius-full); active chip = brand-500 bg.
  * Each is a real control with aria-pressed. "ALL" = no filtered read; the
- * "Hand-cut" chip narrows to hand-cut listings only (an extra on/off boolean).
+ * "Hand-cut" chip narrows to hand-cut listings only and "Delivery" to listings
+ * offering delivery (sc-184) — two independent on/off boolean extras, exactly as
+ * the sc-42 hand-cut filter. Single-select (one active chip) to stay consistent
+ * with the current control.
  */
 export function BrowseChips({
   active,
@@ -18,6 +21,7 @@ export function BrowseChips({
   const chips: { value: BrowseFilter; label: string }[] = [
     { value: "ALL", label: "All" },
     { value: "HAND_CUT", label: "Hand-cut" },
+    { value: "DELIVERY", label: "Delivery" },
   ];
 
   return (

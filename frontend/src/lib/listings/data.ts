@@ -1,7 +1,7 @@
 import { api, ApiError, type BrowseListing, type ListingDetail } from "@/lib/api/client";
 import type { Restaurant, VerificationStatus } from "./restaurants";
 
-export type BrowseFilter = "ALL" | "HAND_CUT";
+export type BrowseFilter = "ALL" | "HAND_CUT" | "DELIVERY";
 
 export type { Restaurant } from "./restaurants";
 
@@ -19,17 +19,31 @@ export type { Restaurant } from "./restaurants";
 /**
  * Pure client-side filter for the browse screens — mirrors the search behavior
  * that used to live on the seed: match name/cuisine/address against the query,
- * optionally restrict to hand-cut only, then sort by distance.
+ * optionally restrict to hand-cut only and/or delivery-only, then sort by
+ * distance.
+ *
+ * sc-184 note: `deliveryOnly` runs client-side over the browse-all read here,
+ * exactly as the sc-42 `handCut` filter does, rather than hitting the backend
+ * `GET /v1/listings/search?deliveryOnly=true` endpoint. That backend filter
+ * lives only on the LOCATION search endpoint (requires `center` + `radius`),
+ * and the browse/search UI has no geolocation yet — so delivery is filtered
+ * over the full browse set, the same seam that already drives the text + hand-cut
+ * filters. The boolean is threaded through this single seam so swapping to the
+ * server-side `/search` filter becomes trivial once location search lands.
  */
 export function filterListings(
   restaurants: Restaurant[],
   query: string,
   handCut?: boolean,
+  deliveryOnly?: boolean,
 ): Restaurant[] {
   const q = query.trim().toLowerCase();
   const filtered = restaurants.filter((r) => {
     if (handCut) {
       if (r.isHandCut !== true) return false;
+    }
+    if (deliveryOnly) {
+      if (r.isDelivery !== true) return false;
     }
     if (!q) return true;
     const haystack = `${r.name} ${r.cuisine} ${r.address}`.toLowerCase();
@@ -70,6 +84,7 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
     lng: b.lng,
     cuisine: b.cuisine ?? "",
     isHandCut: b.isHandCut ?? null,
+    isDelivery: b.isDelivery ?? null,
     // sc-49: carry the backend's authoritative verification state through to the
     // read model so cards + detail render the real trust badge. Absent on
     // legacy payloads → `verificationStatus()` falls back to certificate-derived.
@@ -109,9 +124,10 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
 export async function searchListings(
   query: string,
   handCutOnly?: boolean,
+  deliveryOnly?: boolean,
 ): Promise<Restaurant[]> {
   const cards = await api.getListings();
-  return filterListings(cards.map(toRestaurant), query, handCutOnly);
+  return filterListings(cards.map(toRestaurant), query, handCutOnly, deliveryOnly);
 }
 
 /**
