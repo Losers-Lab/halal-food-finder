@@ -189,6 +189,55 @@ class JdbcRestaurantListingRepository(
         return rows.firstOrNull()
     }
 
+    override fun update(listing: RestaurantListing): RestaurantListing? {
+        val updated: RestaurantListing? = tx.execute {
+            val rows = jdbc.update(
+                """
+                UPDATE restaurant_listings SET
+                    name = ?, address = ?,
+                    location = ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
+                    cuisine = ?, is_hand_cut = ?, is_delivery = ?,
+                    price = ?, rating = ?, alcohol_served = ?,
+                    halal_scope = ?, cross_contamination = ?
+                WHERE id = ?
+                """.trimIndent(),
+                listing.name,
+                listing.address,
+                listing.location.lng,
+                listing.location.lat,
+                listing.cuisine?.value,
+                listing.isHandCut,
+                listing.isDelivery,
+                listing.price?.value,
+                listing.rating?.value,
+                listing.alcoholServed,
+                listing.halalScope.name,
+                listing.crossContamination.name,
+                listing.id,
+            )
+            if (rows == 0) return@execute null
+
+            // Rewrite the child stores + search mirror in the SAME transaction so
+            // an edit is atomically consistent across source/mirror/child tables.
+            replaceCuisines(listing.id, listing.cuisine)
+            replaceHalalItems(listing.id, listing.halalItems)
+            mirrorIntoListingSearch(listing)
+            findById(listing.id)
+        }
+        return updated
+    }
+
+    /** Full replace of a listing's (single) cuisine in the multi-cuisine store (sc-44). */
+    private fun replaceCuisines(listingId: UUID, cuisine: Cuisine?) {
+        jdbc.update("DELETE FROM restaurant_listing_cuisines WHERE listing_id = ?", listingId)
+        cuisine?.let {
+            jdbc.update(
+                "INSERT INTO restaurant_listing_cuisines (listing_id, cuisine) VALUES (?, ?)",
+                listingId, it.value,
+            )
+        }
+    }
+
     override fun updateVerificationStatus(id: UUID, status: VerificationStatus): RestaurantListing? {
         val updated: Int? = tx.execute {
             // Update the source row; no-op path returns 0 rows. The search mirror

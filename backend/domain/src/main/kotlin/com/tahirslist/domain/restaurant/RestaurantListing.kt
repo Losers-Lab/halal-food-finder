@@ -52,26 +52,72 @@ import java.util.UUID
  * decided — do not resolve it in code.
  */
 data class RestaurantListing(
-    val id: UUID,
-    val name: String,
-    val address: String,
-    val location: LatLng,
-    val cuisine: Cuisine?,
-    val isHandCut: Boolean?,
-    val isDelivery: Boolean?,
-    val price: Price?,
-    val rating: Rating?,
-    val ownerId: UUID?,
-    val brandId: UUID?,
-    val provenance: Provenance?,
-    val verificationStatus: VerificationStatus,
-    val createdAt: Instant,
-    val halalScope: HalalScope = HalalScope.DEFAULT,
-    val halalItems: Set<HalalItem> = emptySet(),
-    val crossContamination: CrossContamination = CrossContamination.DEFAULT,
-    val alcoholServed: Boolean = false,
-) {
-    companion object {
+        val id: UUID,
+        val name: String,
+        val address: String,
+        val location: LatLng,
+        val cuisine: Cuisine?,
+        val isHandCut: Boolean?,
+        val isDelivery: Boolean?,
+        val price: Price?,
+        val rating: Rating?,
+        val ownerId: UUID?,
+        val brandId: UUID?,
+        val provenance: Provenance?,
+        val verificationStatus: VerificationStatus,
+        val createdAt: Instant,
+        val halalScope: HalalScope = HalalScope.DEFAULT,
+        val halalItems: Set<HalalItem> = emptySet(),
+        val crossContamination: CrossContamination = CrossContamination.DEFAULT,
+        val alcoholServed: Boolean = false,
+    ) {
+
+        /**
+         * Produce an updated copy of this listing's *editable content fields*
+         * (sc-23/47/48 owner listing edit). Unlike [new], identity and governance
+         * fields — [id], [ownerId], [brandId], [provenance], [verificationStatus],
+         * [createdAt], [price] and [rating] — are PRESERVED untouched: an owner
+         * editing their listing can never change who owns it, its verification
+         * status, or audit fields. Ownership/status changes are out of scope for a
+         * listing edit (they run through the claim/verification vertical).
+         *
+         * Names/addresses are trimmed; blank values are rejected (same contract
+         * as [new]). [isHandCut] / [isDelivery] keep their tri-state (null =
+         * unknown / not claimed) semantics — an owner may explicitly clear them.
+         *
+         * @throws IllegalArgumentException if [name] or [address] is blank.
+         */
+        fun withUpdatedFields(
+            name: String,
+            address: String,
+            location: LatLng,
+            cuisine: Cuisine?,
+            isHandCut: Boolean?,
+            isDelivery: Boolean?,
+            halalScope: HalalScope = HalalScope.DEFAULT,
+            halalItems: Set<HalalItem> = emptySet(),
+            crossContamination: CrossContamination = CrossContamination.DEFAULT,
+            alcoholServed: Boolean = false,
+        ): RestaurantListing {
+            val trimmedName = name.trim()
+            val trimmedAddress = address.trim()
+            require(trimmedName.isNotBlank()) { "Listing name must not be blank." }
+            require(trimmedAddress.isNotBlank()) { "Listing address must not be blank." }
+            return copy(
+                name = trimmedName,
+                address = trimmedAddress,
+                location = location,
+                cuisine = cuisine,
+                isHandCut = isHandCut,
+                isDelivery = isDelivery,
+                halalScope = halalScope,
+                halalItems = halalItems,
+                crossContamination = crossContamination,
+                alcoholServed = alcoholServed,
+            )
+        }
+
+        companion object {
 
         /**
          * Create a brand-new listing. Names/addresses are trimmed; blank values

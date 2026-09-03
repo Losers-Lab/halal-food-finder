@@ -13,6 +13,17 @@ interface RestaurantListingRepository {
     fun findById(id: UUID): RestaurantListing?
 
     /**
+     * Full replace of a listing's editable content fields (sc-23/47/48 owner
+     * listing edit), persisted atomically with its search mirror and child
+     * stores. Identity and governance fields (id, owner, verification status,
+     * createdAt, price, rating) are written unchanged — the caller decides what
+     * changed; this method persists the aggregate as given.
+     *
+     * @return the reloaded updated listing, or null if no listing has that id.
+     */
+    fun update(listing: RestaurantListing): RestaurantListing?
+
+    /**
      * Promote/change a listing's [VerificationStatus]. sc-73 uses this to promote
      * a listing to VERIFIED once the Verification Committee approves its review
      * (the listing itself was never auto-promoted by the claim). The source table

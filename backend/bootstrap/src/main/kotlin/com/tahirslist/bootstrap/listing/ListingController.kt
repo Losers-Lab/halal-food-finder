@@ -1,7 +1,10 @@
 package com.tahirslist.bootstrap.listing
 
+import com.tahirslist.application.favorite.ListingNotFoundException
 import com.tahirslist.application.listing.CreateListing
 import com.tahirslist.application.listing.ListingOwnerNotFoundException
+import com.tahirslist.application.listing.UpdateListing
+import com.tahirslist.application.verification.NotListingOwnerException
 import com.tahirslist.domain.restaurant.CrossContamination
 import com.tahirslist.domain.restaurant.Cuisine
 import com.tahirslist.domain.restaurant.HalalItem
@@ -22,6 +25,8 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
 import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.PatchMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -31,20 +36,30 @@ import java.util.UUID
 
 /**
  * Add Listing (sc-138) endpoint: POST /v1/listings.
+ * Owner listing edit (sc-23/47/48) endpoint: PATCH /v1/listings/{id}.
  *
- * Requires a valid access JWT (deny-by-default resource server from sc-131 —
+ * Both require a valid access JWT (deny-by-default resource server from sc-131 —
  * unauthenticated -> 401 before this reaches the handler). The listing's owner is
  * the **authenticated account** (the JWT `sub`), never a client-supplied owner.
  *
- * This endpoint does NOT geocode: per the sc-138 decision, geocoding stays out of
- * the listing write-path (docs/reviews/sc-138-external-services.md §3) so a
- * listing is always saveable independently of any external geocoding provider.
- * The client supplies coordinates directly; there is no outbound call on this
- * path to rate-limit.
+ * PATCH is a full replace of the editable content fields (same shape as the Add
+ * Listing request, so the frontend reuses the add-listing form): the owner sends
+ * the complete editable payload and identity/governance fields (owner, verification
+ * status, price, rating) are preserved untouched. A non-owner -> 403, a missing
+ * listing -> 404.
+ *
+ * These endpoints do NOT geocode: per the sc-138 decision, geocoding stays out of
+ * the listing write-path (docs/reviews/sc-138-external-services.md §3) so a listing
+ * is always saveable independently of any external geocoding provider. The client
+ * supplies coordinates directly; there is no outbound call on this path to
+ * rate-limit.
  */
 @RestController
 @RequestMapping("/v1/listings")
-class ListingController(private val createListing: CreateListing) {
+class ListingController(
+    private val createListing: CreateListing,
+    private val updateListing: UpdateListing,
+) {
 
     @PostMapping
     @Operation(summary = "Add a restaurant listing", description = "Creates a new, always-unverified restaurant listing owned by the authenticated account. Does not geocode; the client supplies coordinates.")
@@ -84,6 +99,51 @@ class ListingController(private val createListing: CreateListing) {
     fun onOwnerNotFound(): ResponseEntity<ErrorResponse> =
         ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse("owner_not_found"))
 
+    @ExceptionHandler(ListingNotFoundException::class)
+    @ApiResponse(responseCode = "404", description = "Listing not found")
+    fun onListingNotFound(): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.NOT_FOUND).body(ErrorResponse("listing_not_found"))
+
+    @ExceptionHandler(NotListingOwnerException::class)
+    @ApiResponse(responseCode = "403", description = "Only the listing owner may edit")
+    fun onNotListingOwner(): ResponseEntity<ErrorResponse> =
+        ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorResponse("not_listing_owner"))
+
+    @PatchMapping("/{id}")
+    @Operation(summary = "Edit a restaurant listing", description = "Full replace of a listing's editable content fields by its owner (sc-23/47/48). Identity and governance fields (owner, verification status, price, rating) are preserved. Non-owner -> 403; missing listing -> 404.")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "200", description = "Listing updated", content = [Content(schema = Schema(implementation = ListingResponse::class))]),
+            ApiResponse(responseCode = "400", description = "Invalid input"),
+            ApiResponse(responseCode = "401", description = "Authentication required"),
+            ApiResponse(responseCode = "403", description = "Only the listing owner may edit"),
+            ApiResponse(responseCode = "404", description = "Listing not found"),
+        ],
+    )
+    fun update(
+        @PathVariable id: UUID,
+        @Valid @RequestBody request: UpdateListingRequest,
+        authentication: JwtAuthenticationToken,
+    ): ResponseEntity<ListingResponse> {
+        val ownerId = UUID.fromString(authentication.token.subject)
+
+        val listing = updateListing.execute(
+            listingId = id,
+            ownerId = ownerId,
+            name = request.name,
+            address = request.address,
+            location = LatLng(lat = request.lat!!, lng = request.lng!!),
+            cuisine = Cuisine(request.cuisine),
+            isHandCut = request.isHandCut,
+            isDelivery = request.isDelivery,
+            halalScope = request.halalScope,
+            halalItems = request.halalItems,
+            crossContamination = request.crossContamination,
+            alcoholServed = request.alcoholServed,
+        )
+        return ResponseEntity.ok(ListingResponse.from(listing))
+    }
+
     data class CreateListingRequest(
         @field:NotBlank(message = "name is required")
         val name: String,
@@ -119,6 +179,43 @@ class ListingController(private val createListing: CreateListing) {
          * not claimed. Modelled on the sc-42 pattern: pickup is the implicit
          * baseline default, delivery is the extra flag a listing claims.
          */
+        val isDelivery: Boolean?,
+    )
+
+    /**
+     * Edit Listing request (sc-23/47/48). Mirrors [CreateListingRequest] so the
+     * frontend reuses the add-listing form. This is a FULL replace of the editable
+     * content fields: the owner submits the complete editable payload and identity/
+     * governance fields (owner, verification status, price, rating) are preserved
+     * untouched server-side. As with create, omitting a nullable boolean
+     * (isHandCut / isDelivery) clears it to null (unknown).
+     */
+    data class UpdateListingRequest(
+        @field:NotBlank(message = "name is required")
+        val name: String,
+
+        @field:NotBlank(message = "address is required")
+        val address: String,
+
+        @field:NotNull(message = "lat is required")
+        val lat: Double?,
+
+        @field:NotNull(message = "lng is required")
+        val lng: Double?,
+
+        @field:NotBlank(message = "cuisine is required")
+        val cuisine: String,
+
+        val isHandCut: Boolean?,
+
+        val halalScope: HalalScope = HalalScope.DEFAULT,
+
+        val halalItems: Set<HalalItem> = emptySet(),
+
+        val crossContamination: CrossContamination = CrossContamination.DEFAULT,
+
+        val alcoholServed: Boolean = false,
+
         val isDelivery: Boolean?,
     )
 
