@@ -80,6 +80,14 @@ function toRestaurant(b: BrowseListing | ListingDetail): Restaurant {
     id: b.id,
     name: b.name,
     address: b.address,
+    // sc-187: carry the structured address fields (nullable on the payload)
+    // through to the read model so the detail page can render the full
+    // comma-form address; `fullAddress()` falls back to the flat line when
+    // these are absent (pre-ingest/legacy rows).
+    ...(b.city ? { city: b.city } : {}),
+    ...(b.province ? { province: b.province } : {}),
+    ...(b.postal ? { postal: b.postal } : {}),
+    ...(b.country ? { country: b.country } : {}),
     lat: b.lat,
     lng: b.lng,
     cuisine: b.cuisine ?? "",

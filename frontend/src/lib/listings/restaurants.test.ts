@@ -4,6 +4,7 @@ import {
   cardThumbSource,
   expiryState,
   formatDate,
+  fullAddress,
   verificationStatus,
   type Certificate,
   type Restaurant,
@@ -46,6 +47,49 @@ describe("verificationStatus", () => {
     const past = new Date(Date.now() - 5 * 86_400_000).toISOString();
     expect(verificationStatus(restaurant({ certificate: cert(past) }))).toBe(
       "UNVERIFIED",
+    );
+  });
+});
+
+describe("fullAddress (sc-187)", () => {
+  it("builds the full comma-form address when structured fields are present", () => {
+    expect(
+      fullAddress(
+        restaurant({
+          address: "3885 Belt Line Rd",
+          city: "Addison",
+          province: "TX",
+          postal: "75001",
+        }),
+      ),
+    ).toBe("3885 Belt Line Rd, Addison, TX 75001");
+  });
+
+  it("joins street, city, and 'province postal' for a CA-style address", () => {
+    expect(
+      fullAddress(
+        restaurant({
+          address: "563 Yonge St",
+          city: "Toronto",
+          province: "ON",
+          postal: "M4Y 1Z2",
+          country: "CA",
+        }),
+      ),
+    ).toBe("563 Yonge St, Toronto, ON M4Y 1Z2");
+  });
+
+  it("omits empty structured parts defensively (postal-only region)", () => {
+    expect(
+      fullAddress(
+        restaurant({ address: "1 Main St", city: "Brooklyn", postal: "11201" }),
+      ),
+    ).toBe("1 Main St, Brooklyn, 11201");
+  });
+
+  it("falls back to the flat street line when structured fields are absent (pre-ingest/legacy)", () => {
+    expect(fullAddress(restaurant({ address: "112 Atlantic Ave" }))).toBe(
+      "112 Atlantic Ave",
     );
   });
 });

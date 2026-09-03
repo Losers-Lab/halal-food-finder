@@ -195,14 +195,28 @@ describe("RestaurantDetailPage — certificate trust panel (detail-page.md)", ()
     expect(screen.queryByRole("img", { name: "New Spot" })).not.toBeInTheDocument();
   });
 
-it("renders the full address and an embedded map preview with a pin (sc-187)", async () => {
-    getRestaurantMock.mockResolvedValueOnce(restaurant({}));
+it("renders the full comma-form address and an embedded map preview with a pin (sc-187)", async () => {
+    getRestaurantMock.mockResolvedValueOnce(
+      restaurant({
+        address: "112 Atlantic Ave",
+        city: "Brooklyn",
+        province: "NY",
+        postal: "11201",
+      }),
+    );
     render(<RestaurantDetailPage />);
 
-    // Full structured address (street, city, ZIP) from the listing read surface.
+    // Full structured address (street, city, "province postal") from the read surface.
     expect(
-      await screen.findByText("112 Atlantic Ave, Brooklyn, NY"),
+      await screen.findByText("112 Atlantic Ave, Brooklyn, NY 11201"),
     ).toBeInTheDocument();
+
+    // "Get directions" deep link targets the same full address string.
+    const directions = screen.getByRole("link", { name: "Get directions" });
+    expect(directions).toHaveAttribute(
+      "href",
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("112 Atlantic Ave, Brooklyn, NY 11201")}`,
+    );
 
     // Embedded map preview pinned at the listing's lat/lng — Google Maps oEmbed.
     const frame = screen.getByTitle(
@@ -211,6 +225,22 @@ it("renders the full address and an embedded map preview with a pin (sc-187)", a
     expect(frame).toHaveAttribute(
       "src",
       "https://www.google.com/maps?q=40.6916,-73.9788&z=16&output=embed",
+    );
+  });
+
+  it("renders the flat address line when structured fields are absent (pre-ingest/legacy fallback)", async () => {
+    getRestaurantMock.mockResolvedValueOnce(
+      restaurant({ address: "112 Atlantic Ave, Brooklyn, NY" }),
+    );
+    render(<RestaurantDetailPage />);
+
+    expect(
+      await screen.findByText("112 Atlantic Ave, Brooklyn, NY"),
+    ).toBeInTheDocument();
+    const directions = screen.getByRole("link", { name: "Get directions" });
+    expect(directions).toHaveAttribute(
+      "href",
+      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent("112 Atlantic Ave, Brooklyn, NY")}`,
     );
   });
 

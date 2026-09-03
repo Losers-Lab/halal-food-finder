@@ -33,7 +33,17 @@ export type Restaurant = {
   /** The listing's backend UUID (routes: /restaurants/{id}). */
   id: string;
   name: string;
+  /** Flat street line — remains the single source even after sc-187. */
   address: string;
+  /**
+   * sc-187 structured address fields (read surface). Nullable/absent on
+   * pre-ingest/legacy rows and user-added listings yet to be geocoded — see
+   * `fullAddress()` for the graceful fallback to the flat `address` line.
+   */
+  city?: string;
+  province?: string;
+  postal?: string;
+  country?: string;
   lat: number;
   lng: number;
   cuisine: string;
@@ -97,6 +107,25 @@ export function verificationStatus(r: Restaurant): VerificationStatus {
   if (!r.certificate) return "UNVERIFIED";
   const expired = new Date(r.certificate.expiresOn).getTime() < Date.now();
   return expired ? "UNVERIFIED" : "VERIFIED";
+}
+
+/**
+ * sc-187 — the full comma-form address for the detail Location sidebar.
+ *
+ * Built from the backend's structured fields when present (V20 migration:
+ * "3885 Belt Line Rd, Addison, TX 75001"), joined street → city → "province
+ * postal". When the structured fields are absent (pre-ingest/legacy rows or
+ * user-added listings yet to be geocoded), gracefully falls back to the flat
+ * `address` street line — never an empty string, never "N/A".
+ */
+export function fullAddress(r: Restaurant): string {
+  const { address, city, province, postal } = r;
+  if (!city && !province && !postal) return address;
+  const parts: string[] = [address];
+  if (city) parts.push(city);
+  const region = [province, postal].filter(Boolean).join(" ");
+  if (region) parts.push(region);
+  return parts.join(", ");
 }
 
 /**
