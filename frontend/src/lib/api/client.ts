@@ -7,6 +7,15 @@ type SignupBody = operations["signup"]["requestBody"]["content"]["application/js
 type LoginBody = operations["login"]["requestBody"]["content"]["application/json"];
 export type CreateListingBody =
   operations["create"]["requestBody"]["content"]["application/json"];
+/**
+ * PATCH /v1/listings/{id} edit body (sc-23/47/48). Same full-replace shape as
+ * the Add Listing request plus the sc-184 `isDelivery` flag, so the owner edit
+ * reuses the add-listing form. The compiled `schema.d.ts` predates both sc-23
+ * and sc-184, so — exactly as `BrowseListing`/`ListingDetail` do for the read
+ * DTOs — this is typed locally against the real backend payload rather than
+ * blocking on a schema regeneration.
+ */
+export type UpdateListingBody = CreateListingBody & { isDelivery?: boolean };
 export type SignupResponse = components["schemas"]["SignupResponse"];
 export type AuthResponse = components["schemas"]["AuthResponse"];
 export type ListingResponse = components["schemas"]["ListingResponse"];
@@ -119,6 +128,8 @@ export type ApiErrorCode =
   | "owner_not_found"
   | "not_found"
   | "internal_error"
+  // sc-23 owner listing edit: a listing may only be edited by its owner.
+  | "not_listing_owner"
   // sc-73 verification-committee surface.
   | "forbidden"
   | "review_not_found"
@@ -248,6 +259,24 @@ export const api = {
     body: CreateListingBody,
     signal?: AbortSignal,
   ): Promise<ListingResponse> => request("/v1/listings", body, { signal }),
+
+  /**
+   * PATCH /v1/listings/{id} — edit an owned restaurant listing (sc-23/47/48).
+   * A FULL replace of the listing's editable content fields (reuses the Add
+   * Listing request shape); identity/governance fields (owner, verification
+   * status, price, rating) are preserved server-side. Requires the
+   * authenticated owner's access JWT: 403 `not_listing_owner` when the account
+   * does not own the listing, 404 `listing_not_found` when it is missing.
+   */
+  updateListing: (
+    id: string,
+    body: UpdateListingBody,
+    signal?: AbortSignal,
+  ): Promise<ListingResponse> =>
+    request(`/v1/listings/${encodeURIComponent(id)}`, body, {
+      method: "PATCH",
+      signal,
+    }),
 
   /**
    * GET /v1/listings — browse/search cards (sc-171). Public read surface; the
