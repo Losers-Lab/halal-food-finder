@@ -167,6 +167,146 @@ class ListingEndpointTest : PostgresBootTest() {
             resp.statusCode shouldBe HttpStatus.NOT_FOUND
             resp.body!!["code"] shouldBe "owner_not_found"
         }
+
+        test("PATCH /v1/listings/{id} lets the owner edit own listing fields and echoes/persists them (sc-23/47/48)") {
+            val (ownerId, bearer) = signupAndLogin("edit-owner@example.com")
+            val created = createListingWithCustomToken(bearer, validListingBody())
+            created.statusCode shouldBe HttpStatus.CREATED
+            val listingId = UUID.fromString(created.body!!["id"].toString())
+
+            val updateBody = linkedMapOf(
+                "name" to "Halal Grill Renamed",
+                "address" to "999 Renamed Ave",
+                "lat" to 41.0,
+                "lng" to -73.0,
+                "cuisine" to "turkish",
+                "isHandCut" to false,
+                "isDelivery" to false,
+                "halalScope" to "PARTIALLY_HALAL",
+                "alcoholServed" to true,
+            )
+            val resp = patchJson("/v1/listings/$listingId", updateBody, bearer)
+
+            resp.statusCode shouldBe HttpStatus.OK
+            val body = resp.body!!
+            body["id"].toString() shouldBe listingId.toString()
+            body["name"] shouldBe "Halal Grill Renamed"
+            body["address"] shouldBe "999 Renamed Ave"
+            body["lat"].toString().toDouble() shouldBe 41.0
+            body["lng"].toString().toDouble() shouldBe -73.0
+            body["cuisine"] shouldBe "turkish"
+            body["isHandCut"] shouldBe false
+            body["isDelivery"] shouldBe false
+            body["halalScope"] shouldBe "PARTIALLY_HALAL"
+            body["verificationStatus"] shouldBe "UNVERIFIED"
+            body["ownerId"].toString() shouldBe ownerId.toString()
+
+            // Persistence round-trip: the source row reflects the edit.
+            val row = JdbcTemplate(dataSource).queryForList(
+                "SELECT name, address, cuisine, owner_id, verification_status FROM restaurant_listings WHERE id = ?",
+                listingId,
+            ).single()
+            row["name"] shouldBe "Halal Grill Renamed"
+            row["address"] shouldBe "999 Renamed Ave"
+            row["cuisine"] shouldBe "turkish"
+            row["owner_id"].toString() shouldBe ownerId.toString()
+            row["verification_status"] shouldBe "UNVERIFIED"
+        }
+
+        test("PATCH /v1/listings/{id} is a full replace of editable fields: a null bool clears it, governance fields stay preserved") {
+            val (_, bearer) = signupAndLogin("edit-null@example.com")
+            val created = createListingWithCustomToken(bearer, validListingBody())
+            val listingId = UUID.fromString(created.body!!["id"].toString())
+
+            // Full editable payload; isDelivery=null (unknown/pickup-baseline) explicitly
+            // clears the earlier true claim. Governance fields (verification_status, owner_id) are
+            // never touched by an edit.
+            val updateBody = linkedMapOf(
+                "name" to "Full Replace Grill",
+                "address" to "123 Main St",
+                "lat" to 40.7128,
+                "lng" to -74.0060,
+                "cuisine" to "mediterranean",
+                "isHandCut" to true,
+                "isDelivery" to null,
+            )
+            val resp = patchJson("/v1/listings/$listingId", updateBody, bearer)
+
+            resp.statusCode shouldBe HttpStatus.OK
+            val row = JdbcTemplate(dataSource).queryForList(
+                "SELECT name, is_delivery, verification_status, owner_id FROM restaurant_listings WHERE id = ?",
+                listingId,
+            ).single()
+            row["name"] shouldBe "Full Replace Grill"
+            row["is_delivery"] shouldBe null
+            row["verification_status"] shouldBe "UNVERIFIED"
+            row["owner_id"] shouldNotBe null
+        }
+
+        test("PATCH /v1/listings/{id} by a non-owner returns 403 not_listing_owner") {
+            val (ownerId, ownerBearer) = signupAndLogin("edit-owner-b@example.com")
+            val created = createListingWithCustomToken(ownerBearer, validListingBody())
+            val listingId = UUID.fromString(created.body!!["id"].toString())
+
+            // A different account edits -> 403, and the row is untouched.
+            val (_, strangerBearer) = signupAndLogin("edit-stranger@example.com")
+            val updateBody = linkedMapOf(
+                "name" to "Hijack Grill", "address" to "123 Main St", "lat" to 40.7128,
+                "lng" to -74.0060, "cuisine" to "mediterranean", "isHandCut" to true,
+            )
+            val resp = patchJson("/v1/listings/$listingId", updateBody, strangerBearer)
+
+            resp.statusCode shouldBe HttpStatus.FORBIDDEN
+            resp.body!!["code"] shouldBe "not_listing_owner"
+
+            val row = JdbcTemplate(dataSource).queryForList(
+                "SELECT name, owner_id FROM restaurant_listings WHERE id = ?",
+                listingId,
+            ).single()
+            row["name"] shouldBe "Halal Grill"
+            row["owner_id"].toString() shouldBe ownerId.toString()
+        }
+
+        test("PATCH /v1/listings/{id} for an unknown listing returns 404 listing_not_found") {
+            val (_, bearer) = signupAndLogin("edit-ghost@example.com")
+            val updateBody = linkedMapOf(
+                "name" to "Ghost Grill", "address" to "123 Main St", "lat" to 40.7128,
+                "lng" to -74.0060, "cuisine" to "mediterranean", "isHandCut" to true,
+            )
+            val resp = patchJson("/v1/listings/${UUID.randomUUID()}", updateBody, bearer)
+
+            resp.statusCode shouldBe HttpStatus.NOT_FOUND
+            resp.body!!["code"] shouldBe "listing_not_found"
+        }
+
+        test("PATCH /v1/listings/{id} without a token returns a generic 401") {
+            val updateBody = linkedMapOf(
+                "name" to "X", "address" to "1 St", "lat" to 1.0, "lng" to 2.0,
+                "cuisine" to "x", "isHandCut" to null,
+            )
+            val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
+            val resp = client.exchange(
+                url("/v1/listings/${UUID.randomUUID()}"), HttpMethod.PATCH,
+                HttpEntity<Any>(updateBody, headers), Map::class.java,
+            )
+            resp.statusCode shouldBe HttpStatus.UNAUTHORIZED
+            resp.body!!["code"] shouldBe "unauthorized"
+        }
+
+        test("PATCH /v1/listings/{id} rejects a blank name with 400 invalid_input") {
+            val (_, bearer) = signupAndLogin("edit-blank@example.com")
+            val created = createListingWithCustomToken(bearer, validListingBody())
+            val listingId = UUID.fromString(created.body!!["id"].toString())
+
+            val updateBody = linkedMapOf(
+                "name" to "   ", "address" to "123 Main St", "lat" to 40.7128,
+                "lng" to -74.0060, "cuisine" to "mediterranean", "isHandCut" to true,
+            )
+            val resp = patchJson("/v1/listings/$listingId", updateBody, bearer)
+
+            resp.statusCode shouldBe HttpStatus.BAD_REQUEST
+            resp.body!!["code"] shouldBe "invalid_input"
+        }
     }
 
     private fun createListingWithCustomToken(bearer: String, body: Map<String, Any?>): ResponseEntity<Map<*, *>> {
@@ -191,6 +331,12 @@ class ListingEndpointTest : PostgresBootTest() {
         val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
         if (bearer != null) headers.setBearerAuth(bearer)
         return client.exchange(url(path), HttpMethod.POST, HttpEntity<Any>(body, headers), Map::class.java)
+    }
+
+    private fun patchJson(path: String, body: Any, bearer: String?): ResponseEntity<Map<*, *>> {
+        val headers = HttpHeaders().apply { contentType = MediaType.APPLICATION_JSON }
+        if (bearer != null) headers.setBearerAuth(bearer)
+        return client.exchange(url(path), HttpMethod.PATCH, HttpEntity<Any>(body, headers), Map::class.java)
     }
 
     /** Signs up a fresh account and returns its id and a real login access token. */

@@ -624,5 +624,131 @@ class JdbcRestaurantListingRepositoryTest : FunSpec() {
                 tryInsert(owner = newOwner(), cuisine = "c".repeat(65))
             }
         }
+
+        test("update rewrites the editable fields and syncs the search mirror + stores (sc-23/47/48)") {
+            val owner = accounts.save(Account.new(email = Email("update-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val saved = listings.save(
+                RestaurantListing.new(
+                    name = "Old Grill",
+                    address = "1 Old St",
+                    location = LatLng(40.7128, -74.0060),
+                    cuisine = Cuisine("mediterranean"),
+                    isHandCut = true,
+                    ownerId = owner.id,
+                    crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
+                    halalScope = HalalScope.NOT_DISCLOSED,
+                ),
+            )
+
+            val updated = listings.update(
+                saved.copy(
+                    name = "New Grill",
+                    address = "2 New St",
+                    location = LatLng(41.0, -73.0),
+                    cuisine = Cuisine("turkish"),
+                    isHandCut = false,
+                    isDelivery = true,
+                    halalScope = HalalScope.PARTIALLY_HALAL,
+                    crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
+                ),
+            )
+
+            updated shouldNotBe null
+            updated!!.name shouldBe "New Grill"
+            updated.address shouldBe "2 New St"
+            updated.location.lat shouldBe (41.0 plusOrMinus 0.0001)
+            updated.cuisine!!.value shouldBe "turkish"
+            updated.isHandCut shouldBe false
+            updated.isDelivery shouldBe true
+            updated.halalScope shouldBe HalalScope.PARTIALLY_HALAL
+
+            // Direct DB assertions: source row rewritten (PostGIS point too, owner preserved).
+            val row = jdbc.queryForMap(
+                "SELECT name, address, cuisine, is_hand_cut, is_delivery, owner_id, ST_Y(location::geometry) AS lat " +
+                    "FROM restaurant_listings WHERE id = ?",
+                saved.id,
+            )
+            row["name"] shouldBe "New Grill"
+            row["address"] shouldBe "2 New St"
+            row["cuisine"] shouldBe "turkish"
+            row["is_hand_cut"] shouldBe false
+            row["is_delivery"] shouldBe true
+            row["owner_id"].toString() shouldBe owner.id.toString() // owner preserved, never editable
+            (row["lat"] as Number).toDouble() shouldBe (41.0 plusOrMinus 0.0001)
+
+            // search mirror reflects the edited fields (public read surface stays consistent)
+            val mirrored = jdbc.queryForMap(
+                "SELECT name, address, cuisine, is_hand_cut, is_delivery FROM listing_search WHERE id = ?",
+                saved.id,
+            )
+            mirrored["name"] shouldBe "New Grill"
+            mirrored["is_hand_cut"] shouldBe false
+
+            // multi-cuisine store replaced with the edited cuisine
+            val cuisines = jdbc.queryForList(
+                "SELECT cuisine FROM restaurant_listing_cuisines WHERE listing_id = ?",
+                saved.id,
+            ).map { it["cuisine"] }
+            cuisines shouldBe listOf("turkish")
+        }
+
+        test("update round-trips edited halal items and preserves verification status") {
+            val owner = accounts.save(Account.new(email = Email("update-halal-${UUID.randomUUID()}@example.com"), passwordHash = "argon2id\$h"))
+            val saved = listings.save(
+                RestaurantListing.new(
+                    name = "Scope Grill",
+                    address = "3 Scope St",
+                    location = LatLng(43.7, -79.4),
+                    cuisine = Cuisine("mediterranean"),
+                    isHandCut = true,
+                    ownerId = owner.id,
+                    halalScope = HalalScope.NOT_DISCLOSED,
+                    crossContamination = CrossContamination.NO_CROSS_CONTAMINATION,
+                ),
+            )
+
+            val updated = listings.update(
+                saved.copy(
+                    halalScope = HalalScope.PARTIALLY_HALAL,
+                    halalItems = setOf(HalalItem("lamb", true), HalalItem("beef", false)),
+                ),
+            )
+
+            updated!!.halalScope shouldBe HalalScope.PARTIALLY_HALAL
+            updated.halalItems shouldBe setOf(HalalItem("lamb", true), HalalItem("beef", false))
+
+            val itemCount = jdbc.queryForObject(
+                "SELECT count(*) FROM restaurant_halal_items WHERE listing_id = ?",
+                Int::class.java,
+                saved.id,
+            )
+            itemCount shouldBe 2
+
+            // the validation status is preserved by an edit (a listing edit never re-verifies)
+            val status = jdbc.queryForObject(
+                "SELECT verification_status FROM restaurant_listings WHERE id = ?",
+                String::class.java,
+                saved.id,
+            )
+            status shouldBe "UNVERIFIED"
+        }
+
+        test("update returns null for an unknown id and writes nothing") {
+            listings.update(
+                RestaurantListing.fromStorage(
+                    id = UUID.randomUUID(),
+                    name = "X",
+                    address = "1 St",
+                    location = LatLng(1.0, 2.0),
+                    cuisine = null,
+                    isHandCut = null,
+                    ownerId = null,
+                    brandId = null,
+                    provenance = null,
+                    verificationStatus = VerificationStatus.UNVERIFIED,
+                    createdAt = java.time.Instant.now(),
+                ),
+            ) shouldBe null
+        }
     }
 }
