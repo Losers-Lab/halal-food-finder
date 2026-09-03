@@ -26,7 +26,8 @@ import { verificationStatus } from "@/lib/listings/restaurants";
  * The public detail read surface does not expose `ownerId` and there is no
  * "my listings" endpoint, so the frontend cannot statically confirm ownership
  * before rendering an edit affordance; the owner reaches this screen via the
- * add-listing success card (where the creator is provably the owner) or by
+ * add-listing success card (where the creator is provably the owner — it links
+ * to `/restaurants/{id}/edit` immediately after creating the listing) or by
  * direct URL. A non-owner who lands here sees the honest 403 error on save.
  *
  * States: auth restore hold / not-signed-in prompt / unknown listing (404) /

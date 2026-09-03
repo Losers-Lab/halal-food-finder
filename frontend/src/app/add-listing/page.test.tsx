@@ -117,6 +117,12 @@ describe("AddListingPage (sc-138) — form success + data contract", () => {
     // Unverified semantics: neutral tag present, no premium "Verified" styling.
     expect(screen.getByText("Unverified")).toBeInTheDocument();
     expect(screen.queryByText("Verified")).not.toBeInTheDocument();
+    // Owner-provable entry point to the manage/edit screen (sc-23/47/48):
+    // the creator immediately sees an "Edit listing" affordance for the new id.
+    expect(screen.getByRole("link", { name: "Edit listing" })).toHaveAttribute(
+      "href",
+      "/restaurants/l-1/edit",
+    );
   });
 
   it("logs the generic copy for a non-ApiError failure (network)", async () => {
