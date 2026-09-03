@@ -24,6 +24,16 @@ export type BrowseListing = {
   id: string;
   name: string;
   address: string;
+  /**
+   * sc-187 structured address fields (read surface: ListingReadController). The
+   * backend emits city/province/postal/country on browse, search, and detail
+   * DTOs after the V20 migration; nullable → absent on pre-ingest/legacy rows
+   * and user-added listings yet to be geocoded.
+   */
+  city?: string | null;
+  province?: string | null;
+  postal?: string | null;
+  country?: string | null;
   lat: number;
   lng: number;
   cuisine: string | null;

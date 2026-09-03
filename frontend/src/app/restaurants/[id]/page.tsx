@@ -20,6 +20,7 @@ import { FavoriteButton } from "@/components/listing/FavoriteButton";
 import type { Restaurant } from "@/lib/listings/restaurants";
 import {
   expiryState,
+  fullAddress,
   verificationStatus,
 } from "@/lib/listings/restaurants";
 import { getRestaurant } from "@/lib/listings/data";
@@ -244,7 +245,10 @@ function Sidebar({ restaurant }: { restaurant: Restaurant }) {
       {restaurant.hours ? <Hours hours={restaurant.hours} /> : null}
       <section aria-label="Location">
         <h2 className="text-heading text-ink-900">Location</h2>
-        <p className="mt-2 text-body text-ink-700">{restaurant.address}</p>
+        {/* sc-187: full comma-form address from the backend's structured fields
+            (street, city, "province postal"); falls back to the flat street line
+            on pre-ingest/legacy rows. */}
+        <p className="mt-2 text-body text-ink-700">{fullAddress(restaurant)}</p>
         {/* sc-187: embedded map preview with a location pin from the listing's lat/lng. */}
         <div className="mt-3">
           <MapPreview
@@ -255,7 +259,7 @@ function Sidebar({ restaurant }: { restaurant: Restaurant }) {
         </div>
         <a
           className="mt-2 inline-block text-label text-brand-500 underline-offset-2 hover:underline"
-          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurant.address)}`}
+          href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress(restaurant))}`}
           target="_blank"
           rel="noreferrer"
         >
