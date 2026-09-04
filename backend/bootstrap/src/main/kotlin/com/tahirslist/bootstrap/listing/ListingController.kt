@@ -1,8 +1,11 @@
 package com.tahirslist.bootstrap.listing
 
 import com.tahirslist.application.favorite.ListingNotFoundException
+import com.tahirslist.application.image.StoredImage
+import com.tahirslist.application.listing.AddListingImage
 import com.tahirslist.application.listing.CreateListing
 import com.tahirslist.application.listing.ListingOwnerNotFoundException
+import com.tahirslist.application.listing.RemoveListingImage
 import com.tahirslist.application.listing.UpdateListing
 import com.tahirslist.application.verification.NotListingOwnerException
 import com.tahirslist.domain.restaurant.CrossContamination
@@ -22,23 +25,30 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotNull
 import org.springframework.http.HttpStatus
+import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.PatchMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.multipart.MultipartFile
+import org.springframework.web.multipart.support.MissingServletRequestPartException
 import java.time.Instant
 import java.util.UUID
 
 /**
  * Add Listing (sc-138) endpoint: POST /v1/listings.
  * Owner listing edit (sc-23/47/48) endpoint: PATCH /v1/listings/{id}.
+ * Owner image management (sc-53/54) endpoints: PUT/DELETE /v1/listings/{id}/image.
  *
- * Both require a valid access JWT (deny-by-default resource server from sc-131 —
+ * All require a valid access JWT (deny-by-default resource server from sc-131 —
  * unauthenticated -> 401 before this reaches the handler). The listing's owner is
  * the **authenticated account** (the JWT `sub`), never a client-supplied owner.
  *
@@ -47,6 +57,12 @@ import java.util.UUID
  * the complete editable payload and identity/governance fields (owner, verification
  * status, price, rating) are preserved untouched. A non-owner -> 403, a missing
  * listing -> 404.
+ *
+ * PUT /{id}/image is a multipart upload that (re)places the listing's single hero
+ * image (last-write-wins; sc-53). DELETE /{id}/image removes every stored variant
+ * (sc-54); removal is idempotent (a listing with no image is not an error). Both
+ * are owner-guarded; bytes live in the object store via [com.tahirslist.application.image.ImagePort],
+ * never in the database.
  *
  * These endpoints do NOT geocode: per the sc-138 decision, geocoding stays out of
  * the listing write-path (docs/reviews/sc-138-external-services.md §3) so a listing
@@ -59,6 +75,8 @@ import java.util.UUID
 class ListingController(
     private val createListing: CreateListing,
     private val updateListing: UpdateListing,
+    private val addListingImage: AddListingImage,
+    private val removeListingImage: RemoveListingImage,
 ) {
 
     @PostMapping
@@ -146,6 +164,72 @@ class ListingController(
             alcoholServed = request.alcoholServed,
         )
         return ResponseEntity.ok(ListingResponse.from(listing))
+    }
+
+    /**
+     * Owner add/replace listing image (sc-53): PUT /v1/listings/{id}/image.
+     * Multipart upload of a single `image` part; last-write-wins replace of the
+     * listing's one hero image (FULL + every sc-183 thumbnail width). Owner-only
+     * (403 for others, 404 for unknown listings); an undecodable image -> 400.
+     * Bytes go to the object store, not the database.
+     */
+    @PutMapping(value = ["/{id}/image"], consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @Operation(summary = "Add or replace a listing's hero image", description = "Owner uploads a single hero image (multipart `image` part). Last-write-wins replace: FULL + every thumbnail width are stored (sc-53). Non-owner -> 403; missing listing -> 404; undecodable image -> 400.")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Image stored/replaced"),
+            ApiResponse(responseCode = "400", description = "No image part, or image is not a decodable image"),
+            ApiResponse(responseCode = "401", description = "Authentication required"),
+            ApiResponse(responseCode = "403", description = "Only the listing owner may edit"),
+            ApiResponse(responseCode = "404", description = "Listing not found"),
+        ],
+    )
+    fun addImage(
+        @PathVariable id: UUID,
+        @RequestPart("image") image: MultipartFile,
+        authentication: JwtAuthenticationToken,
+    ): ResponseEntity<Void> {
+        addListingImage.execute(
+            listingId = id,
+            ownerId = UUID.fromString(authentication.token.subject),
+            original = StoredImage(
+                bytes = image.bytes,
+                contentType = image.contentType ?: "application/octet-stream",
+            ),
+        )
+        return ResponseEntity.noContent().build()
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException::class)
+    @ApiResponse(responseCode = "400", description = "Multipart request is missing the `image` part")
+    fun onMissingPart(): ResponseEntity<ErrorResponse> =
+        ResponseEntity.badRequest().body(ErrorResponse("invalid_input", "Image part is required."))
+
+    /**
+     * Owner remove listing image (sc-54): DELETE /v1/listings/{id}/image.
+     * Removes every stored variant (FULL + thumbnails). Idempotent: a listing with
+     * no image is not an error (204 either way). Owner-only (403 for others,
+     * 404 for unknown listings).
+     */
+    @DeleteMapping("/{id}/image")
+    @Operation(summary = "Remove a listing's hero image", description = "Owner removes every stored variant of the listing's hero image (sc-54). Idempotent: removing an image the listing never had is not an error. Non-owner -> 403; missing listing -> 404.")
+    @ApiResponses(
+        value = [
+            ApiResponse(responseCode = "204", description = "Image removed (or had nothing to remove)"),
+            ApiResponse(responseCode = "401", description = "Authentication required"),
+            ApiResponse(responseCode = "403", description = "Only the listing owner may edit"),
+            ApiResponse(responseCode = "404", description = "Listing not found"),
+        ],
+    )
+    fun removeImage(
+        @PathVariable id: UUID,
+        authentication: JwtAuthenticationToken,
+    ): ResponseEntity<Void> {
+        removeListingImage.execute(
+            listingId = id,
+            ownerId = UUID.fromString(authentication.token.subject),
+        )
+        return ResponseEntity.noContent().build()
     }
 
     data class CreateListingRequest(

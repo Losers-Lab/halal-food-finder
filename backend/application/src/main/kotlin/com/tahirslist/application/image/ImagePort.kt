@@ -18,6 +18,8 @@ import java.util.UUID
  *  - [save] stores the given variant's bytes, overwriting any previous value
  *    for the same (listing, variant) (last-write-wins).
  *  - [load] returns the stored variant, or `null` if none was ever saved.
+ *  - [delete] removes the stored variant; deleting a variant that was never
+ *    saved is a silent no-op, and deleting one variant never affects any other.
  *  - Save/load must round-trip bytes + contentType exactly.
  *  - Variants are independent: writing one thumbnail width (or FULL) never
  *    affects any other variant.
@@ -26,4 +28,11 @@ interface ImagePort {
     fun save(listingId: UUID, variant: ImageVariant, contentType: String, bytes: ByteArray)
 
     fun load(listingId: UUID, variant: ImageVariant): StoredImage?
+
+    /**
+     * Remove the stored variant (sc-53/54 owner remove-image path). Idempotent:
+     * deleting a variant that was never saved is a silent no-op. Only the
+     * given variant is removed — sibling variants remain untouched.
+     */
+    fun delete(listingId: UUID, variant: ImageVariant)
 }

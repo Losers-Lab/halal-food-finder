@@ -24,4 +24,8 @@ class InMemoryImagePort : ImagePort {
 
     override fun load(listingId: UUID, variant: ImageVariant): StoredImage? =
         store[Key(listingId, variant)]
+
+    override fun delete(listingId: UUID, variant: ImageVariant) {
+        store.remove(Key(listingId, variant))
+    }
 }
