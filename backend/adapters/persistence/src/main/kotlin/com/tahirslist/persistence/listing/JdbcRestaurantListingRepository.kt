@@ -48,9 +48,9 @@ class JdbcRestaurantListingRepository(
         val saved: RestaurantListing = tx.execute {
             val id = jdbc.queryForObject(
                 """
-                INSERT INTO restaurant_listings (name, address, location, cuisine, is_hand_cut, is_delivery, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
+                INSERT INTO restaurant_listings (name, address, city, province, postal, country, location, cuisine, is_hand_cut, is_delivery, owner_id, brand_id, provenance, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
                 VALUES (
-                    ?, ?,
+                    ?, ?, ?, ?, ?, ?,
                     ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography,
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
@@ -59,6 +59,10 @@ class JdbcRestaurantListingRepository(
                 UUID::class.java,
                 listing.name,
                 listing.address,
+                listing.city,
+                listing.province,
+                listing.postal,
+                listing.country,
                 listing.location.lng, // ST_MakePoint(x = longitude, y = latitude)
                 listing.location.lat,
                 listing.cuisine?.value,
@@ -111,11 +115,15 @@ class JdbcRestaurantListingRepository(
         if (listing.crossContamination.isIndexQualified()) {
             jdbc.update(
                 """
-                INSERT INTO listing_search (id, name, address, location, cuisine, is_hand_cut, is_delivery, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
-                VALUES (?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO listing_search (id, name, address, city, province, postal, country, location, cuisine, is_hand_cut, is_delivery, verification_status, price, rating, alcohol_served, halal_scope, cross_contamination)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ST_SetSRID(ST_MakePoint(?, ?), 4326)::geography, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT (id) DO UPDATE SET
                     name = EXCLUDED.name,
                     address = EXCLUDED.address,
+                    city = EXCLUDED.city,
+                    province = EXCLUDED.province,
+                    postal = EXCLUDED.postal,
+                    country = EXCLUDED.country,
                     location = EXCLUDED.location,
                     cuisine = EXCLUDED.cuisine,
                     is_hand_cut = EXCLUDED.is_hand_cut,
@@ -130,6 +138,10 @@ class JdbcRestaurantListingRepository(
                 listing.id,
                 listing.name,
                 listing.address,
+                listing.city,
+                listing.province,
+                listing.postal,
+                listing.country,
                 listing.location.lng,
                 listing.location.lat,
                 listing.cuisine?.value,
@@ -165,6 +177,10 @@ class JdbcRestaurantListingRepository(
                 id,
                 name,
                 address,
+                city,
+                province,
+                postal,
+                country,
                 ST_Y(location::geometry) AS lat,
                 ST_X(location::geometry) AS lng,
                 cuisine,
@@ -267,6 +283,10 @@ class JdbcRestaurantListingRepository(
                 id,
                 name,
                 address,
+                city,
+                province,
+                postal,
+                country,
                 ST_Y(location::geometry) AS lat,
                 ST_X(location::geometry) AS lng,
                 cuisine,
@@ -291,6 +311,10 @@ class JdbcRestaurantListingRepository(
         id = getObject("id", UUID::class.java),
         name = getString("name"),
         address = getString("address"),
+        city = getString("city"),
+        province = getString("province"),
+        postal = getString("postal"),
+        country = getString("country"),
         location = LatLng(lat = getDouble("lat"), lng = getDouble("lng")),
         cuisine = getString("cuisine")?.let { Cuisine(it) },
         isHandCut = getObject("is_hand_cut", java.lang.Boolean::class.java) as Boolean?,

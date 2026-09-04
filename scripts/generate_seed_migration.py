@@ -70,6 +70,11 @@ def main() -> None:
     out.append("-- Source: OpenStreetMap via Photon (photon.komoot.io), ODbL 1.0; coordinates WGS84.")
     out.append("-- Every row starts UNVERIFIED with provenance 'research-seed / photon-geocode'")
     out.append("-- (listing-first model), cuisine NULL, is_hand_cut NULL, owner_id NULL.")
+    out.append("-- Since sc-187, each row also carries the structured address fields")
+    out.append("-- (city, province, postal, country) read straight from the seed JSON; the")
+    out.append("-- committed V7 (applied history) predates them — the current DB shape is")
+    out.append("-- reached via V20__sc_187_structured_address.sql, so DO NOT rewrite V7;")
+    out.append("-- regenerate into a NEW bumped-version seed migration instead.")
     out.append("-- Brand vs location: one brand row per distinct name; The Halal Guys is 1 brand, 3 locations.")
     out.append("-- Idempotent: brands ON CONFLICT (name); listings ON CONFLICT (normalised location,")
     out.append("-- scoped to seed provenance) DO NOTHING — dedupe by geocoded-normalised location, not raw name.")
@@ -84,10 +89,14 @@ def main() -> None:
     for r in rows:
         out.append(
             "INSERT INTO restaurant_listings"
-            " (name, address, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)"
+            " (name, address, city, province, postal, country, location, cuisine, is_hand_cut, owner_id, brand_id, provenance, verification_status)"
             " VALUES ("
             f" {sql_str(r['name'])},"
             f" {sql_str(r['address'])},"
+            f" {sql_str(r['city'])},"
+            f" {sql_str(r['province'])},"
+            f" {sql_str(r['postal'])},"
+            f" {sql_str(r['country'])},"
             f" ST_SetSRID(ST_MakePoint({r['lon']:.6f}, {r['lat']:.6f}), 4326)::geography,"
             " NULL,"
             " NULL,"

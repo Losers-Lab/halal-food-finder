@@ -81,6 +81,10 @@ class ListingController(
         val listing = createListing.execute(
             name = request.name,
             address = request.address,
+            city = request.city,
+            province = request.province,
+            postal = request.postal,
+            country = request.country,
             location = LatLng(lat = request.lat!!, lng = request.lng!!),
             cuisine = Cuisine(request.cuisine),
             isHandCut = request.isHandCut,
@@ -150,6 +154,12 @@ class ListingController(
 
         @field:NotBlank(message = "address is required")
         val address: String,
+
+        /** Structured address (sc-187): city/province/postal/country, optional. null = unknown. */
+        val city: String? = null,
+        val province: String? = null,
+        val postal: String? = null,
+        val country: String? = null,
 
         @field:NotNull(message = "lat is required")
         val lat: Double?,
@@ -223,6 +233,10 @@ class ListingController(
         val id: UUID,
         val name: String,
         val address: String,
+        val city: String?,
+        val province: String?,
+        val postal: String?,
+        val country: String?,
         val lat: Double,
         val lng: Double,
         val cuisine: String,
@@ -238,6 +252,10 @@ class ListingController(
                 id = listing.id,
                 name = listing.name,
                 address = listing.address,
+                city = listing.city,
+                province = listing.province,
+                postal = listing.postal,
+                country = listing.country,
                 lat = listing.location.lat,
                 lng = listing.location.lng,
                 // The Add Listing flow always requires a cuisine, so the response

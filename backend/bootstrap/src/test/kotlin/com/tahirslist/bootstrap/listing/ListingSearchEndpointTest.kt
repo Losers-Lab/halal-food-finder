@@ -194,6 +194,22 @@ class ListingSearchEndpointTest : PostgresBootTest() {
             bodyOf(only).map { it.get("name").asText() } shouldBe listOf("Delivery Test")
         }
 
+        test("each search card exposes the structured address fields (sc-187)") {
+            // A seed row around St. Clair surfaces the V20-backfilled structured
+            // fields on the search card, with the street line preserved.
+            val resp = get("/v1/listings/search?center=43.682921,-79.418493&radius=5.0")
+            resp.statusCode shouldBe HttpStatus.OK
+
+            val results = bodyOf(resp)
+            val osmow = results[0] // Osmow's is co-located with the centre
+            osmow.get("name").asText() shouldBe "Osmow's"
+            osmow.get("address").asText() shouldBe "505 St. Clair Ave W"
+            osmow.get("city").asText() shouldBe "Toronto"
+            osmow.get("province").asText() shouldBe "ON"
+            osmow.get("postal").asText() shouldBe "M6C 1A1"   // Canadian postal — not a US zip
+            osmow.get("country").asText() shouldBe "CA"
+        }
+
         test("price range narrows results through the live search endpoint (sc-43)") {
             // Controlled priced rows far from the seeds (mirrored into listing_search).
             insertFilterRows()

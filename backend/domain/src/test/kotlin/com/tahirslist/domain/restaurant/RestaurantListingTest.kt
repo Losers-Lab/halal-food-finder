@@ -269,4 +269,109 @@ class RestaurantListingTest : FunSpec({
         listing.alcoholServed shouldBe true
         listing.isDelivery shouldBe true
     }
+
+    test("new() carries and trims the structured address fields (sc-187)") {
+        val listing = RestaurantListing.new(
+            name = "Al-Amir",
+            address = " 3885 Belt Line Rd ",
+            city = " Addison ",
+            province = " TX ",
+            postal = " 75001 ",
+            country = " US ",
+            location = LatLng(32.953530, -96.849844),
+            cuisine = Cuisine("lebanese"),
+            ownerId = UUID.randomUUID(),
+        )
+
+        listing.address shouldBe "3885 Belt Line Rd"      // street line untouched (backward compat)
+        listing.city shouldBe "Addison"                   // trimmed
+        listing.province shouldBe "TX"
+        listing.postal shouldBe "75001"
+        listing.country shouldBe "US"
+    }
+
+    test("new() defaults the structured address fields to null (sc-187)") {
+        val listing = RestaurantListing.new(
+            name = "Plain Grill",
+            address = "9 St",
+            location = LatLng(0.0, 0.0),
+            cuisine = Cuisine("x"),
+            ownerId = UUID.randomUUID(),
+        )
+        listing.city shouldBe null
+        listing.province shouldBe null
+        listing.postal shouldBe null
+        listing.country shouldBe null
+    }
+
+    test("new() keeps the Canadian seed shape with a Toronto / ON / Canadian-postal country (sc-187 non-US)") {
+        // Province must be country-agnostic — CA rows use a Canadian postal string and CA country.
+        val listing = RestaurantListing.new(
+            name = "Osmow's",
+            address = "505 St. Clair Ave W",
+            city = "Toronto",
+            province = "ON",
+            postal = "M6C 1A1",
+            country = "CA",
+            location = LatLng(43.682921, -79.418493),
+            cuisine = Cuisine("shwarma"),
+            ownerId = UUID.randomUUID(),
+        )
+        listing.province shouldBe "ON"
+        listing.postal shouldBe "M6C 1A1"   // NOT a US 5-digit zip — no US-only assumption
+        listing.country shouldBe "CA"
+    }
+
+    test("new() rejects a blank structured address field (sc-187)") {
+        shouldThrow<IllegalArgumentException> {
+            RestaurantListing.new(
+                name = "X", address = "1 St", location = LatLng(0.0, 0.0), cuisine = Cuisine("x"),
+                city = "   ", ownerId = UUID.randomUUID(),
+            )
+        }
+        shouldThrow<IllegalArgumentException> {
+            RestaurantListing.new(
+                name = "X", address = "1 St", location = LatLng(0.0, 0.0), cuisine = Cuisine("x"),
+                country = " ", ownerId = UUID.randomUUID(),
+            )
+        }
+    }
+
+    test("new() rejects an over-long structured address field (sc-187)") {
+        shouldThrow<IllegalArgumentException> {
+            RestaurantListing.new(
+                name = "X", address = "1 St", location = LatLng(0.0, 0.0), cuisine = Cuisine("x"),
+                city = "c".repeat(RestaurantListing.CITY_MAX_LENGTH + 1), ownerId = UUID.randomUUID(),
+            )
+        }
+        shouldThrow<IllegalArgumentException> {
+            RestaurantListing.new(
+                name = "X", address = "1 St", location = LatLng(0.0, 0.0), cuisine = Cuisine("x"),
+                postal = "p".repeat(RestaurantListing.POSTAL_MAX_LENGTH + 1), ownerId = UUID.randomUUID(),
+            )
+        }
+    }
+
+    test("fromStorage reconstitutes the structured address fields (sc-187)") {
+        val listing = RestaurantListing.fromStorage(
+            id = UUID.randomUUID(),
+            name = "Caspian Grill",
+            address = "12518 Research Blvd",
+            city = "Austin",
+            province = "TX",
+            postal = "78759",
+            country = "US",
+            location = LatLng(30.428596, -97.760465),
+            cuisine = null,
+            ownerId = null,
+            brandId = null,
+            provenance = null,
+            verificationStatus = VerificationStatus.UNVERIFIED,
+            createdAt = java.time.Instant.now(),
+        )
+        listing.city shouldBe "Austin"
+        listing.province shouldBe "TX"
+        listing.postal shouldBe "78759"
+        listing.country shouldBe "US"
+    }
 })

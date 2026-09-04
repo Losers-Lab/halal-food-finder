@@ -224,6 +224,62 @@ class SeedRestaurantsMigrationTest : FunSpec() {
             // OSM node coordinate round-trips.
             found.location.lat shouldBe (43.682921 plusOrMinus 0.0001)
             found.location.lng shouldBe (-79.418493 plusOrMinus 0.0001)
+            // sc-187: the V20 backfill is visible through the read port, and the
+            // street line (address) is preserved for backward compat.
+            found.address shouldBe "505 St. Clair Ave W"
+            found.city shouldBe "Toronto"
+            found.province shouldBe "ON"
+            found.postal shouldBe "M6C 1A1"
+            found.country shouldBe "CA"
+        }
+
+        test("V20 adds the structured address columns to both tables, nullable (sc-187)") {
+            for (table in listOf("restaurant_listings", "listing_search")) {
+                for (column in listOf("city", "province", "postal", "country")) {
+                    val row = jdbc.queryForMap(
+                        "SELECT is_nullable FROM information_schema.columns " +
+                            "WHERE table_name = ? AND column_name = ?",
+                        table, column,
+                    )
+                    row["is_nullable"] shouldBe "YES" // legacy/user rows carry no structured address
+                }
+            }
+        }
+
+        test("V20 backfilled the CA seed rows with city/province/postal/country (sc-187 non-US)") {
+            val row = jdbc.queryForMap(
+                "SELECT city, province, postal, country FROM restaurant_listings WHERE name = 'Osmow''s' LIMIT 1",
+            )
+            row["city"] shouldBe "Toronto"
+            row["province"] shouldBe "ON"
+            row["postal"] shouldBe "M6C 1A1"   // Canadian postal string — no US zip assumption
+            row["country"] shouldBe "CA"
+        }
+
+        test("V20 backfilled the US seed rows with structured address (sc-187)") {
+            val row = jdbc.queryForMap(
+                "SELECT city, province, postal, country FROM restaurant_listings WHERE name = 'Al-Amir Lebanese Restaurant & Club' LIMIT 1",
+            )
+            row["city"] shouldBe "Addison"
+            row["province"] shouldBe "TX"
+            row["postal"] shouldBe "75001"
+            row["country"] shouldBe "US"
+        }
+
+        test("V20 mirrored the structured address into the search projection (sc-187)") {
+            val rows = jdbc.queryForList(
+                """
+                SELECT s.city, s.province, s.postal, s.country
+                FROM listing_search s
+                JOIN restaurant_listings r ON r.id = s.id
+                WHERE r.name = 'Dera' LIMIT 1
+                """.trimIndent(),
+            )
+            rows.size shouldBe 1
+            rows.single()["city"] shouldBe "Jackson Heights, Queens"
+            rows.single()["province"] shouldBe "NY"
+            rows.single()["postal"] shouldBe "11372"
+            rows.single()["country"] shouldBe "US"
         }
     }
 }

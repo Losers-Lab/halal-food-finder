@@ -33,6 +33,10 @@ class CreateListing(
     fun execute(
         name: String,
         address: String,
+        city: String? = null,
+        province: String? = null,
+        postal: String? = null,
+        country: String? = null,
         location: LatLng,
         cuisine: Cuisine,
         isHandCut: Boolean? = null,
@@ -48,6 +52,10 @@ class CreateListing(
         val listing = RestaurantListing.new(
             name = name,
             address = address,
+            city = city,
+            province = province,
+            postal = postal,
+            country = country,
             location = location,
             cuisine = cuisine,
             isHandCut = isHandCut,

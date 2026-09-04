@@ -153,6 +153,20 @@ class JdbcListingSearchQueryTest : FunSpec() {
             osmow.isDelivery shouldBe null     // seed rows carry no delivery claim (sc-184)
         }
 
+        test("search results carry the structured address fields (sc-187)") {
+            val center = LatLng(lat = 43.682921, lng = -79.418493)
+
+            val results = query.searchNearby(center = center, radiusMiles = 5.0, offset = 0, limit = 50)
+
+            val osmow = results.first { it.name == "Osmow's" }
+            // Street line preserved + the V20-backfilled structured fields surface.
+            osmow.address shouldBe "505 St. Clair Ave W"
+            osmow.city shouldBe "Toronto"
+            osmow.province shouldBe "ON"
+            osmow.postal shouldBe "M6C 1A1"    // Canadian postal — not a US zip
+            osmow.country shouldBe "CA"
+        }
+
         test("handCutOnly filter returns only hand-cut listings (sc-42)") {
             // sc-42: hand-cut is an EXTRA on/off boolean. With it off (default)
             // every listing matches — hand-cut, not-hand-cut, and unknown (NULL).
