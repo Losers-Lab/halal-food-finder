@@ -73,5 +73,30 @@ abstract class ImagePortContractSpec(private val port: ImagePort) : FunSpec() {
             stored.contentType shouldBe "image/png"
             stored.bytes.contentEquals("v2".toByteArray()) shouldBe true
         }
+
+        test("delete removes the stored variant (owner remove-image path, sc-53/54)") {
+            port.save(listingA, ImageVariant.FULL, "image/jpeg", "hero".toByteArray())
+
+            port.load(listingA, ImageVariant.FULL).shouldNotBeNull()
+            port.delete(listingA, ImageVariant.FULL)
+
+            port.load(listingA, ImageVariant.FULL) shouldBe null
+        }
+
+        test("delete of an unsaved variant is a silent no-op") {
+            // Idempotent remove: deleting nothing must not throw, and load stays null.
+            port.delete(listingB, ImageVariant.FULL)
+            port.load(listingB, ImageVariant.FULL) shouldBe null
+        }
+
+        test("delete of one variant leaves the others intact") {
+            port.save(listingA, ImageVariant.FULL, "image/jpeg", "full".toByteArray())
+            port.save(listingA, ImageVariant.THUMBNAIL_400, "image/jpeg", "thumb".toByteArray())
+
+            port.delete(listingA, ImageVariant.FULL)
+
+            port.load(listingA, ImageVariant.FULL) shouldBe null
+            port.load(listingA, ImageVariant.THUMBNAIL_400)!!.bytes.contentEquals("thumb".toByteArray()) shouldBe true
+        }
     }
 }

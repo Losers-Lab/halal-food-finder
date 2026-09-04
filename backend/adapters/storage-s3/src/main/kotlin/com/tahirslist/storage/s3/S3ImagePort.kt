@@ -6,13 +6,14 @@ import com.tahirslist.application.image.StoredImage
 import java.util.UUID
 import software.amazon.awssdk.core.sync.RequestBody
 import software.amazon.awssdk.services.s3.S3Client
+import software.amazon.awssdk.services.s3.model.CreateBucketRequest
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.HeadBucketRequest
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.model.S3Exception
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest
 
 /**
  * S3-compatible [ImagePort] (MinIO now, Cloudflare R2 later — both speak the S3
@@ -58,6 +59,17 @@ class S3ImagePort(
         } catch (e: S3Exception) {
             if (e.statusCode() == 404) null else throw e
         }
+    }
+
+    override fun delete(listingId: UUID, variant: ImageVariant) {
+        ensureBucket()
+        val request = DeleteObjectRequest.builder()
+            .bucket(bucket)
+            .key(key(listingId, variant))
+            .build()
+        // S3 DeleteObject of a non-existent key is an idempotent no-op (204),
+        // matching the port's "delete of unsaved variant is silent" contract.
+        s3.deleteObject(request)
     }
 
     private fun key(listingId: UUID, variant: ImageVariant): String =
