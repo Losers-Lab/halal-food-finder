@@ -41,6 +41,14 @@ export const createListingSchema = z.object({
    * (Zabiha). The either/or cutting-method enum was dropped upstream.
    */
   isHandCut: z.boolean().optional(),
+  /**
+   * sc-184: service-mode delivery flag, on the same optional on/off tri-state
+   * pattern as `isHandCut`. `undefined` (unchecked) leaves delivery unknown /
+   * not claimed; `true` records that the listing offers delivery. Pickup is the
+   * implicit baseline. Both flags round-trip through the edit form so an
+   * unrelated edit never silently clears a claimed flag.
+   */
+  isDelivery: z.boolean().optional(),
 });
 
 export type CreateListingFormValues = z.infer<typeof createListingSchema>;

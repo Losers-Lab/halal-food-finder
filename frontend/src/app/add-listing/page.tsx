@@ -134,6 +134,12 @@ export default function AddListingPage() {
             review.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href={`/restaurants/${encodeURIComponent(created.id)}/edit`}
+              className="inline-flex h-11 items-center justify-center rounded-md bg-brand-500 px-4 text-body font-medium text-cream-50 shadow-chip hover:bg-brand-600"
+            >
+              Edit listing
+            </Link>
             <Button
               type="button"
               variant="ghost"
